@@ -10,5 +10,11 @@ allowBuilds:
   '@firebase/util': false
   '@parcel/watcher': false
   '@swc/core': true
+  # Downloads the Electron binary that the desktop shell runs on.
+  electron: true
+  # Only needed for Squirrel installers; the Windows build uses NSIS.
+  electron-winstaller: false
+  # Install script only checks the prebuilt binary, which is already installed as an optional package.
+  esbuild: false
   # Skipped on purpose: install script only prepares the optional protobufjs CLI, unused here.
   protobufjs: false
