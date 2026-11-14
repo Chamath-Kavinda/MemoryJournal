@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+build/
+out/
+.expo/
+.turbo/
+coverage/
+
+# env and secrets
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+serviceAccountKey*.json
+
+# firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# os and editor
+.DS_Store
+Thumbs.db
+.idea/
+*.log
