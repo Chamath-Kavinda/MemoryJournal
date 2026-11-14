@@ -74,3 +74,7 @@ The calendar listens to users/{uid}/days for the visible month only (date range 
 ## D-016: The Day screen gets server time by stamping the user document
 
 The lock state uses the stored utcOffsetMinutes plus the device clock moved onto Firestore server time. The app writes clockProbeAt: serverTimestamp() to users/{uid}, reads it back from the server and takes the midpoint of the round trip as the clock offset, on opening a day and when the app returns to the foreground. Without Cloud Functions this is the only way to get server time. When offline the last known offset (zero at start) is used; the Firestore rules still decide every write. The Day screen shows the date, a status banner with a countdown to 21:00 for today and a plain message for future days. The writer itself arrives in commits 19 to 23.
+
+## D-017: Hourly rows edit a draft held in memory, one row open at a time
+
+The Day screen shows the Free Notes block and 24 hourly rows. Rows are collapsed with a one-line preview and only one row is open at a time. The draft is a DayContent from packages/core, and an empty row removes its block so empty rows are never stored. Opening a row edits only the whole-hour text; minute markers arrive in commit 20. While today is locked nothing can be typed, and only rows that already have text can be opened to read. The draft is not saved anywhere yet: autosave is commit 21 and saving revisions is commit 22.
