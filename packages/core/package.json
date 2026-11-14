@@ -4,5 +4,8 @@
   "private": true,
   "description": "Pure TypeScript business logic: time rules, revisions, score, streak, messages.",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
 }

@@ -7,5 +7,10 @@
   "engines": {
     "node": ">=20"
   },
-  "scripts": {}
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
 }
