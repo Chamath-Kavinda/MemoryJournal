@@ -13,3 +13,7 @@ Development happens on Windows, where Git defaults to CRLF. `.gitattributes` (`*
 ## D-003: Core package is consumed as TypeScript source
 
 `packages/core` exposes `src/index.ts` directly (no build step). Expo, Metro and Electron's bundler all compile workspace TypeScript, so this avoids maintaining a separate build output for the package.
+
+## D-004: Timestamps in core are epoch milliseconds
+
+Domain types in `packages/core` use epoch milliseconds (UTC) for every timestamp instead of Firestore `Timestamp` objects. This keeps core free of Firebase dependencies and trivially testable. Platform adapters convert at the Firestore boundary.
