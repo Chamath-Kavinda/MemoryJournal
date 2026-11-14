@@ -52,3 +52,9 @@ The tests use `@firebase/rules-unit-testing` 5.0.2 with `firebase` 12.19.0. Vers
 ## D-011: The stored UTC offset is client-reported
 
 The rules trust `utcOffsetMinutes` from the user document, because the server has no other way to know the user's zone. It is limited to real offsets (-12:00 to +14:00, steps of 15 minutes). A user could still set a false offset to unlock today early. That only affects their own private journal, so it is accepted for v1. Changing the device clock alone does not help, because the rules use server time.
+
+## D-012: The app runs against emulators until a real Firebase project exists
+
+The local .env (git-ignored) holds placeholder Firebase and Google values with EXPO_PUBLIC_USE_EMULATORS=true, so the app starts without a real project. Real sign-in needs a Firebase project and a Google OAuth web client ID. Replace the placeholders and set the flag to false. Android emulators reach the PC at 10.0.2.2, so set EXPO_PUBLIC_EMULATOR_HOST to that (or the PC's LAN IP for a real phone).
+
+firebase/auth exports getReactNativePersistence only under the React Native bundle condition, so its types do not declare it. apps/app/src/types/firebase-auth-rn.d.ts declares it. The web build has a placeholder sign-in that is replaced by the browser-based flow in the Electron commit.

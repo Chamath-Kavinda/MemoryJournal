@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Memory Journal",
+    "slug": "memory-journal",
+    "scheme": "memoryjournal",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.memoryjournal.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.memoryjournal.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router", "@react-native-google-signin/google-signin"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
