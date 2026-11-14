@@ -21,15 +21,50 @@ service cloud.firestore {
       return exists(userPath) && 'deletionRequestedAt' in get(userPath).data;
     }
 
+    // Real zones sit between UTC-12:00 and UTC+14:00 in steps of 15 minutes.
+    function validOffset(offset) {
+      return offset is int && offset >= -720 && offset <= 840 && offset % 15 == 0;
+    }
+
+    function validProfile(data) {
+      return !('utcOffsetMinutes' in data) || validOffset(data.utcOffsetMinutes);
+    }
+
+    // The user's local time at the moment of the write. It uses server time
+    // (request.time) plus the stored UTC offset, so the device clock cannot
+    // change it. This is the same arithmetic as packages/core/src/time.ts.
+    function localNow(uid) {
+      let user = get(/databases/$(database)/documents/users/$(uid)).data;
+      return request.time + duration.value(user.utcOffsetMinutes, 'm');
+    }
+
+    function pad2(value) {
+      return (value < 10 ? '0' : '') + string(value);
+    }
+
+    function localDayId(local) {
+      return string(local.year()) + '-' + pad2(local.month()) + '-' + pad2(local.day());
+    }
+
+    // A future day is never writable, today only from 21:00 local time, and
+    // every past day always. Day ids are zero-padded, so string order is date order.
+    function dayIsWritable(uid, dayId) {
+      let local = localNow(uid);
+      let today = localDayId(local);
+      return dayId.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+        && (dayId < today || (dayId == today && local.hours() >= 21));
+    }
+
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validProfile(request.resource.data);
 
       match /days/{dayId} {
         allow read, write: if isOwner(uid);
 
         match /revisions/{n} {
           allow read: if isOwner(uid);
-          allow create: if isOwner(uid);
+          allow create: if isOwner(uid) && dayIsWritable(uid, dayId);
           allow update: if isOwner(uid) && isOpen(resource.data);
           allow delete: if isOwner(uid) && (isOpen(resource.data) || deletionRequested(uid));
         }
