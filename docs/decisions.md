@@ -28,3 +28,13 @@ pnpm blocks dependency install scripts by default. Only `@swc/core` (used by the
 - The last activity of a sitting is the day document's `updatedAt`; if unknown, the open revision's `createdAt` is used.
 - `addedWordCount` compares against the previous revision as a multiset of words, ignoring case and surrounding punctuation. Revision 1 has no previous pass, so all of its words count as added.
 - Library item revisions (section 5.5) have no `closedAt` in the data model, so their helper is added together with the library feature.
+
+## D-007: Firebase runs on a demo project until a real one exists
+
+The emulators and the rules tests use the project ID `demo-memory-journal`. The `demo-` prefix tells the Firebase CLI to run fully offline, so no Firebase project, login or billing is needed to develop or test. A real project ID and its web config go into `apps/app/.env` (see `apps/app/.env.example`) before the first real sign-in.
+
+`firebase-tools` is a pinned root dev dependency, set to `14.27.0` instead of the latest 15.x. Version 15 refuses to run the emulators on Java before 21, and the machine in use has Temurin 17. Move to 15.x after installing JDK 21 or newer.
+
+## D-008: protobufjs install script stays blocked
+
+`firebase-tools` pulls in `protobufjs`, whose install script only prepares its optional CLI. It is set to `false` in `allowBuilds` (see D-005).
