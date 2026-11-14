@@ -7,7 +7,7 @@ export const HOURS: readonly number[] = Array.from({ length: 24 }, (_, hour) => 
 /** How long a collapsed row's preview may be before it is cut with an ellipsis. */
 export const PREVIEW_MAX_LENGTH = 60;
 
-function assertHour(hour: number): void {
+export function assertHour(hour: number): void {
   if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
     throw new RangeError(`Invalid hour: ${hour}`);
   }

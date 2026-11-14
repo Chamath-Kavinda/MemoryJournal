@@ -1,14 +1,22 @@
 import {
   HOURS,
+  addMinuteMarker,
   getHourText,
+  hasMinuteMarker,
   hourHasText,
   hourLabel,
   hourPreview,
+  minuteBlocksOfHour,
+  minuteLabel,
+  parseMinute,
+  removeMinuteMarker,
   setFreeNotes,
   setHourText,
+  setMinuteText,
+  timeLabel,
   type DayContent,
 } from '@memory-journal/core';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
 
 interface Props {
@@ -18,12 +26,20 @@ interface Props {
   editable: boolean;
 }
 
+/** The last known cursor of the open row: which block it was in and where. */
+interface Cursor {
+  minute: number | null;
+  offset: number;
+}
+
 function colorsFor(dark: boolean) {
   return {
     text: dark ? '#f2f2f2' : '#1c1c1e',
     muted: dark ? '#8e8e93' : '#6c6c70',
     border: dark ? '#38383a' : '#d1d1d6',
     surface: dark ? '#1c1c1e' : '#f7f7f9',
+    accent: dark ? '#0a84ff' : '#007aff',
+    error: dark ? '#ff453a' : '#d70015',
   };
 }
 
@@ -31,6 +47,12 @@ function colorsFor(dark: boolean) {
 export function DayWriter({ content, onChange, editable }: Props) {
   const colors = colorsFor(useColorScheme() === 'dark');
   const [expandedHour, setExpandedHour] = useState<number | null>(null);
+  const [addingMinute, setAddingMinute] = useState(false);
+  const [minuteInput, setMinuteInput] = useState('');
+  const [minuteError, setMinuteError] = useState<string | null>(null);
+  const [focusMinute, setFocusMinute] = useState<number | null>(null);
+  // Kept in a ref: the cursor moves with every key press and must not re-render the day.
+  const cursorRef = useRef<Cursor | null>(null);
 
   const inputStyle = {
     color: colors.text,
@@ -41,6 +63,39 @@ export function DayWriter({ content, onChange, editable }: Props) {
     padding: 12,
     textAlignVertical: 'top' as const,
   };
+
+  function toggleRow(hour: number, expanded: boolean) {
+    setExpandedHour(expanded ? null : hour);
+    setAddingMinute(false);
+    setMinuteInput('');
+    setMinuteError(null);
+    setFocusMinute(null);
+    cursorRef.current = null;
+  }
+
+  function closeMinuteForm() {
+    setAddingMinute(false);
+    setMinuteInput('');
+    setMinuteError(null);
+  }
+
+  function insertMinute(hour: number) {
+    const minute = parseMinute(minuteInput);
+    if (minute === null) {
+      setMinuteError('Enter a minute from 0 to 59.');
+      return;
+    }
+    if (hasMinuteMarker(content, hour, minute)) {
+      setMinuteError(`${timeLabel(hour, minute)} already has a marker.`);
+      return;
+    }
+    const cursor = cursorRef.current;
+    const split = cursor ? { minute: cursor.minute, cursor: cursor.offset } : undefined;
+    onChange(addMinuteMarker(content, hour, minute, split));
+    setFocusMinute(minute);
+    cursorRef.current = null;
+    closeMinuteForm();
+  }
 
   return (
     <View
@@ -82,7 +137,7 @@ export function DayWriter({ content, onChange, editable }: Props) {
                 accessibilityLabel={`${label}, ${preview || 'empty'}`}
                 accessibilityState={{ expanded, disabled: !canOpen }}
                 disabled={!canOpen}
-                onPress={() => setExpandedHour(expanded ? null : hour)}
+                onPress={() => toggleRow(hour, expanded)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 }}
               >
                 <Text style={{ width: 52, color: colors.muted, fontVariant: ['tabular-nums'] }}>
@@ -94,16 +149,132 @@ export function DayWriter({ content, onChange, editable }: Props) {
               </Pressable>
 
               {expanded ? (
-                <View style={{ paddingBottom: 12 }}>
+                <View style={{ paddingBottom: 12, gap: 12 }}>
                   <TextInput
                     accessibilityLabel={`Notes for ${label}`}
                     multiline
-                    autoFocus={editable}
+                    autoFocus={editable && focusMinute === null}
                     editable={editable}
                     value={getHourText(content, hour)}
                     onChangeText={(text) => onChange(setHourText(content, hour, text))}
+                    onSelectionChange={(event) => {
+                      cursorRef.current = {
+                        minute: null,
+                        offset: event.nativeEvent.selection.start,
+                      };
+                    }}
                     style={{ ...inputStyle, minHeight: 96 }}
                   />
+
+                  {minuteBlocksOfHour(content, hour).map((block) => {
+                    // Marker blocks always have a minute; the filter above removes the whole-hour block.
+                    const minute = block.minute as number;
+                    const time = timeLabel(hour, minute);
+                    return (
+                      <View key={minute} style={{ gap: 6 }}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: colors.accent,
+                              fontWeight: '600',
+                              fontVariant: ['tabular-nums'],
+                            }}
+                          >
+                            {minuteLabel(minute)}
+                          </Text>
+                          {editable ? (
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`Remove ${time}`}
+                              onPress={() => {
+                                cursorRef.current = null;
+                                onChange(removeMinuteMarker(content, hour, minute));
+                              }}
+                              hitSlop={8}
+                            >
+                              <Text style={{ color: colors.muted }}>Remove</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                        <TextInput
+                          accessibilityLabel={`Notes at ${time}`}
+                          multiline
+                          autoFocus={editable && focusMinute === minute}
+                          editable={editable}
+                          value={block.text}
+                          onChangeText={(text) =>
+                            onChange(setMinuteText(content, hour, minute, text))
+                          }
+                          onSelectionChange={(event) => {
+                            cursorRef.current = {
+                              minute,
+                              offset: event.nativeEvent.selection.start,
+                            };
+                          }}
+                          style={{ ...inputStyle, minHeight: 64 }}
+                        />
+                      </View>
+                    );
+                  })}
+
+                  {editable && !addingMinute ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Add minute"
+                      onPress={() => setAddingMinute(true)}
+                      style={{ alignSelf: 'flex-start', paddingVertical: 6 }}
+                    >
+                      <Text style={{ color: colors.accent, fontWeight: '600' }}>+ Add minute</Text>
+                    </Pressable>
+                  ) : null}
+
+                  {editable && addingMinute ? (
+                    <View style={{ gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Text style={{ color: colors.muted }}>{label.slice(0, 3)}</Text>
+                        <TextInput
+                          accessibilityLabel="Minute"
+                          autoFocus
+                          keyboardType="number-pad"
+                          maxLength={3}
+                          placeholder="0–59"
+                          placeholderTextColor={colors.muted}
+                          value={minuteInput}
+                          onChangeText={(text) => {
+                            setMinuteInput(text);
+                            setMinuteError(null);
+                          }}
+                          onSubmitEditing={() => insertMinute(hour)}
+                          style={{ ...inputStyle, width: 88, paddingVertical: 8 }}
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Insert minute marker"
+                          onPress={() => insertMinute(hour)}
+                        >
+                          <Text style={{ color: colors.accent, fontWeight: '600' }}>Insert</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Cancel adding a minute"
+                          onPress={closeMinuteForm}
+                        >
+                          <Text style={{ color: colors.muted }}>Cancel</Text>
+                        </Pressable>
+                      </View>
+                      {minuteError ? (
+                        <Text accessibilityRole="alert" style={{ color: colors.error }}>
+                          {minuteError}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
             </View>
