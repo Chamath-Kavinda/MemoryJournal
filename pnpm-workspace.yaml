@@ -1,10 +1,13 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'firebase'
 
 # Dependencies allowed to run install scripts. Everything else stays blocked.
 # Skipped on purpose: optional native file watcher, not needed.
 allowBuilds:
+  # Skipped on purpose: install script only writes optional Firebase defaults, unused in tests.
+  '@firebase/util': false
   '@parcel/watcher': false
   '@swc/core': true
   # Skipped on purpose: install script only prepares the optional protobufjs CLI, unused here.

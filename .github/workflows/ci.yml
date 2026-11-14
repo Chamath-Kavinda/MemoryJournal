@@ -22,6 +22,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # The Firestore emulator used by the rules tests needs Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - run: pnpm install --frozen-lockfile
 
       - name: Format check

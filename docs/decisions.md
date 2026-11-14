@@ -42,3 +42,13 @@ The emulators and the rules tests use the project ID `demo-memory-journal`. The 
 ## D-009: Closed revisions can only be deleted during account deletion
 
 Section 7.1 makes closed revisions undeletable, but section 5.9 requires "delete account and all data", and v1 has no Cloud Functions to do that from a server. The account deletion flow first sets `deletionRequestedAt` on `users/{uid}`; while that field exists the owner may delete closed revisions. Everywhere else a closed revision is read-only. A user can only ever use this on their own data.
+
+## D-010: Rules tests use the real clock and pinned test libraries
+
+The Firestore emulator evaluates `request.time` with the real clock, which cannot be mocked. The rules tests therefore pick a stored `utcOffsetMinutes` that puts local time about 20:30 or 21:30 right now, never exactly at 21:00. The exact 20:59 and 21:00 boundary is covered by the unit tests in `packages/core`.
+
+The tests use `@firebase/rules-unit-testing` 5.0.2 with `firebase` 12.19.0. Version 6 of the test library needs Node 24.12 or newer, while CI runs Node 22. The `@firebase/util` install script is blocked in `allowBuilds` (see D-005) because it is not needed. CI installs Temurin 17 for the emulator.
+
+## D-011: The stored UTC offset is client-reported
+
+The rules trust `utcOffsetMinutes` from the user document, because the server has no other way to know the user's zone. It is limited to real offsets (-12:00 to +14:00, steps of 15 minutes). A user could still set a false offset to unlock today early. That only affects their own private journal, so it is accepted for v1. Changing the device clock alone does not help, because the rules use server time.

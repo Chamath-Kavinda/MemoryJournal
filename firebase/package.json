@@ -1,0 +1,20 @@
+{
+  "name": "@memory-journal/firebase",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Firestore rules, indexes, emulator config and the rules tests.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "firebase emulators:exec --only firestore --config firebase.json --project demo-memory-journal \"jest\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "@memory-journal/core": "workspace:*",
+    "@swc/core": "^1.16.22",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.19.0",
+    "firebase": "12.19.0",
+    "jest": "^30.5.2"
+  }
+}
