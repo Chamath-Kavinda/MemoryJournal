@@ -1,4 +1,5 @@
 import { addMonths, monthOfDayId, type MonthRef } from '@memory-journal/core';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { signOut } from '@/platform/auth/google';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const todayId = useTodayId();
   // Start on the current month, then follow the user's own navigation.
   const [month, setMonth] = useState<MonthRef>(() => monthOfDayId(todayId));
@@ -22,8 +24,7 @@ export default function HomeScreen() {
           todayId={todayId}
           writtenDays={writtenDays}
           onChangeMonth={(delta) => setMonth((current) => addMonths(current, delta))}
-          // The Day screen arrives in commit 18; until then a tap has nowhere to go.
-          onSelectDay={() => undefined}
+          onSelectDay={(dayId) => router.push(`/day/${dayId}`)}
         />
         <View style={{ alignItems: 'center', gap: 12, marginTop: 8 }}>
           {status === 'loading' ? <ActivityIndicator /> : null}

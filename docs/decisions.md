@@ -70,3 +70,7 @@ users/{uid} is created the first time a signed-in user opens the app, with stats
 ## D-015: The home calendar shows written days for one month and starts weeks on Monday
 
 The calendar listens to users/{uid}/days for the visible month only (date range query on the date field, no extra index) and marks a day as written when its wordCount is above zero. Weeks start on Monday; core supports Sunday if a setting is added later. Next month is blocked past the current month and future days are disabled. Today comes from the device clock for display only. The streak and score top bar and the bottom or side navigation are not built here because there is no streak or score data until Milestone 5; tapping a day is wired to the Day screen in commit 18.
+
+## D-016: The Day screen gets server time by stamping the user document
+
+The lock state uses the stored utcOffsetMinutes plus the device clock moved onto Firestore server time. The app writes clockProbeAt: serverTimestamp() to users/{uid}, reads it back from the server and takes the midpoint of the round trip as the clock offset, on opening a day and when the app returns to the foreground. Without Cloud Functions this is the only way to get server time. When offline the last known offset (zero at start) is used; the Firestore rules still decide every write. The Day screen shows the date, a status banner with a countdown to 21:00 for today and a plain message for future days. The writer itself arrives in commits 19 to 23.
