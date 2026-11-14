@@ -1,8 +1,8 @@
-import { emptyContent, isValidDayId, type DayContent } from '@memory-journal/core';
+import { contentEquals, emptyContent, isValidDayId, type DayContent } from '@memory-journal/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { loadDraft, saveDraft, type KeyValueStorage } from './draftStore';
+import { clearDraft, loadDraft, saveDraft, type KeyValueStorage } from './draftStore';
 
 /** How long typing may go on before the draft is written to the device (section 5.3). */
 export const DRAFT_SAVE_DELAY_MS = 3000;
@@ -13,6 +13,16 @@ export interface DayDraft {
   content: DayContent;
   /** Replaces the draft text and schedules a local save. */
   setContent: (next: DayContent) => void;
+  /**
+   * Starts the draft from text that is already saved (the latest revision), but only when the
+   * device has no stored draft and nothing has been typed yet. It is not written as a draft.
+   */
+  seed: (initial: DayContent) => void;
+  /**
+   * Called after `saved` has been saved as a revision: the stored draft is removed, unless
+   * typing has gone on since, in which case the newer text stays as the draft.
+   */
+  discard: (saved: DayContent) => void;
   /** False until the stored draft has been read, so a stored draft is never overwritten. */
   ready: boolean;
   saveState: DraftSaveState;
@@ -25,11 +35,16 @@ interface Options {
   delayMs?: number;
 }
 
+interface Actions {
+  seed: (initial: DayContent) => void;
+  discard: (saved: DayContent) => void;
+}
+
 /**
  * The text being written for a day, kept on the device. It is read when the day opens and
  * written at most every `delayMs` while typing, and also when the app goes to the background
  * or the screen closes, so nothing typed is lost. A day with no text has no stored draft.
- * Saving the draft as a revision comes in commit 22.
+ * Saving the draft as a revision happens in the Day screen, which then calls `discard`.
  */
 export function useDayDraft({
   uid,
@@ -43,12 +58,15 @@ export function useDayDraft({
   // Edits arrive faster than saves, so the newest text lives in a ref.
   const latest = useRef<DayContent>(content);
   const schedule = useRef<(() => void) | null>(null);
+  const actions = useRef<Actions | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let dirty = false;
     let loaded = false;
+    let touched = false;
+    let hadStoredDraft = false;
     // Writes go one after another, so an older write can never land after a newer one.
     let queue: Promise<void> = Promise.resolve();
 
@@ -58,6 +76,7 @@ export function useDayDraft({
     setSaveState('idle');
     setReady(false);
     schedule.current = null;
+    actions.current = null;
 
     if (!uid || !isValidDayId(dayId)) return;
 
@@ -86,13 +105,41 @@ export function useDayDraft({
 
     schedule.current = () => {
       if (!loaded) return;
+      touched = true;
       dirty = true;
       timer ??= setTimeout(writeNow, delayMs);
+    };
+
+    actions.current = {
+      seed: (initial) => {
+        if (!loaded || touched || hadStoredDraft) return;
+        latest.current = initial;
+        setContentState(initial);
+      },
+      discard: (saved) => {
+        // Typing went on while the revision was being saved: that newer text is still a draft.
+        if (!contentEquals(latest.current, saved)) return;
+        if (timer !== null) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        dirty = false;
+        queue = queue
+          .then(() => clearDraft(storage, uid, dayId))
+          .then(
+            () => {
+              if (!cancelled) setSaveState('idle');
+            },
+            // A draft that could not be removed equals the saved text, so it does no harm.
+            () => {},
+          );
+      },
     };
 
     loadDraft(storage, uid, dayId).then(
       (draft) => {
         if (cancelled) return;
+        hadStoredDraft = draft !== null;
         const start = draft?.content ?? emptyContent();
         latest.current = start;
         setContentState(start);
@@ -116,6 +163,7 @@ export function useDayDraft({
       cancelled = true;
       subscription.remove();
       schedule.current = null;
+      actions.current = null;
       writeNow();
     };
   }, [uid, dayId, storage, delayMs]);
@@ -126,5 +174,8 @@ export function useDayDraft({
     schedule.current?.();
   }, []);
 
-  return { content, setContent, ready, saveState };
+  const seed = useCallback((initial: DayContent) => actions.current?.seed(initial), []);
+  const discard = useCallback((saved: DayContent) => actions.current?.discard(saved), []);
+
+  return { content, setContent, seed, discard, ready, saveState };
 }

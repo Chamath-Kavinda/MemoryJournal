@@ -312,3 +312,94 @@ describe('useDayDraft', () => {
     expect(getItem).not.toHaveBeenCalled();
   });
 });
+
+describe('useDayDraft seed and discard', () => {
+  it('starts from the saved text when there is no stored draft', async () => {
+    const storage = createMemoryStorage();
+    const setItem = jest.spyOn(storage, 'setItem');
+    const hook = await renderDraft(storage);
+
+    await act(async () => {
+      hook.result.current.seed(text('Saved earlier'));
+    });
+    await advance(DRAFT_SAVE_DELAY_MS);
+    await flush();
+
+    expect(hook.result.current.content).toEqual(text('Saved earlier'));
+    // The saved text is not a draft, so nothing is written for it.
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it('does not replace a stored draft', async () => {
+    const storage = createMemoryStorage();
+    await saveDraft(storage, 'u1', DAY, text('My unsaved draft'), 1);
+    const hook = await renderDraft(storage);
+
+    await act(async () => {
+      hook.result.current.seed(text('Saved earlier'));
+    });
+
+    expect(hook.result.current.content).toEqual(text('My unsaved draft'));
+  });
+
+  it('does not replace text that has already been typed', async () => {
+    const storage = createMemoryStorage();
+    const hook = await renderDraft(storage);
+
+    await type(hook, text('Typed first'));
+    await act(async () => {
+      hook.result.current.seed(text('Saved earlier'));
+    });
+
+    expect(hook.result.current.content).toEqual(text('Typed first'));
+  });
+
+  it('removes the stored draft once its text has been saved', async () => {
+    const storage = createMemoryStorage();
+    const hook = await renderDraft(storage);
+    await type(hook, text('Saved now'));
+    await advance(DRAFT_SAVE_DELAY_MS);
+    await flush();
+    expect(storage.data.has(draftKey('u1', DAY))).toBe(true);
+
+    await act(async () => {
+      hook.result.current.discard(text('Saved now'));
+    });
+    await flush();
+
+    expect(storage.data.has(draftKey('u1', DAY))).toBe(false);
+    expect(hook.result.current.content).toEqual(text('Saved now'));
+    expect(hook.result.current.saveState).toBe('idle');
+  });
+
+  it('cancels a pending draft write once its text has been saved', async () => {
+    const storage = createMemoryStorage();
+    const setItem = jest.spyOn(storage, 'setItem');
+    const hook = await renderDraft(storage);
+
+    await type(hook, text('Saved now'));
+    await act(async () => {
+      hook.result.current.discard(text('Saved now'));
+    });
+    await advance(DRAFT_SAVE_DELAY_MS);
+    await flush();
+
+    expect(setItem).not.toHaveBeenCalled();
+    expect(storage.data.size).toBe(0);
+  });
+
+  it('keeps the draft when typing went on while the revision was being saved', async () => {
+    const storage = createMemoryStorage();
+    const hook = await renderDraft(storage);
+    await type(hook, text('Saved text'));
+    await type(hook, text('Saved text and more'));
+
+    await act(async () => {
+      hook.result.current.discard(text('Saved text'));
+    });
+    await advance(DRAFT_SAVE_DELAY_MS);
+    await flush();
+
+    expect((await loadDraft(storage, 'u1', DAY))?.content).toEqual(text('Saved text and more'));
+  });
+});
