@@ -38,3 +38,7 @@ The emulators and the rules tests use the project ID `demo-memory-journal`. The 
 ## D-008: protobufjs install script stays blocked
 
 `firebase-tools` pulls in `protobufjs`, whose install script only prepares its optional CLI. It is set to `false` in `allowBuilds` (see D-005).
+
+## D-009: Closed revisions can only be deleted during account deletion
+
+Section 7.1 makes closed revisions undeletable, but section 5.9 requires "delete account and all data", and v1 has no Cloud Functions to do that from a server. The account deletion flow first sets `deletionRequestedAt` on `users/{uid}`; while that field exists the owner may delete closed revisions. Everywhere else a closed revision is read-only. A user can only ever use this on their own data.

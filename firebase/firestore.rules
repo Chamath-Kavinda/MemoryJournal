@@ -1,10 +1,59 @@
 rules_version = '2';
 
-// Placeholder: deny everything until the owner-only rules are added.
+// Memory Journal security rules.
+// Every document lives under users/{uid}. Paths that are not matched below are denied.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // A revision is open until its sitting ends and `closedAt` is set.
+    function isOpen(data) {
+      return !('closedAt' in data) || data.closedAt == null;
+    }
+
+    // Account deletion sets `deletionRequestedAt` on the user document first.
+    // That is the only way closed revisions can be deleted (see docs/decisions.md).
+    function deletionRequested(uid) {
+      let userPath = /databases/$(database)/documents/users/$(uid);
+      return exists(userPath) && 'deletionRequestedAt' in get(userPath).data;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /days/{dayId} {
+        allow read, write: if isOwner(uid);
+
+        match /revisions/{n} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid);
+          allow update: if isOwner(uid) && isOpen(resource.data);
+          allow delete: if isOwner(uid) && (isOpen(resource.data) || deletionRequested(uid));
+        }
+      }
+
+      match /tagCategories/{categoryId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /tags/{tagId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /library/{itemId} {
+        allow read, write: if isOwner(uid);
+
+        match /revisions/{n} {
+          allow read, write: if isOwner(uid);
+        }
+      }
+
+      match /progress/{documentId} {
+        allow read, write: if isOwner(uid);
+      }
     }
   }
 }
