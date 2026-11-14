@@ -21,3 +21,10 @@ Domain types in `packages/core` use epoch milliseconds (UTC) for every timestamp
 ## D-005: Dependency build scripts are allow-listed
 
 pnpm blocks dependency install scripts by default. Only `@swc/core` (used by the Jest transform) is allowed in `allowBuilds` in `pnpm-workspace.yaml`. New entries need a reason recorded here.
+
+## D-006: Revision and sitting rules the documentation left open
+
+- A new sitting always creates the next revision, even on the same calendar day. Revisions are immutable once a sitting ends, so the documentation's later save session on any later day is applied to every new sitting.
+- The last activity of a sitting is the day document's `updatedAt`; if unknown, the open revision's `createdAt` is used.
+- `addedWordCount` compares against the previous revision as a multiset of words, ignoring case and surrounding punctuation. Revision 1 has no previous pass, so all of its words count as added.
+- Library item revisions (section 5.5) have no `closedAt` in the data model, so their helper is added together with the library feature.
