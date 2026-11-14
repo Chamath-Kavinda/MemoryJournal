@@ -66,3 +66,7 @@ The Electron main process starts a loopback server on 127.0.0.1 (random port), o
 ## D-014: The profile is created on first sign-in and its time zone is refreshed on foreground
 
 users/{uid} is created the first time a signed-in user opens the app, with stats at zero, the reminder on and the theme set to system. The stored time zone and UTC offset are compared with the device on every sign-in and whenever the app returns to the foreground, and only changed fields are written. This keeps the offset right across travel and daylight saving changes, which matters because the Firestore rules use it for the 21:00 unlock. If Firestore is unreachable the sync is skipped and retried on the next start or foreground.
+
+## D-015: The home calendar shows written days for one month and starts weeks on Monday
+
+The calendar listens to users/{uid}/days for the visible month only (date range query on the date field, no extra index) and marks a day as written when its wordCount is above zero. Weeks start on Monday; core supports Sunday if a setting is added later. Next month is blocked past the current month and future days are disabled. Today comes from the device clock for display only. The streak and score top bar and the bottom or side navigation are not built here because there is no streak or score data until Milestone 5; tapping a day is wired to the Day screen in commit 18.
