@@ -135,18 +135,20 @@ export function utcOffsetMinutesForZone(timeZone: string, utcMs: EpochMs): numbe
     minute: 'numeric',
     second: 'numeric',
   });
-  const values: Record<string, number> = {};
+  const values: Record<string, string> = {};
   for (const part of formatter.formatToParts(new Date(utcMs))) {
-    if (part.type !== 'literal') values[part.type] = Number(part.value);
+    values[part.type] = part.value;
   }
+  // Every requested field is always present in the formatted parts.
   const asIfUtc = Date.UTC(
-    values['year'] ?? 0,
-    (values['month'] ?? 1) - 1,
-    values['day'] ?? 1,
-    values['hour'] ?? 0,
-    values['minute'] ?? 0,
-    values['second'] ?? 0,
+    Number(values['year']),
+    Number(values['month']) - 1,
+    Number(values['day']),
+    Number(values['hour']),
+    Number(values['minute']),
+    Number(values['second']),
   );
+
   // Drop sub-second precision from the input so the difference is whole minutes.
   const wholeSeconds = Math.floor(utcMs / 1000) * 1000;
   return Math.round((asIfUtc - wholeSeconds) / MS_PER_MINUTE);

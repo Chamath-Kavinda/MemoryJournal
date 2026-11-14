@@ -17,3 +17,7 @@ Development happens on Windows, where Git defaults to CRLF. `.gitattributes` (`*
 ## D-004: Timestamps in core are epoch milliseconds
 
 Domain types in `packages/core` use epoch milliseconds (UTC) for every timestamp instead of Firestore `Timestamp` objects. This keeps core free of Firebase dependencies and trivially testable. Platform adapters convert at the Firestore boundary.
+
+## D-005: Dependency build scripts are allow-listed
+
+pnpm blocks dependency install scripts by default. Only `@swc/core` (used by the Jest transform) is allowed in `allowBuilds` in `pnpm-workspace.yaml`. New entries need a reason recorded here.

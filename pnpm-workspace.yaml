@@ -1,3 +1,9 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Dependencies allowed to run install scripts. Everything else stays blocked.
+# Skipped on purpose: optional native file watcher, not needed.
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': true
