@@ -62,3 +62,7 @@ firebase/auth exports getReactNativePersistence only under the React Native bund
 ## D-013: Desktop Google sign-in uses PKCE in the system browser
 
 The Electron main process starts a loopback server on 127.0.0.1 (random port), opens the system browser to Google, checks the state value, and exchanges the code for an ID token with a PKCE verifier. The ID token goes to the renderer through the preload bridge and is passed to Firebase with signInWithCredential. This needs a separate Google OAuth client of type Desktop app, read from MJ_GOOGLE_DESKTOP_CLIENT_ID and MJ_GOOGLE_DESKTOP_CLIENT_SECRET (Google does not treat a desktop client secret as confidential). The Expo web export is served through a custom app:// protocol because file:// breaks its absolute asset paths. The tray and 9 PM scheduler stay in commit 36.
+
+## D-014: The profile is created on first sign-in and its time zone is refreshed on foreground
+
+users/{uid} is created the first time a signed-in user opens the app, with stats at zero, the reminder on and the theme set to system. The stored time zone and UTC offset are compared with the device on every sign-in and whenever the app returns to the foreground, and only changed fields are written. This keeps the offset right across travel and daylight saving changes, which matters because the Firestore rules use it for the 21:00 unlock. If Firestore is unreachable the sync is skipped and retried on the next start or foreground.
