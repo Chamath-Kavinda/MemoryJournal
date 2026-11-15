@@ -16,6 +16,11 @@ import {
 
 if (remindersSupported) configureNotificationDisplay();
 
+// The hook throws on web, where the shared build also runs inside the desktop app. Which one is used
+// is fixed for the whole run, so every render calls the same hook.
+const useLastResponse: () => Notifications.NotificationResponse | null | undefined =
+  remindersSupported ? Notifications.useLastNotificationResponse : () => null;
+
 const currentOffset = () => deviceZone(Date.now()).utcOffsetMinutes;
 
 /**
@@ -45,7 +50,7 @@ export function useReminder(enabled = true): void {
     syncReminder(enabled).catch(() => undefined);
   }, [signedIn, enabled, offset]);
 
-  const response = Notifications.useLastNotificationResponse();
+  const response = useLastResponse();
   const handled = useRef<string | null>(null);
   useEffect(() => {
     if (!remindersSupported || !signedIn || !response) return;
