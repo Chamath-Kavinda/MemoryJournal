@@ -633,25 +633,25 @@ Commit directly on `main`. Do not create feature branches. Use Conventional Comm
 Numbering continues from 42:
 
 43. `docs: plan v0.2.0 guest mode, neon theme, navigation and size reduction`
-44. `build(app): move app config to app.config.ts with per-profile Android architectures`
-45. `build(app): enable code and resource shrinking and remove unused dependencies and assets`
+44. `build(app): move config to app.config.ts with per-profile CPU types`
+45. `build(app): enable shrinking and remove unused dependencies and assets`
 46. `build: add release script that names Android artifacts with the version`
 47. `feat(app): add theme tokens, neon gradient palette and dark default`
-48. `feat(app): add bundled fonts, icon set and shared gradient button, card and chip components`
+48. `feat(app): add fonts, icons and shared button, card, chip components`
 49. `feat(app): add motion tokens and shared animated components`
-50. `feat(app): add confirm dialog and route every delete and remove action through it`
+50. `feat(app): add confirm dialog and use it for every delete action`
 51. `feat(app): add icon-only bottom tab bar, top bar and icon back button`
 52. `feat(app): add branded splash with app name and loading bar`
-53. `feat(app): open on home without sign-in and keep the guest journal on the device`
-54. `feat(app): merge guest journal on Google sign-in and wipe it on sign-out`
-55. `test: cover guest merge, sign-out wipe, account switching and rules isolation`
+53. `feat(app): open on home as guest and keep the journal on the device`
+54. `feat(app): merge guest journal on sign-in and wipe it on sign-out`
+55. `test: cover guest merge, sign-out wipe and account switching`
 56. `feat(app): redesign home and calendar with animation`
 57. `feat(app): redesign day writer with animation`
 58. `feat(app): redesign tags and library with animation`
 59. `feat(app): redesign insights, learn and settings with animation`
 60. `feat(app): make layouts responsive across phone, tablet and desktop`
-61. `feat(desktop): match window background, sidebar and splash to the new theme`
-62. `test(app): cover theme default, guest flow, confirm dialog, motion and size classes`
+61. `feat(desktop): match window, sidebar and splash to the new theme`
+62. `test(app): cover theme, guest flow, confirm dialog, motion and sizes`
 63. `chore: release v0.2.0 with notes, qa checklist and install guide`
 
 Commit 63 contains the version change in all package files and the app config, plus `docs/release-notes.md`, `docs/qa.md` and the README section Installing on Android. It is not a version-only commit. Tag `v0.2.0` goes on it.
