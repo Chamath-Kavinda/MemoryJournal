@@ -153,3 +153,15 @@ export function utcOffsetMinutesForZone(timeZone: string, utcMs: EpochMs): numbe
   const wholeSeconds = Math.floor(utcMs / 1000) * 1000;
   return Math.round((asIfUtc - wholeSeconds) / MS_PER_MINUTE);
 }
+
+/** Whole calendar days from `from` to `to`; negative when `to` is earlier. */
+export function daysBetween(from: DayId, to: DayId): number {
+  const a = parseDayId(from);
+  const b = parseDayId(to);
+  if (!a) throw new RangeError(`Invalid day id: ${from}`);
+  if (!b) throw new RangeError(`Invalid day id: ${to}`);
+  const MS_PER_DAY = 86_400_000;
+  return Math.round(
+    (Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / MS_PER_DAY,
+  );
+}

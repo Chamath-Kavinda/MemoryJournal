@@ -1,6 +1,6 @@
 import { hourHasText, HOURS } from './dayContent';
 import { contentOf } from './revisions';
-import { addDays, compareDayIds } from './time';
+import { addDays, compareDayIds, daysBetween } from './time';
 import type { DayId, DayRevision } from './types';
 
 /** Points each component can give. They add up to 100 (build documentation section 8.1). */
@@ -45,13 +45,6 @@ export interface ScoreBreakdown {
   laterRecall: number;
   consistency: number;
   total: number;
-}
-
-/** Whole days from `from` up to `to`. Scoring only asks about days that are not after `today`. */
-function daysBetween(from: DayId, to: DayId): number {
-  let count = 0;
-  for (let day = from; compareDayIds(day, to) < 0; day = addDays(day, 1)) count += 1;
-  return count;
 }
 
 function firstRevisionOf(day: ScoreDay): DayRevision | null {

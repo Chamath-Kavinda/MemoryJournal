@@ -4,6 +4,7 @@ import {
   canWriteDay,
   compareDayIds,
   dayIdFromUtc,
+  daysBetween,
   formatDayId,
   getDayAccess,
   isValidDayId,
@@ -283,5 +284,24 @@ describe('daylight saving (America/New_York, 2026)', () => {
       expect(getDayAccess('2026-11-01', unlock - 1, NEW_YORK_EST).state).toBe('locked');
       expect(getDayAccess('2026-11-01', unlock, NEW_YORK_EST)).toEqual({ state: 'open' });
     });
+  });
+});
+
+describe('daysBetween', () => {
+  it('counts calendar days, also across months, years and leap days', () => {
+    expect(daysBetween('2026-11-14', '2026-11-14')).toBe(0);
+    expect(daysBetween('2026-11-14', '2026-11-15')).toBe(1);
+    expect(daysBetween('2026-10-31', '2026-11-02')).toBe(2);
+    expect(daysBetween('2025-12-31', '2026-01-01')).toBe(1);
+    expect(daysBetween('2028-02-28', '2028-03-01')).toBe(2);
+  });
+
+  it('is negative when the second day is earlier', () => {
+    expect(daysBetween('2026-11-14', '2026-11-10')).toBe(-4);
+  });
+
+  it('refuses an invalid day id', () => {
+    expect(() => daysBetween('nope', '2026-11-14')).toThrow(RangeError);
+    expect(() => daysBetween('2026-11-14', '2026-13-01')).toThrow(RangeError);
   });
 });

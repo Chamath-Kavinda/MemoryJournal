@@ -9,6 +9,7 @@ export * from './profile';
 export * from './revisionLabels';
 export * from './revisions';
 export * from './score';
+export * from './streak';
 export * from './tags';
 export * from './time';
 export * from './types';
