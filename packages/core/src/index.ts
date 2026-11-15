@@ -8,6 +8,7 @@ export * from './mentions';
 export * from './messages';
 export * from './minuteMarkers';
 export * from './profile';
+export * from './reminder';
 export * from './revisionLabels';
 export * from './revisions';
 export * from './score';

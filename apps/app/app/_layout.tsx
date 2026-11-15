@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
 import { useProfileSync } from '@/features/profile/useProfileSync';
+import { useReminder } from '@/features/reminder/useReminder';
 
 export default function RootLayout() {
   const status = useAuthStore((s) => s.status);
@@ -13,6 +14,7 @@ export default function RootLayout() {
 
   useEffect(() => startAuthListener(), []);
   useProfileSync();
+  useReminder();
 
   useEffect(() => {
     if (status === 'loading') return;
