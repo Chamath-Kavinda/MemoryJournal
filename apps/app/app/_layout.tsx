@@ -11,6 +11,7 @@ import { reminderWanted, useSettings } from '@/features/settings/useSettings';
 import { NAV_ITEMS, SideNav } from '@/navigation/AppNav';
 import { useNavShortcuts } from '@/navigation/shortcuts';
 import { useFocusRing } from '@/theme/focusRing';
+import { useAppFonts } from '@/theme/fonts';
 import { isWide } from '@/theme/palette';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
@@ -44,6 +45,8 @@ export default function RootLayout() {
   const router = useRouter();
   const settings = useSettings();
   const reminderOn = reminderWanted(settings);
+  // The fonts are bundled files, so this resolves quickly and never waits for the network.
+  const fontsReady = useAppFonts();
 
   useEffect(() => startAuthListener(), []);
   useProfileSync();
@@ -59,7 +62,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider preference={settings.settings.theme}>
-      {status === 'loading' ? (
+      {status === 'loading' || !fontsReady ? (
         <LoadingShell />
       ) : (
         <Shell showNav={status === 'signed-in' && segments[0] !== 'sign-in'} />

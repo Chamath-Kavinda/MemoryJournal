@@ -19,10 +19,12 @@
   "jest": {
     "preset": "jest-expo",
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
     }
   },
   "dependencies": {
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@memory-journal/core": "workspace:*",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-google-signin/google-signin": "^17.0.0",
@@ -31,16 +33,20 @@
     "expo-build-properties": "~58.0.12",
     "expo-constants": "^58.0.16",
     "expo-dev-client": "^58.0.20",
+    "expo-font": "~58.0.12",
+    "expo-linear-gradient": "~58.0.4",
     "expo-linking": "^58.0.17",
     "expo-notifications": "~58.1.9",
     "expo-router": "^58.0.31",
     "expo-status-bar": "^58.0.5",
     "firebase": "^12.19.0",
+    "lucide-react-native": "^1.73.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-native": "^0.88.1",
     "react-native-safe-area-context": "^5.11.1",
     "react-native-screens": "^4.30.1",
+    "react-native-svg": "15.16.0",
     "react-native-web": "^0.21.4",
     "zod": "^4.6.7",
     "zustand": "^5.1.0"
