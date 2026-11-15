@@ -9,19 +9,19 @@ Android device / version: ________   Windows version: ________
 
 ## 0. Before you start
 
-- [ ] `pnpm typecheck`, `pnpm exec eslint .`, `pnpm format:check` and `pnpm test` all exit 0 on the commit you are testing (the tests include the Firestore rules tests, which need the emulator and a JDK).
-- [ ] The Firebase project has the current `firebase/firestore.rules` and `firebase/firestore.indexes.json` deployed.
+- [x] `pnpm typecheck`, `pnpm exec eslint .`, `pnpm format:check` and `pnpm test` all exit 0 on the commit you are testing (the tests include the Firestore rules tests, which need the emulator and a JDK).
+- [x] The Firebase project has the current `firebase/firestore.rules` and `firebase/firestore.indexes.json` deployed.
 - [ ] You have a test Google account that has never signed in, and a second test account for the privacy checks.
-- [ ] The Firebase and Google values from the `.env` files are set (locally for Windows, as EAS environment variables for Android).
+- [x] The Firebase and Google values from the `.env` files are set (locally for Windows, as EAS environment variables for Android).
 
 ## 1. Sign-in (acceptance 1)
 
-- [ ] Android: Continue with Google opens the native account picker and lands on an empty calendar.
+- [x] Android: Continue with Google opens the native account picker and lands on an empty calendar.
 - [ ] Windows: Continue with Google opens the system browser (not an embedded window), and after approving, the app shows an empty calendar.
-- [ ] A new `users/{uid}` document exists in Firestore with the device time zone and UTC offset.
-- [ ] Close and reopen the app: you are still signed in.
-- [ ] Settings shows your name and email, read-only. Sign out returns to the sign-in screen.
-- [ ] Android: a build signed by EAS can sign in. If it fails with a developer error, the SHA-1 of the build's signing key is missing in the Firebase console.
+- [x] A new `users/{uid}` document exists in Firestore with the device time zone and UTC offset.
+- [x] Close and reopen the app: you are still signed in.
+- [x] Settings shows your name and email, read-only. Sign out returns to the sign-in screen.
+- [x] Android: a build signed by EAS can sign in. If it fails with a developer error, the SHA-1 of the build's signing key is missing in the Firebase console.
 
 ## 2. Home and calendar
 
