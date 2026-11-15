@@ -5,5 +5,6 @@ export * from './minuteMarkers';
 export * from './profile';
 export * from './revisionLabels';
 export * from './revisions';
+export * from './tags';
 export * from './time';
 export * from './types';

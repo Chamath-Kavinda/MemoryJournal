@@ -31,6 +31,10 @@ export default function HomeScreen() {
           {status === 'error' ? (
             <Text>Could not load this month. Showing nothing for now.</Text>
           ) : null}
+          {/* The full navigation (Tags, Library, Insights, Learn, Settings) arrives in commit 38. */}
+          <Pressable accessibilityRole="button" onPress={() => router.push('/tags')}>
+            <Text>Tags</Text>
+          </Pressable>
           {/* Sign out moves to Settings in a later commit. */}
           <Pressable accessibilityRole="button" onPress={() => void signOut()}>
             <Text>Sign out</Text>

@@ -1,0 +1,49 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, ScrollView, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { TagForm } from '@/features/tags/TagForm';
+import { deleteTag, updateTag } from '@/features/tags/tagService';
+import { watchWrite } from '@/features/tags/tagErrors';
+import { useTagData } from '@/features/tags/useTagData';
+import { ScreenHeader } from '@/features/tags/ui';
+
+// Commit 26 adds the list of mentions to this screen.
+export default function TagRoute() {
+  const { tagId: rawTagId } = useLocalSearchParams<{ tagId: string }>();
+  const tagId = Array.isArray(rawTagId) ? (rawTagId[0] ?? '') : (rawTagId ?? '');
+  const router = useRouter();
+  const { uid, categories, tags, status } = useTagData();
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/tags'));
+  const tag = tags.find((t) => t.id === tagId);
+
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <ScreenHeader title={tag?.name ?? 'Tag'} onBack={leave} />
+        {status === 'loading' || uid === undefined ? (
+          <ActivityIndicator style={{ marginTop: 24 }} />
+        ) : tag === undefined ? (
+          <Text style={{ padding: 16, textAlign: 'center' }}>This tag no longer exists.</Text>
+        ) : (
+          <TagForm
+            // A new key resets the form if the tag is replaced while the screen is open.
+            key={tag.id}
+            categories={categories}
+            tags={tags}
+            initial={tag}
+            onCancel={leave}
+            onSubmit={(draft) => {
+              watchWrite(updateTag(uid, tag.id, draft), 'The tag changes could not be saved.');
+              leave();
+            }}
+            onDelete={() => {
+              watchWrite(deleteTag(uid, tag.id), 'The tag could not be deleted.');
+              leave();
+            }}
+          />
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
