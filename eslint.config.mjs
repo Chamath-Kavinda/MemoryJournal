@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/build/**',
       '**/out/**',
+      '**/release/**',
       '**/.expo/**',
       '**/coverage/**',
     ],
@@ -23,6 +24,12 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', fetch: 'readonly', process: 'readonly' },
     },
   },
   prettier,

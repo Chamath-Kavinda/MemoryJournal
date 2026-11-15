@@ -14,7 +14,8 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
-    "emulators": "firebase emulators:start --config firebase/firebase.json --project demo-memory-journal"
+    "emulators": "firebase emulators:start --config firebase/firebase.json --project demo-memory-journal",
+    "release:android": "node scripts/release-android.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
