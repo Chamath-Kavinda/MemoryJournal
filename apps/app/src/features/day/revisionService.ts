@@ -23,7 +23,7 @@ import { z } from 'zod';
 
 import { getFirebase } from '@/lib/firebase';
 
-const revisionSchema = z.object({
+export const revisionSchema = z.object({
   n: z.number().int().min(1),
   createdAt: z.number(),
   closedAt: z.number().nullable(),

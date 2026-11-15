@@ -1,6 +1,7 @@
 export * from './calendar';
 export * from './clock';
 export * from './dayContent';
+export * from './insights';
 export * from './library';
 export * from './mentionHistory';
 export * from './mentions';
