@@ -1,11 +1,11 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Pressable } from 'react-native';
 
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 
 export interface ChipProps {
   label: string;
@@ -32,14 +32,13 @@ export function Chip({
 }: ChipProps) {
   const { palette } = useTheme();
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
-      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => ({
+      innerStyle={({ pressed }) => ({
         minHeight: MIN_TARGET,
         flexDirection: 'row',
         alignItems: 'center',
@@ -51,7 +50,6 @@ export function Chip({
         borderWidth: BORDER_WIDTH,
         borderColor: selected ? palette.neonViolet : palette.border,
         backgroundColor: selected || pressed ? palette.surfaceRaised : 'transparent',
-        opacity: disabled ? 0.5 : 1,
       })}
     >
       {icon ? (
@@ -60,6 +58,6 @@ export function Chip({
       <Text style={{ color: palette.text, fontSize: 14, lineHeight: 20, fontWeight: '600' }}>
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

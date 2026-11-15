@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import { MIN_TARGET, RADIUS } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 
 export interface IconButtonProps {
   icon: LucideIcon;
@@ -30,27 +31,23 @@ export function IconButton({
 }: IconButtonProps) {
   const { palette } = useTheme();
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
-      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        {
-          width: MIN_TARGET,
-          height: MIN_TARGET,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: RADIUS.pill,
-          backgroundColor: pressed ? palette.surfaceRaised : 'transparent',
-          opacity: disabled ? 0.5 : 1,
-        },
-        style,
-      ]}
+      style={style}
+      innerStyle={({ pressed }) => ({
+        width: MIN_TARGET,
+        height: MIN_TARGET,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: RADIUS.pill,
+        backgroundColor: pressed ? palette.surfaceRaised : 'transparent',
+      })}
     >
       <Icon icon={icon} size="control" color={color ?? palette.text} />
-    </Pressable>
+    </PressableScale>
   );
 }

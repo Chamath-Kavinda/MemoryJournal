@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
 import type { Palette } from '@/theme/palette';
@@ -9,6 +9,7 @@ import { Text } from '@/theme/themed';
 import { GRADIENT_END, GRADIENT_START } from '@/theme/tokens';
 
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 
 /**
  * primary: the brand gradient with white text, for the one main action of a screen.
@@ -76,21 +77,6 @@ export function Button({
   const inactive = disabled || loading;
   const radius = pill ? RADIUS.pill : RADIUS.input;
 
-  const body = {
-    // No fixed height: the label can wrap when the system font is scaled up.
-    minHeight: MIN_TARGET,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    borderRadius: radius,
-    borderWidth: look.border ? BORDER_WIDTH : 0,
-    borderColor: look.border ?? 'transparent',
-    backgroundColor: look.fill ?? 'transparent',
-  } as const;
-
   const content = (
     <>
       {loading ? (
@@ -114,35 +100,47 @@ export function Button({
   );
 
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
-      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
+      dimmed={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        {
-          borderRadius: radius,
-          overflow: 'hidden',
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
-        },
-        fullWidth ? { width: '100%' } : null,
-        style,
-      ]}
+      style={[fullWidth ? { width: '100%' } : null, style]}
+      innerStyle={{ borderRadius: radius, overflow: 'hidden' }}
     >
-      {variant === 'primary' ? (
-        <LinearGradient
-          colors={[palette.primaryStart, palette.primaryEnd]}
-          start={GRADIENT_START}
-          end={GRADIENT_END}
-          style={body}
-        >
-          {content}
-        </LinearGradient>
-      ) : (
-        <View style={body}>{content}</View>
-      )}
-    </Pressable>
+      {({ pressed }) => {
+        const body = {
+          // No fixed height: the label can wrap when the system font is scaled up.
+          minHeight: MIN_TARGET,
+          paddingHorizontal: SPACING.lg,
+          paddingVertical: SPACING.sm,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: SPACING.sm,
+          borderRadius: radius,
+          borderWidth: look.border ? BORDER_WIDTH : 0,
+          borderColor: look.border ?? 'transparent',
+          backgroundColor: look.fill ?? 'transparent',
+          // The colour change on press: the button dims a little while it is held.
+          opacity: pressed && !inactive ? 0.85 : 1,
+        } as const;
+
+        return variant === 'primary' ? (
+          <LinearGradient
+            colors={[palette.primaryStart, palette.primaryEnd]}
+            start={GRADIENT_START}
+            end={GRADIENT_END}
+            style={body}
+          >
+            {content}
+          </LinearGradient>
+        ) : (
+          <View style={body}>{content}</View>
+        );
+      }}
+    </PressableScale>
   );
 }

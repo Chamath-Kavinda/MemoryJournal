@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Flame, Trash2 } from 'lucide-react-native';
-import { StyleSheet, Text as NativeText } from 'react-native';
+import { StyleSheet, Text as NativeText, type ViewStyle } from 'react-native';
 
 import { MIN_TARGET } from '@/theme/layout';
 import { DARK_PALETTE } from '@/theme/palette';
@@ -9,6 +9,15 @@ import { Card } from './Card';
 import { Chip } from './Chip';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
+
+/** The press wrapper holds layout only; size, border and fill sit on the view inside it. */
+function innerStyleOf(name: string): ViewStyle {
+  const inner = screen.getByRole('button', { name }).children[0];
+  if (inner === undefined || typeof inner === 'string') {
+    throw new Error(`The "${name}" button has no inner view`);
+  }
+  return StyleSheet.flatten(inner.props.style) as ViewStyle;
+}
 
 describe('Card', () => {
   it('shows its children', async () => {
@@ -74,8 +83,7 @@ describe('Chip', () => {
         <Chip label="Places" onPress={jest.fn()} />
       </>,
     );
-    const border = (name: string) =>
-      StyleSheet.flatten(screen.getByRole('button', { name }).props.style).borderColor;
+    const border = (name: string) => innerStyleOf(name).borderColor;
     expect(border('People')).toBe(DARK_PALETTE.neonViolet);
     expect(border('Places')).toBe(DARK_PALETTE.border);
   });
@@ -98,9 +106,7 @@ describe('IconButton', () => {
 
   it('has a touch target of at least 44 by 44', async () => {
     await render(<IconButton icon={Trash2} accessibilityLabel="Delete tag" onPress={jest.fn()} />);
-    const style = StyleSheet.flatten(
-      screen.getByRole('button', { name: 'Delete tag' }).props.style,
-    );
+    const style = innerStyleOf('Delete tag');
     expect(style.width).toBeGreaterThanOrEqual(44);
     expect(style.height).toBeGreaterThanOrEqual(44);
     expect(style.width).toBe(MIN_TARGET);
