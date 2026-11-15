@@ -47,6 +47,11 @@ export interface DayMeta {
   wordCount: number;
   updatedAt: EpochMs;
   firstWrittenAt: EpochMs;
+  /**
+   * Ids of tags mentioned in the latest revision, so a tag can find its days without reading
+   * revisions. Days saved before this field existed have none.
+   */
+  mentions?: string[];
 }
 
 /** `first` is revision 1 of a day; every later pass is `later`. */

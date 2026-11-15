@@ -158,6 +158,8 @@ export async function saveDayContent(
     wordCount: revision.wordCount,
     updatedAt: now,
     firstWrittenAt,
+    // The tags of the latest pass, so a tag can find its days with one query (D-024).
+    mentions: revision.mentions,
   });
   await batch.commit();
   return { saved: true, revision };

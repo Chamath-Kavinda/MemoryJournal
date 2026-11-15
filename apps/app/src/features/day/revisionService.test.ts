@@ -1,6 +1,7 @@
 import {
   buildRevision,
   emptyContent,
+  mentionToken,
   setHourText,
   type DayContent,
   type DayRevision,
@@ -217,10 +218,49 @@ describe('saveDayContent', () => {
     );
     expect(mockBatch.set).toHaveBeenCalledWith(
       { path: `users/u1/days/${DAY}` },
-      { date: DAY, latestRevision: 1, wordCount: 3, updatedAt: T0, firstWrittenAt: T0 },
+      {
+        date: DAY,
+        latestRevision: 1,
+        wordCount: 3,
+        updatedAt: T0,
+        firstWrittenAt: T0,
+        mentions: [],
+      },
     );
     expect(mockBatch.update).not.toHaveBeenCalled();
     expect(mockBatch.commit).toHaveBeenCalledTimes(1);
+  });
+
+  it('stores the tags of the latest pass on the day document', async () => {
+    const withTags = text(
+      `Lunch with ${mentionToken('t1', 'Ravi')} at ${mentionToken('t2', 'Galle Fort')}`,
+    );
+
+    await saveDayContent('u1', DAY, { revisions: [], lastActivityAt: null }, withTags, T0);
+
+    expect(mockBatch.set).toHaveBeenCalledWith(
+      { path: `users/u1/days/${DAY}` },
+      expect.objectContaining({ mentions: ['t1', 't2'] }),
+    );
+  });
+
+  it('drops a tag from the day document once the latest pass no longer mentions it', async () => {
+    const first = saved(1, text(`Lunch with ${mentionToken('t1', 'Ravi')}`), {
+      closedAt: T0 + MINUTE,
+    });
+
+    await saveDayContent(
+      'u1',
+      DAY,
+      { revisions: [first], lastActivityAt: T0 + MINUTE },
+      text('Lunch with Ravi'),
+      T0 + 24 * 60 * MINUTE,
+    );
+
+    expect(mockBatch.set).toHaveBeenCalledWith(
+      { path: `users/u1/days/${DAY}` },
+      expect.objectContaining({ latestRevision: 2, mentions: [] }),
+    );
   });
 
   it('updates the open revision while the sitting goes on', async () => {
