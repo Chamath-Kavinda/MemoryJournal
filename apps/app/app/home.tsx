@@ -62,6 +62,9 @@ export default function HomeScreen() {
           <Pressable accessibilityRole="button" onPress={() => router.push('/insights')}>
             <Text>Insights</Text>
           </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/learn')}>
+            <Text>Learn</Text>
+          </Pressable>
           {/* Sign out moves to Settings in a later commit. */}
           <Pressable accessibilityRole="button" onPress={() => void signOut()}>
             <Text>Sign out</Text>
