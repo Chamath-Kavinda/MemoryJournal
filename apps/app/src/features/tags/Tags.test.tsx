@@ -207,12 +207,122 @@ describe('TagForm', () => {
     expect(screen.queryByText('Delete tag')).toBeNull();
   });
 
-  it('cancels', async () => {
+  it('cancels without asking when nothing was changed', async () => {
     await renderWithConfirm(
       <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
     );
     await fireEvent.press(screen.getByText('Cancel'));
     expect(onCancel).toHaveBeenCalled();
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+  });
+
+  it('asks before discarding changes, and Cancel keeps the form open', async () => {
+    await renderWithConfirm(
+      <TagForm
+        categories={categories}
+        tags={tags}
+        initial={ravi}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Met at the market');
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(await screen.findByTestId('confirm-dialog')).toBeTruthy();
+    expect(dialog().getByText('Discard changes?')).toBeTruthy();
+    expect(dialog().getByText('Your changes to Ravi will not be saved.')).toBeTruthy();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    await fireEvent.press(dialog().getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Note').props.value).toBe('Met at the market');
+  });
+
+  it('leaves the form once discarding is confirmed', async () => {
+    await renderWithConfirm(
+      <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText('Name'), 'Nimal');
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    await screen.findByTestId('confirm-dialog');
+    expect(dialog().getByText('This new tag will not be saved.')).toBeTruthy();
+    await fireEvent.press(dialog().getByRole('button', { name: 'Discard changes' }));
+
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+  });
+
+  it('asks before an edit removes an alias, and saves once confirmed', async () => {
+    await renderWithConfirm(
+      <TagForm
+        categories={categories}
+        tags={tags}
+        initial={ravi}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText('Aliases'), '');
+    await fireEvent.press(screen.getByText('Save changes'));
+
+    expect(await screen.findByTestId('confirm-dialog')).toBeTruthy();
+    expect(dialog().getByText('Remove alias?')).toBeTruthy();
+    expect(dialog().getByText('Rav will be removed from Ravi.')).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await fireEvent.press(dialog().getByRole('button', { name: 'Remove alias' }));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        name: 'Ravi',
+        categoryId: 'people',
+        note: 'Met at the library',
+        aliases: [],
+      }),
+    );
+  });
+
+  it('does not save the edit when the alias removal is cancelled', async () => {
+    await renderWithConfirm(
+      <TagForm
+        categories={categories}
+        tags={tags}
+        initial={ravi}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText('Aliases'), '');
+    await fireEvent.press(screen.getByText('Save changes'));
+    await screen.findByTestId('confirm-dialog');
+    await fireEvent.press(dialog().getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('does not ask when an edit only adds an alias', async () => {
+    await renderWithConfirm(
+      <TagForm
+        categories={categories}
+        tags={tags}
+        initial={ravi}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText('Aliases'), 'Rav, Ravindu');
+    await fireEvent.press(screen.getByText('Save changes'));
+
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ aliases: ['Rav', 'Ravindu'] }));
   });
 });
 

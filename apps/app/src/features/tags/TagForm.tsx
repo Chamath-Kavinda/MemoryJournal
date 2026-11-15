@@ -1,4 +1,5 @@
 import { validateTagInput, type Tag, type TagCategory, type TagDraft } from '@memory-journal/core';
+import { TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -36,15 +37,26 @@ export function TagForm({
 }: Props) {
   const palette = usePalette();
   const confirm = useConfirm();
-  const [name, setName] = useState(initial?.name ?? defaultName ?? '');
-  const [categoryId, setCategoryId] = useState(
-    initial?.categoryId ?? defaultCategoryId ?? categories[0]?.id ?? '',
-  );
-  const [note, setNote] = useState(initial?.note ?? '');
-  const [aliasesText, setAliasesText] = useState(initial?.aliases.join(', ') ?? '');
+  // What the form started with, to tell whether anything has changed.
+  const [start] = useState(() => ({
+    name: initial?.name ?? defaultName ?? '',
+    categoryId: initial?.categoryId ?? defaultCategoryId ?? categories[0]?.id ?? '',
+    note: initial?.note ?? '',
+    aliasesText: initial?.aliases.join(', ') ?? '',
+  }));
+  const [name, setName] = useState(start.name);
+  const [categoryId, setCategoryId] = useState(start.categoryId);
+  const [note, setNote] = useState(start.note);
+  const [aliasesText, setAliasesText] = useState(start.aliasesText);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = () => {
+  const dirty =
+    name !== start.name ||
+    categoryId !== start.categoryId ||
+    note !== start.note ||
+    aliasesText !== start.aliasesText;
+
+  const submit = async () => {
     const result = validateTagInput(
       { name, categoryId, note, aliasesText },
       categories,
@@ -56,7 +68,37 @@ export function TagForm({
       return;
     }
     setError(null);
+
+    const removed = (initial?.aliases ?? []).filter(
+      (alias) => !result.value.aliases.includes(alias),
+    );
+    if (initial && removed.length > 0) {
+      const many = removed.length > 1;
+      const confirmed = await confirm({
+        title: many ? 'Remove aliases?' : 'Remove alias?',
+        message: `${removed.join(', ')} will be removed from ${initial.name}.`,
+        confirmLabel: many ? 'Remove aliases' : 'Remove alias',
+        icon: TriangleAlert,
+      });
+      if (!confirmed) return;
+    }
     onSubmit(result.value);
+  };
+
+  const askCancel = async () => {
+    if (!dirty) {
+      onCancel();
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Discard changes?',
+      message: initial
+        ? `Your changes to ${initial.name} will not be saved.`
+        : 'This new tag will not be saved.',
+      confirmLabel: 'Discard changes',
+      icon: TriangleAlert,
+    });
+    if (confirmed) onCancel();
   };
 
   const askDelete = async () => {
@@ -136,9 +178,9 @@ export function TagForm({
         <ActionButton
           label={initial ? 'Save changes' : 'Create tag'}
           tone="primary"
-          onPress={submit}
+          onPress={() => void submit()}
         />
-        <ActionButton label="Cancel" onPress={onCancel} />
+        <ActionButton label="Cancel" onPress={() => void askCancel()} />
       </View>
 
       {onDelete ? (

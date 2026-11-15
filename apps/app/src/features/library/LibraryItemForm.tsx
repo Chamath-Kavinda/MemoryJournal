@@ -5,9 +5,11 @@ import {
   type DayId,
   type LibraryItemType,
 } from '@memory-journal/core';
+import { TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { useConfirm } from '@/components/useConfirm';
 import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, usePalette } from '@/features/tags/ui';
@@ -23,8 +25,10 @@ interface Props {
 /** Title and the optional date watched or read, for a new or an existing movie or book. */
 export function LibraryItemForm({ type, initial, submitLabel, onSubmit, onCancel }: Props) {
   const palette = usePalette();
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [date, setDate] = useState(initial?.date ?? '');
+  const confirm = useConfirm();
+  const [start] = useState(() => ({ title: initial?.title ?? '', date: initial?.date ?? '' }));
+  const [title, setTitle] = useState(start.title);
+  const [date, setDate] = useState(start.date);
   const [error, setError] = useState<string | null>(null);
 
   const noun = libraryTypeLabel(type).toLowerCase();
@@ -47,6 +51,22 @@ export function LibraryItemForm({ type, initial, submitLabel, onSubmit, onCancel
     }
     setError(null);
     onSubmit({ title: checked.value.title, date: checked.value.date });
+  }
+
+  async function askCancel() {
+    if (title === start.title && date === start.date) {
+      onCancel();
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Discard changes?',
+      message: initial
+        ? `Your changes to ${initial.title} will not be saved.`
+        : `This new ${noun} will not be saved.`,
+      confirmLabel: 'Discard changes',
+      icon: TriangleAlert,
+    });
+    if (confirmed) onCancel();
   }
 
   return (
@@ -76,7 +96,7 @@ export function LibraryItemForm({ type, initial, submitLabel, onSubmit, onCancel
       ) : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         <ActionButton label={submitLabel} tone="primary" onPress={submit} />
-        <ActionButton label="Cancel" onPress={onCancel} />
+        <ActionButton label="Cancel" onPress={() => void askCancel()} />
       </View>
     </View>
   );
