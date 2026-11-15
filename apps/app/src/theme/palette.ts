@@ -1,41 +1,45 @@
 import type { ThemePreference } from '@memory-journal/core';
 
+import { DARK_TOKENS, LIGHT_TOKENS, ON_GRADIENT, type Tokens } from './tokens';
+
 export type Scheme = 'light' | 'dark';
 
-export interface Palette {
+/**
+ * What screens draw with: the design tokens plus the names the screens already use. The older
+ * names are kept so screens can move to the token names one by one as they are redesigned.
+ */
+export interface Palette extends Tokens {
+  /** Same as `bg`. */
   background: string;
-  text: string;
+  /** Same as `textMuted`. */
   muted: string;
-  border: string;
-  surface: string;
+  /** Colour of controls and links: `neonViolet`. */
   accent: string;
+  /** Text drawn on top of `accent`. */
   onAccent: string;
-  danger: string;
+  /** Text drawn on the brand gradient. */
+  onGradient: string;
 }
 
-export const LIGHT_PALETTE: Palette = {
-  background: '#ffffff',
-  text: '#1c1c1e',
-  muted: '#6c6c70',
-  border: '#d1d1d6',
-  surface: '#f2f2f7',
-  accent: '#0a60d6',
-  onAccent: '#ffffff',
-  danger: '#d70015',
-};
+function paletteFromTokens(tokens: Tokens, onAccent: string): Palette {
+  return {
+    ...tokens,
+    background: tokens.bg,
+    muted: tokens.textMuted,
+    accent: tokens.neonViolet,
+    onAccent,
+    onGradient: ON_GRADIENT,
+  };
+}
 
-// Every text pair of both palettes is checked against WCAG AA (4.5:1) in contrast.test.ts. A
-// light accent is needed to read on dark surfaces, and dark text then reads best on top of it.
-export const DARK_PALETTE: Palette = {
-  background: '#121214',
-  text: '#f2f2f2',
-  muted: '#a1a1a6',
-  border: '#3a3a3c',
-  surface: '#2c2c2e',
-  accent: '#4da3ff',
-  onAccent: '#000000',
-  danger: '#ff6961',
-};
+// Every text pair of both palettes is checked against WCAG AA (4.5:1) in contrast.test.ts. On
+// the dark theme the accent is light, so dark text reads best on top of it; on the light theme
+// the accent is deep, so white text does.
+export const LIGHT_PALETTE: Palette = paletteFromTokens(LIGHT_TOKENS, '#FFFFFF');
+export const DARK_PALETTE: Palette = paletteFromTokens(DARK_TOKENS, DARK_TOKENS.bg);
+
+/** The theme a person gets until they choose one: dark (section 2, decision 8). */
+export const DEFAULT_THEME: ThemePreference = 'dark';
 
 /**
  * The scheme to draw with. "system" follows the device, which may report nothing, in which case

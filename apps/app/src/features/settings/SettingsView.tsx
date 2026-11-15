@@ -14,9 +14,9 @@ import { setReminderEnabled, setTheme } from './settingsService';
 import { useSettings } from './useSettings';
 
 const THEMES: { value: ThemePreference; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'System' },
 ];
 
 /**

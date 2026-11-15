@@ -35,7 +35,7 @@ describe('readSettings', () => {
   it('uses the defaults when nothing is stored', () => {
     expect(readSettings(undefined)).toEqual(DEFAULT_SETTINGS);
     expect(readSettings(null)).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS).toEqual({ reminderEnabled: true, theme: 'system' });
+    expect(DEFAULT_SETTINGS).toEqual({ reminderEnabled: true, theme: 'dark' });
   });
 
   it('reads stored values', () => {
@@ -52,7 +52,7 @@ describe('readSettings', () => {
     });
     expect(readSettings({ reminderEnabled: false, theme: 'purple' })).toEqual({
       reminderEnabled: false,
-      theme: 'system',
+      theme: 'dark',
     });
   });
 

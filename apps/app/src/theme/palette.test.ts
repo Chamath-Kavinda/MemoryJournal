@@ -1,4 +1,5 @@
-import { isWide, paletteFor, resolveScheme, WIDE_BREAKPOINT } from './palette';
+import { DEFAULT_THEME, isWide, paletteFor, resolveScheme, WIDE_BREAKPOINT } from './palette';
+import { DARK_TOKENS, LIGHT_TOKENS } from './tokens';
 
 describe('resolveScheme', () => {
   it('uses the chosen theme whatever the system says', () => {
@@ -30,5 +31,23 @@ describe('isWide', () => {
   it('switches to the desktop layout at the breakpoint', () => {
     expect(isWide(WIDE_BREAKPOINT - 1)).toBe(false);
     expect(isWide(WIDE_BREAKPOINT)).toBe(true);
+  });
+});
+
+describe('default theme', () => {
+  it('is dark, and the dark palette is built from the dark tokens', () => {
+    expect(DEFAULT_THEME).toBe('dark');
+    expect(paletteFor('dark').bg).toBe(DARK_TOKENS.bg);
+    expect(paletteFor('dark').accent).toBe(DARK_TOKENS.neonViolet);
+    expect(paletteFor('light').bg).toBe(LIGHT_TOKENS.bg);
+  });
+
+  it('keeps the older colour names in step with the tokens', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const p = paletteFor(scheme);
+      expect(p.background).toBe(p.bg);
+      expect(p.muted).toBe(p.textMuted);
+      expect(p.accent).toBe(p.neonViolet);
+    }
   });
 });

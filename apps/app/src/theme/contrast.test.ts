@@ -24,13 +24,23 @@ function textPairs(p: Palette): [string, string, string][] {
   return [
     ['text on background', p.text, p.background],
     ['text on surface', p.text, p.surface],
+    ['text on surfaceRaised', p.text, p.surfaceRaised],
     ['muted on background', p.muted, p.background],
     ['muted on surface', p.muted, p.surface],
+    ['muted on surfaceRaised', p.muted, p.surfaceRaised],
     ['accent on background', p.accent, p.background],
     ['accent on surface', p.accent, p.surface],
     ['danger on background', p.danger, p.background],
     ['danger on surface', p.danger, p.surface],
     ['onAccent on accent', p.onAccent, p.accent],
+    ['onGradient on primaryStart', p.onGradient, p.primaryStart],
+    ['onGradient on primaryEnd', p.onGradient, p.primaryEnd],
+    ...(['neonViolet', 'neonBlue', 'neonCyan', 'neonPink', 'success', 'warning'] as const).flatMap(
+      (name): [string, string, string][] => [
+        [`${name} on background`, p[name], p.background],
+        [`${name} on surface`, p[name], p.surface],
+      ],
+    ),
   ];
 }
 

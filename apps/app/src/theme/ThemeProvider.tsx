@@ -2,7 +2,7 @@ import type { ThemePreference } from '@memory-journal/core';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { paletteFor, resolveScheme, type Palette, type Scheme } from './palette';
+import { DEFAULT_THEME, paletteFor, resolveScheme, type Palette, type Scheme } from './palette';
 
 interface ThemeValue {
   preference: ThemePreference;
@@ -23,11 +23,11 @@ export function ThemeProvider({ preference, children }: ProviderProps) {
 }
 
 /**
- * The colours to draw with. Without a provider (as in most tests) the theme follows the system,
+ * The colours to draw with. Without a provider (as in most tests) the default theme is used,
  * which is also what a person who never opened Settings gets.
  */
 export function useTheme(): ThemeValue {
-  const preference = useContext(ThemeContext) ?? 'system';
+  const preference = useContext(ThemeContext) ?? DEFAULT_THEME;
   const system = useColorScheme();
   return useMemo(() => {
     const scheme = resolveScheme(preference, system);

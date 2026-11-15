@@ -29,7 +29,7 @@ export function createInitialProfile(input: NewProfileInput): UserProfile {
     },
     settings: {
       reminderEnabled: true,
-      theme: 'system',
+      theme: 'dark',
     },
   };
 }

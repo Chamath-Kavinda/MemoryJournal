@@ -43,7 +43,7 @@ describe('subscribeSettings', () => {
 
     subscribeSettings('u1', onChange, jest.fn());
 
-    expect(onChange).toHaveBeenCalledWith({ reminderEnabled: true, theme: 'system' });
+    expect(onChange).toHaveBeenCalledWith({ reminderEnabled: true, theme: 'dark' });
   });
 
   it('passes errors on', () => {

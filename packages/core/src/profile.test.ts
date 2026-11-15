@@ -30,7 +30,7 @@ describe('createInitialProfile', () => {
       recallScore: 0,
       scoreUpdatedAt: null,
     });
-    expect(profile.settings).toEqual({ reminderEnabled: true, theme: 'system' });
+    expect(profile.settings).toEqual({ reminderEnabled: true, theme: 'dark' });
   });
 
   it('falls back to empty strings when Google gives no name or email', () => {
