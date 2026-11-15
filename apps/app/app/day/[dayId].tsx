@@ -3,6 +3,7 @@ import {
   contentOf,
   emptyContent,
   pickRevision,
+  previousRevision,
   revisionOptions,
   type RevisionSelection,
 } from '@memory-journal/core';
@@ -16,6 +17,8 @@ import { DayScreenView } from '@/features/day/DayScreenView';
 import { DayWriter } from '@/features/day/DayWriter';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
+import { HighlightedDay } from '@/features/day/HighlightedDay';
+import { HighlightSwitch } from '@/features/day/HighlightSwitch';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
 import { SaveBar } from '@/features/day/SaveBar';
 import { useDayAccess } from '@/features/day/useDayAccess';
@@ -47,7 +50,11 @@ export default function DayRoute() {
   }, [draft.ready, history, latest, seededDay, dayId, seedDraft]);
 
   const [selection, setSelection] = useState<RevisionSelection>('latest');
-  useEffect(() => setSelection('latest'), [dayId]);
+  const [highlight, setHighlight] = useState(false);
+  useEffect(() => {
+    setSelection('latest');
+    setHighlight(false);
+  }, [dayId]);
 
   const daySave = useDaySave({
     uid,
@@ -60,8 +67,12 @@ export default function DayRoute() {
   });
 
   const options = revisionOptions(history?.revisions.length ?? 0);
-  const viewed =
-    selection === 'latest' || history === null ? null : pickRevision(history.revisions, selection);
+  // The saved pass on screen (for Latest too) and the pass before it, for the highlights.
+  const target = history === null ? null : pickRevision(history.revisions, selection);
+  const previous =
+    history === null || target === null ? null : previousRevision(history.revisions, target.n);
+  const highlighting = highlight && target !== null && previous !== null;
+  const viewed = selection === 'latest' ? null : target;
   const savedContent = latest ? contentOf(latest) : emptyContent();
   const canSave = editable && !contentEquals(draft.content, savedContent);
 
@@ -91,7 +102,21 @@ export default function DayRoute() {
         {showWriter ? (
           <>
             <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
-            {viewed === null ? (
+            {options.length > 0 ? (
+              <HighlightSwitch
+                value={highlight}
+                onChange={setHighlight}
+                disabled={previous === null}
+                readOnlyNote={selection === 'latest' && editable}
+              />
+            ) : null}
+            {highlighting && target !== null && previous !== null ? (
+              <HighlightedDay
+                current={contentOf(target)}
+                previous={contentOf(previous)}
+                previousN={previous.n}
+              />
+            ) : viewed === null ? (
               <>
                 <DraftStatus state={draft.saveState} />
                 {editable ? (
