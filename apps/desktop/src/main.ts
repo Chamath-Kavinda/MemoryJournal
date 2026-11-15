@@ -6,6 +6,13 @@ import { BrowserWindow, app, ipcMain, net, protocol, shell } from 'electron';
 
 import { googleSignIn } from './googleSignIn';
 
+// In development, read the Google desktop client settings from apps/desktop/.env.
+// Variables already set in the shell win over the file.
+if (!app.isPackaged) {
+  const envFile = resolve(__dirname, '..', '.env');
+  if (existsSync(envFile)) process.loadEnvFile(envFile);
+}
+
 const APP_SCHEME = 'app';
 const DEV_URL = process.env.MJ_DEV_URL;
 
