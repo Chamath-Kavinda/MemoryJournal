@@ -21,6 +21,7 @@ import {
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import type { Palette } from '@/theme/palette';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text, TextInput } from '@/theme/themed';
 
@@ -42,16 +43,19 @@ interface Cursor {
   offset: number;
 }
 
-function colorsFor(dark: boolean) {
+function colorsFrom(palette: Palette) {
   return {
-    text: dark ? '#f2f2f2' : '#1c1c1e',
-    muted: dark ? '#8e8e93' : '#6c6c70',
-    border: dark ? '#38383a' : '#d1d1d6',
-    surface: dark ? '#1c1c1e' : '#f7f7f9',
-    accent: dark ? '#0a84ff' : '#007aff',
-    error: dark ? '#ff453a' : '#d70015',
+    text: palette.text,
+    muted: palette.muted,
+    border: palette.border,
+    surface: palette.surface,
+    accent: palette.accent,
+    error: palette.danger,
   };
 }
+
+/** Small text buttons still get a comfortable target to press or click. */
+const targetStyle = { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 } as const;
 
 /**
  * One line for a collapsed row: the first text of the hour as the person sees it (mentions as
@@ -68,7 +72,7 @@ function previewOf(content: DayContent, hour: number, names: ReadonlyMap<string,
 
 /** Free Notes block followed by the 24 hourly rows. Empty rows stay collapsed. */
 export function DayWriter({ content, onChange, editable, tagging }: Props) {
-  const colors = colorsFor(useTheme().scheme === 'dark');
+  const colors = colorsFrom(useTheme().palette);
   const [expandedHour, setExpandedHour] = useState<number | null>(null);
   const [addingMinute, setAddingMinute] = useState(false);
   const [minuteInput, setMinuteInput] = useState('');
@@ -222,7 +226,7 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                                 cursorRef.current = null;
                                 onChange(removeMinuteMarker(content, hour, minute));
                               }}
-                              hitSlop={8}
+                              style={targetStyle}
                             >
                               <Text style={{ color: colors.muted }}>Remove</Text>
                             </Pressable>
@@ -251,7 +255,7 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel="Add minute"
                       onPress={() => setAddingMinute(true)}
-                      style={{ alignSelf: 'flex-start', paddingVertical: 6 }}
+                      style={{ ...targetStyle, alignSelf: 'flex-start' }}
                     >
                       <Text style={{ color: colors.accent, fontWeight: '600' }}>+ Add minute</Text>
                     </Pressable>
@@ -274,12 +278,16 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                             setMinuteError(null);
                           }}
                           onSubmitEditing={() => insertMinute(hour)}
+                          onKeyPress={(event) => {
+                            if (event.nativeEvent.key === 'Escape') closeMinuteForm();
+                          }}
                           style={{ ...inputStyle, width: 88, paddingVertical: 8 }}
                         />
                         <Pressable
                           accessibilityRole="button"
                           accessibilityLabel="Insert minute marker"
                           onPress={() => insertMinute(hour)}
+                          style={targetStyle}
                         >
                           <Text style={{ color: colors.accent, fontWeight: '600' }}>Insert</Text>
                         </Pressable>
@@ -287,6 +295,7 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                           accessibilityRole="button"
                           accessibilityLabel="Cancel adding a minute"
                           onPress={closeMinuteForm}
+                          style={targetStyle}
                         >
                           <Text style={{ color: colors.muted }}>Cancel</Text>
                         </Pressable>

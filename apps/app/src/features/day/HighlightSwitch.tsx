@@ -14,8 +14,7 @@ interface Props {
 
 /** The Highlight additions switch under the revision toggle (section 5.3). */
 export function HighlightSwitch({ value, onChange, disabled, readOnlyNote }: Props) {
-  const dark = useTheme().scheme === 'dark';
-  const muted = dark ? '#8e8e93' : '#6c6c70';
+  const { palette } = useTheme();
 
   let hint = '';
   if (disabled) hint = 'The first pass has nothing earlier to compare with.';
@@ -33,9 +32,7 @@ export function HighlightSwitch({ value, onChange, disabled, readOnlyNote }: Pro
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ color: dark ? '#f2f2f2' : '#1c1c1e', fontSize: 15 }}>
-          Highlight additions
-        </Text>
+        <Text style={{ color: palette.text, fontSize: 15 }}>Highlight additions</Text>
         <Switch
           accessibilityLabel="Highlight additions"
           value={value && !disabled}
@@ -43,7 +40,7 @@ export function HighlightSwitch({ value, onChange, disabled, readOnlyNote }: Pro
           onValueChange={onChange}
         />
       </View>
-      {hint !== '' ? <Text style={{ color: muted, fontSize: 13 }}>{hint}</Text> : null}
+      {hint !== '' ? <Text style={{ color: palette.muted, fontSize: 13 }}>{hint}</Text> : null}
     </View>
   );
 }

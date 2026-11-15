@@ -8,7 +8,9 @@ import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
 import { reminderWanted, useSettings } from '@/features/settings/useSettings';
-import { SideNav } from '@/navigation/AppNav';
+import { NAV_ITEMS, SideNav } from '@/navigation/AppNav';
+import { useNavShortcuts } from '@/navigation/shortcuts';
+import { useFocusRing } from '@/theme/focusRing';
 import { isWide } from '@/theme/palette';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
@@ -16,7 +18,15 @@ import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 function Shell({ showNav }: { showNav: boolean }) {
   const { palette, scheme } = useTheme();
   const { width } = useWindowDimensions();
+  const router = useRouter();
   const sideNav = showNav && isWide(width);
+  useFocusRing(palette.accent);
+  // Alt+1 to Alt+6 jump between the main sections, on the web build and in the desktop app.
+  useNavShortcuts(
+    NAV_ITEMS.length,
+    (index) => router.push(NAV_ITEMS[index]?.href ?? '/home'),
+    showNav,
+  );
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: palette.background }}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />

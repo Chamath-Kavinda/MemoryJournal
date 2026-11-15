@@ -227,6 +227,9 @@ export function MentionInput({
             placeholderTextColor={palette.muted}
             value={panel.search}
             onChangeText={(search) => setPanel({ ...panel, search })}
+            onKeyPress={(event) => {
+              if (event.nativeEvent.key === 'Escape') setPanel(null);
+            }}
             style={{
               minHeight: 40,
               color: palette.text,

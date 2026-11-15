@@ -14,16 +14,13 @@ import { Text } from '@/theme/themed';
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const CELL_WIDTH = `${100 / 7}%` as const;
 
-function palette(scheme: 'light' | 'dark' | null | undefined) {
-  const dark = scheme === 'dark';
-  return {
-    text: dark ? '#f2f2f2' : '#1c1c1e',
-    muted: dark ? '#8e8e93' : '#8e8e93',
-    faint: dark ? '#48484a' : '#c7c7cc',
-    accent: dark ? '#7fb2ff' : '#2563eb',
-    writtenFill: dark ? '#1e3a66' : '#dbe7ff',
-  };
-}
+/** The month arrows are small glyphs, so their pressable area is padded to a full target. */
+const ARROW_TARGET = {
+  minWidth: 44,
+  minHeight: 44,
+  alignItems: 'center',
+  justifyContent: 'center',
+} as const;
 
 function describeCell(cell: CalendarCell, month: MonthRef): string {
   const date = format(new Date(month.year, month.month - 1, cell.day), 'd MMMM yyyy');
@@ -44,7 +41,10 @@ interface Props {
 
 /** Month calendar: a dot marks written days, a ring marks today, future days are disabled. */
 export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChangeMonth }: Props) {
-  const colors = palette(useTheme().scheme);
+  const { palette, scheme } = useTheme();
+  // Future days are disabled, so they are exempt from the text contrast rule and stay faint.
+  const faint = scheme === 'dark' ? '#48484a' : '#c7c7cc';
+  const writtenFill = scheme === 'dark' ? '#1e3a66' : '#dbe7ff';
   const weeks = buildMonthGrid({ month, todayId, writtenDays });
   const todayMonth = { year: Number(todayId.slice(0, 4)), month: Number(todayId.slice(5, 7)) };
   const canGoNext = compareMonths(month, todayMonth) < 0;
@@ -63,14 +63,14 @@ export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChan
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Previous month"
-          hitSlop={12}
           onPress={() => onChangeMonth(-1)}
+          style={ARROW_TARGET}
         >
-          <Text style={{ color: colors.accent, fontSize: 24 }}>‹</Text>
+          <Text style={{ color: palette.accent, fontSize: 24 }}>‹</Text>
         </Pressable>
         <Text
           accessibilityRole="header"
-          style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}
+          style={{ color: palette.text, fontSize: 18, fontWeight: '600' }}
         >
           {title}
         </Text>
@@ -79,10 +79,10 @@ export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChan
           accessibilityLabel="Next month"
           accessibilityState={{ disabled: !canGoNext }}
           disabled={!canGoNext}
-          hitSlop={12}
           onPress={() => onChangeMonth(1)}
+          style={ARROW_TARGET}
         >
-          <Text style={{ color: canGoNext ? colors.accent : colors.faint, fontSize: 24 }}>›</Text>
+          <Text style={{ color: canGoNext ? palette.accent : faint, fontSize: 24 }}>›</Text>
         </Pressable>
       </View>
 
@@ -90,7 +90,7 @@ export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChan
         {WEEKDAYS.map((name) => (
           <Text
             key={name}
-            style={{ width: CELL_WIDTH, textAlign: 'center', color: colors.muted, fontSize: 12 }}
+            style={{ width: CELL_WIDTH, textAlign: 'center', color: palette.muted, fontSize: 12 }}
           >
             {name}
           </Text>
@@ -117,13 +117,13 @@ export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChan
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: cell.isToday ? 2 : 0,
-                    borderColor: colors.accent,
-                    backgroundColor: cell.hasWriting ? colors.writtenFill : 'transparent',
+                    borderColor: palette.accent,
+                    backgroundColor: cell.hasWriting ? writtenFill : 'transparent',
                   }}
                 >
                   <Text
                     style={{
-                      color: cell.state === 'future' ? colors.faint : colors.text,
+                      color: cell.state === 'future' ? faint : palette.text,
                       fontWeight: cell.isToday ? '700' : '400',
                     }}
                   >
@@ -136,7 +136,7 @@ export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChan
                         height: 5,
                         borderRadius: 3,
                         marginTop: 2,
-                        backgroundColor: colors.accent,
+                        backgroundColor: palette.accent,
                       }}
                     />
                   ) : null}

@@ -15,7 +15,7 @@ interface Props {
  * the day as it was then. A day with a single pass has no options, so nothing is drawn.
  */
 export function RevisionToggle({ options, selected, onSelect }: Props) {
-  const dark = useTheme().scheme === 'dark';
+  const { palette } = useTheme();
   if (options.length === 0) return null;
 
   return (
@@ -36,18 +36,18 @@ export function RevisionToggle({ options, selected, onSelect }: Props) {
                 accessibilityState={{ selected: active }}
                 onPress={() => onSelect(option.key)}
                 style={{
-                  minHeight: 36,
-                  paddingHorizontal: 14,
+                  minHeight: 44,
+                  paddingHorizontal: 16,
                   justifyContent: 'center',
-                  borderRadius: 18,
-                  backgroundColor: active ? '#0a84ff' : dark ? '#2c2c2e' : '#e9e9ee',
+                  borderRadius: 22,
+                  backgroundColor: active ? palette.accent : palette.surface,
                 }}
               >
                 <Text
                   style={{
                     fontSize: 14,
                     fontWeight: active ? '600' : '400',
-                    color: active ? '#ffffff' : dark ? '#e5e5ea' : '#1c1c1e',
+                    color: active ? palette.onAccent : palette.text,
                   }}
                 >
                   {option.label}

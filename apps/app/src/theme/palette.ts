@@ -24,15 +24,17 @@ export const LIGHT_PALETTE: Palette = {
   danger: '#d70015',
 };
 
+// Every text pair of both palettes is checked against WCAG AA (4.5:1) in contrast.test.ts. A
+// light accent is needed to read on dark surfaces, and dark text then reads best on top of it.
 export const DARK_PALETTE: Palette = {
   background: '#121214',
   text: '#f2f2f2',
-  muted: '#8e8e93',
+  muted: '#a1a1a6',
   border: '#3a3a3c',
   surface: '#2c2c2e',
-  accent: '#0a84ff',
-  onAccent: '#ffffff',
-  danger: '#ff453a',
+  accent: '#4da3ff',
+  onAccent: '#000000',
+  danger: '#ff6961',
 };
 
 /**

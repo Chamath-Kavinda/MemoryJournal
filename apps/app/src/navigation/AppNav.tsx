@@ -4,6 +4,8 @@ import { Pressable, View } from 'react-native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
+import { HAS_KEYBOARD_SHORTCUTS, shortcutLabel } from './shortcuts';
+
 export interface NavItem {
   label: string;
   href: '/home' | '/tags' | '/library' | '/insights' | '/learn' | '/settings';
@@ -23,14 +25,19 @@ export function isCurrent(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** The side navigation shown on wide windows (the desktop app and large browser windows). */
+/**
+ * The side navigation shown on wide windows (the desktop app and large browser windows). It is
+ * a navigation landmark of links, so a screen reader can jump to it and Tab walks through it.
+ * On the web build each item also names its Alt+number shortcut.
+ */
 export function SideNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { palette } = useTheme();
   return (
     <View
-      accessibilityRole="menu"
+      role="navigation"
+      accessibilityLabel="Main"
       style={{
         width: 200,
         paddingVertical: 16,
@@ -41,31 +48,40 @@ export function SideNav() {
         backgroundColor: palette.surface,
       }}
     >
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.map((item, index) => {
         const current = isCurrent(pathname, item.href);
+        const shortcut = HAS_KEYBOARD_SHORTCUTS ? shortcutLabel(index) : '';
+        const color = current ? palette.onAccent : palette.text;
         return (
           <Pressable
             key={item.href}
-            accessibilityRole="menuitem"
+            accessibilityRole="link"
+            accessibilityLabel={item.label}
+            accessibilityHint={shortcut === '' ? undefined : `Shortcut ${shortcut}`}
             accessibilityState={{ selected: current }}
             onPress={() => router.push(item.href)}
             style={{
               minHeight: 44,
-              justifyContent: 'center',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               paddingHorizontal: 12,
               borderRadius: 10,
               backgroundColor: current ? palette.accent : 'transparent',
             }}
           >
-            <Text
-              style={{
-                color: current ? palette.onAccent : palette.text,
-                fontSize: 16,
-                fontWeight: current ? '600' : '500',
-              }}
-            >
+            <Text style={{ color, fontSize: 16, fontWeight: current ? '600' : '500' }}>
               {item.label}
             </Text>
+            {shortcut !== '' ? (
+              <Text
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                style={{ color: current ? palette.onAccent : palette.muted, fontSize: 12 }}
+              >
+                {shortcut}
+              </Text>
+            ) : null}
           </Pressable>
         );
       })}
@@ -78,11 +94,16 @@ export function LinkList() {
   const router = useRouter();
   const { palette } = useTheme();
   return (
-    <View style={{ alignItems: 'center', gap: 4, marginTop: 8 }}>
+    <View
+      role="navigation"
+      accessibilityLabel="Sections"
+      style={{ alignItems: 'center', gap: 4, marginTop: 8 }}
+    >
       {NAV_ITEMS.filter((item) => item.href !== '/home').map((item) => (
         <Pressable
           key={item.href}
-          accessibilityRole="button"
+          accessibilityRole="link"
+          accessibilityLabel={item.label}
           onPress={() => router.push(item.href)}
           style={{ minHeight: 44, minWidth: 120, alignItems: 'center', justifyContent: 'center' }}
         >

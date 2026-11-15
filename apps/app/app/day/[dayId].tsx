@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView } from 'react-native';
 
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -40,6 +41,7 @@ export default function DayRoute() {
   const { dayId: rawDayId } = useLocalSearchParams<{ dayId: string }>();
   const dayId = Array.isArray(rawDayId) ? (rawDayId[0] ?? '') : (rawDayId ?? '');
   const router = useRouter();
+  const { palette } = useTheme();
   const uid = useAuthStore((s) => s.user?.uid);
   const access = useDayAccess(dayId);
   const editable = access?.state === 'open';
@@ -127,7 +129,7 @@ export default function DayRoute() {
         {historyFailed ? (
           <Text
             accessibilityRole="alert"
-            style={{ padding: 16, fontSize: 14, color: '#d70015', textAlign: 'center' }}
+            style={{ padding: 16, fontSize: 14, color: palette.danger, textAlign: 'center' }}
           >
             The saved passes of this day could not be loaded. Check your connection and open the day
             again.

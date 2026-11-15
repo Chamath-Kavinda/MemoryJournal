@@ -10,7 +10,7 @@ import type { DraftSaveState } from './useDayDraft';
  * not. Its height is reserved so the page does not jump while typing.
  */
 export function DraftStatus({ state }: { state: DraftSaveState }) {
-  const dark = useTheme().scheme === 'dark';
+  const { palette } = useTheme();
   const failed = state === 'error';
   const visible = state === 'saved' || failed;
 
@@ -28,10 +28,7 @@ export function DraftStatus({ state }: { state: DraftSaveState }) {
       {visible ? (
         <Text
           accessibilityRole={failed ? 'alert' : undefined}
-          style={{
-            fontSize: 13,
-            color: failed ? (dark ? '#ff453a' : '#d70015') : dark ? '#8e8e93' : '#6c6c70',
-          }}
+          style={{ fontSize: 13, color: failed ? palette.danger : palette.muted }}
         >
           {failed
             ? 'Could not save your draft on this device. Keep this screen open.'

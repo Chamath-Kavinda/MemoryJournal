@@ -17,7 +17,7 @@ interface Props {
 
 /** The Save button of the writer, with one quiet line that says where the text stands. */
 export function SaveBar({ canSave, hasSaved, saving, failed, pendingSync, onSave }: Props) {
-  const dark = useTheme().scheme === 'dark';
+  const { palette } = useTheme();
   // Offline, a save waits for the server for a long time; it must not block more saving.
   const busy = saving && !pendingSync;
   const disabled = !canSave || busy;
@@ -48,30 +48,28 @@ export function SaveBar({ canSave, hasSaved, saving, failed, pendingSync, onSave
         disabled={disabled}
         onPress={onSave}
         style={{
-          minHeight: 40,
+          minHeight: 44,
           paddingHorizontal: 20,
           justifyContent: 'center',
-          borderRadius: 20,
-          backgroundColor: disabled ? (dark ? '#2c2c2e' : '#e9e9ee') : '#0a84ff',
+          borderRadius: 22,
+          backgroundColor: disabled ? palette.surface : palette.accent,
         }}
       >
         <Text
           style={{
             fontSize: 15,
             fontWeight: '600',
-            color: disabled ? (dark ? '#8e8e93' : '#8a8a8e') : '#ffffff',
+            color: disabled ? palette.muted : palette.onAccent,
           }}
         >
           Save
         </Text>
       </Pressable>
+      {/* A polite live region, so a screen reader announces "All changes saved" after saving. */}
       <Text
         accessibilityRole={failed ? 'alert' : undefined}
-        style={{
-          flex: 1,
-          fontSize: 13,
-          color: failed ? (dark ? '#ff453a' : '#d70015') : dark ? '#8e8e93' : '#6c6c70',
-        }}
+        accessibilityLiveRegion="polite"
+        style={{ flex: 1, fontSize: 13, color: failed ? palette.danger : palette.muted }}
       >
         {message}
       </Text>

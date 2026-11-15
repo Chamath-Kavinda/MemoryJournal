@@ -32,13 +32,14 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
  * colour alone. Only the parts of the day that have text are listed.
  */
 export function HighlightedDay({ current, previous, previousN, names = NO_NAMES }: Props) {
-  const dark = useTheme().scheme === 'dark';
+  const { palette, scheme } = useTheme();
   const colors = {
-    text: dark ? '#f2f2f2' : '#1c1c1e',
-    muted: dark ? '#8e8e93' : '#6c6c70',
-    border: dark ? '#38383a' : '#d1d1d6',
-    accent: dark ? '#0a84ff' : '#007aff',
-    added: dark ? '#4a3d00' : '#fff1a8',
+    text: palette.text,
+    muted: palette.muted,
+    border: palette.border,
+    accent: palette.accent,
+    // Text on this fill is the normal text colour, which reads well on both fills.
+    added: scheme === 'dark' ? '#4a3d00' : '#fff1a8',
   };
 
   // The same canonical form on both sides, so blocks line up with their marked segments.

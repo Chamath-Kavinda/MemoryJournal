@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
 import { signInWithGoogle } from '@/platform/auth/google';
 
 export default function SignInScreen() {
+  const { palette } = useTheme();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,28 +21,34 @@ export default function SignInScreen() {
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
-      <Text style={{ fontSize: 28, fontWeight: '600' }}>Memory Journal</Text>
+      <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '600' }}>
+        Memory Journal
+      </Text>
       <Text style={{ textAlign: 'center', maxWidth: 360 }}>
         Recall your day each night and train your memory.
       </Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Continue with Google"
+        accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={onPress}
         style={{
-          paddingVertical: 12,
+          minHeight: 48,
           paddingHorizontal: 20,
           borderRadius: 8,
           borderWidth: 1,
+          // A visible edge in both themes; without a colour the border is black on a dark page.
+          borderColor: palette.accent,
           minWidth: 220,
           alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        {busy ? <ActivityIndicator /> : <Text>Continue with Google</Text>}
+        {busy ? <ActivityIndicator color={palette.accent} /> : <Text>Continue with Google</Text>}
       </Pressable>
       {error ? (
-        <Text accessibilityRole="alert" style={{ color: '#b00020', textAlign: 'center' }}>
+        <Text accessibilityRole="alert" style={{ color: palette.danger, textAlign: 'center' }}>
           {error}
         </Text>
       ) : null}

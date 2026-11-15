@@ -29,7 +29,8 @@ function bannerFor(access: DayAccess | null): { title: string; detail?: string }
 
 /** Date header and status banner of the Day screen. The writer itself arrives in later commits. */
 export function DayScreenView({ dayId, access, onBack }: Props) {
-  const dark = useTheme().scheme === 'dark';
+  const { palette, scheme } = useTheme();
+  const dark = scheme === 'dark';
   const parts = parseDayId(dayId);
   const heading = parts
     ? format(new Date(parts.year, parts.month - 1, parts.day), 'EEEE, d MMMM yyyy')
@@ -39,17 +40,24 @@ export function DayScreenView({ dayId, access, onBack }: Props) {
 
   return (
     <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 16 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={12} onPress={onBack}>
-        <Text style={{ color: dark ? '#7fb2ff' : '#2563eb', fontSize: 16 }}>‹ Back</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        hitSlop={12}
+        onPress={onBack}
+        style={{ minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' }}
+      >
+        <Text style={{ color: palette.accent, fontSize: 16 }}>‹ Back</Text>
       </Pressable>
 
       <Text
         accessibilityRole="header"
-        style={{ color: dark ? '#f2f2f2' : '#1c1c1e', fontSize: 22, fontWeight: '700' }}
+        style={{ color: palette.text, fontSize: 22, fontWeight: '700' }}
       >
         {heading}
       </Text>
 
+      {/* The banner keeps its own tinted fill; its text colours are checked against both. */}
       <View
         accessibilityRole="summary"
         style={{
@@ -59,9 +67,7 @@ export function DayScreenView({ dayId, access, onBack }: Props) {
           backgroundColor: open ? (dark ? '#1e3a2a' : '#dcf5e4') : dark ? '#3a3320' : '#fff3cd',
         }}
       >
-        <Text style={{ color: dark ? '#f2f2f2' : '#1c1c1e', fontWeight: '600' }}>
-          {banner.title}
-        </Text>
+        <Text style={{ color: palette.text, fontWeight: '600' }}>{banner.title}</Text>
         {banner.detail ? (
           <Text style={{ color: dark ? '#d1d1d6' : '#3c3c43' }}>{banner.detail}</Text>
         ) : null}
