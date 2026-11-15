@@ -27,6 +27,9 @@ export const SPRING = { damping: 15, stiffness: 180 } as const;
 /** Every button, tab, chip, card and icon button scales to this on press. */
 export const PRESS_SCALE = 0.97;
 
+/** A dialog scales up from this to 1 with the shared spring (section 15.16). */
+export const DIALOG_ENTER_SCALE = 0.92;
+
 /** The icon pop on selection goes 1, 1.2, 1. */
 export const POP_SCALE = 1.2;
 

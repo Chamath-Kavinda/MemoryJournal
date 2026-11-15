@@ -72,6 +72,9 @@ export const ON_GRADIENT = '#FFFFFF';
 /** The splash is always dark, whichever theme is saved (section 15.5). */
 export const SPLASH_BACKGROUND = DARK_TOKENS.bg;
 
+/** The dimming layer behind a dialog. The same in both themes, so the page stays readable under it. */
+export const SCRIM = 'rgba(3, 3, 8, 0.7)';
+
 /** Gradients run at 135 degrees, from the top left corner to the bottom right. */
 export const GRADIENT_START = { x: 0, y: 0 } as const;
 export const GRADIENT_END = { x: 1, y: 1 } as const;

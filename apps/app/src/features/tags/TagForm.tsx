@@ -2,6 +2,7 @@ import { validateTagInput, type Tag, type TagCategory, type TagDraft } from '@me
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { useConfirm } from '@/components/useConfirm';
 import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, Chip, usePalette } from './ui';
@@ -18,7 +19,7 @@ interface Props {
   defaultName?: string;
   onSubmit: (draft: TagDraft) => void;
   onCancel: () => void;
-  /** Only passed when editing. */
+  /** Only passed when editing. Called after the person confirms in the dialog. */
   onDelete?: () => void;
 }
 
@@ -34,6 +35,7 @@ export function TagForm({
   onDelete,
 }: Props) {
   const palette = usePalette();
+  const confirm = useConfirm();
   const [name, setName] = useState(initial?.name ?? defaultName ?? '');
   const [categoryId, setCategoryId] = useState(
     initial?.categoryId ?? defaultCategoryId ?? categories[0]?.id ?? '',
@@ -41,7 +43,6 @@ export function TagForm({
   const [note, setNote] = useState(initial?.note ?? '');
   const [aliasesText, setAliasesText] = useState(initial?.aliases.join(', ') ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const submit = () => {
     const result = validateTagInput(
@@ -56,6 +57,15 @@ export function TagForm({
     }
     setError(null);
     onSubmit(result.value);
+  };
+
+  const askDelete = async () => {
+    const confirmed = await confirm({
+      title: 'Delete tag?',
+      message: `${initial?.name ?? 'This tag'} will be deleted. Mentions in your old entries stay as plain text.`,
+      confirmLabel: 'Delete tag',
+    });
+    if (confirmed) onDelete?.();
   };
 
   const input = {
@@ -132,25 +142,9 @@ export function TagForm({
       </View>
 
       {onDelete ? (
-        confirmingDelete ? (
-          <View style={{ gap: 8, paddingTop: 8 }}>
-            <Text style={{ color: palette.text, fontSize: 15 }}>
-              Delete this tag? Entries that mention it keep their text.
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <ActionButton label="Delete tag" tone="danger" onPress={onDelete} />
-              <ActionButton label="Keep tag" onPress={() => setConfirmingDelete(false)} />
-            </View>
-          </View>
-        ) : (
-          <View style={{ alignItems: 'flex-start', paddingTop: 8 }}>
-            <ActionButton
-              label="Delete tag"
-              tone="danger"
-              onPress={() => setConfirmingDelete(true)}
-            />
-          </View>
-        )
+        <View style={{ alignItems: 'flex-start', paddingTop: 8 }}>
+          <ActionButton label="Delete tag" tone="danger" onPress={() => void askDelete()} />
+        </View>
       ) : null}
     </View>
   );

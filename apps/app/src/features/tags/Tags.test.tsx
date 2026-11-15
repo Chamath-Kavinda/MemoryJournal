@@ -1,5 +1,8 @@
 import { DEFAULT_CATEGORIES, type Tag, type TagCategory } from '@memory-journal/core';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+
+import { ConfirmProvider } from '@/components/useConfirm';
 
 import { CategoryManager } from './CategoryManager';
 import { TagBrowser } from './TagBrowser';
@@ -14,6 +17,11 @@ function tag(id: string, name: string, categoryId: string, extra: Partial<Tag> =
 
 const ravi = tag('t1', 'Ravi', 'people', { note: 'Met at the library', aliases: ['Rav'] });
 const tags = [ravi, tag('t2', 'Galle Fort', 'places'), tag('t3', '0771234567', 'numbers')];
+
+/** The forms ask through the confirmation dialog, so they need its provider above them. */
+const renderWithConfirm = (ui: ReactElement) => render(ui, { wrapper: ConfirmProvider });
+
+const dialog = () => within(screen.getByTestId('confirm-dialog'));
 
 describe('TagBrowser', () => {
   const handlers = { onOpenTag: jest.fn(), onNewTag: jest.fn(), onManageCategories: jest.fn() };
@@ -78,7 +86,7 @@ describe('TagForm', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('creates a tag with the chosen category, note and aliases', async () => {
-    await render(
+    await renderWithConfirm(
       <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
     );
 
@@ -97,7 +105,7 @@ describe('TagForm', () => {
   });
 
   it('shows the reason and does not submit when the name is missing', async () => {
-    await render(
+    await renderWithConfirm(
       <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
     );
 
@@ -108,7 +116,7 @@ describe('TagForm', () => {
   });
 
   it('refuses a duplicate name in the same category', async () => {
-    await render(
+    await renderWithConfirm(
       <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
     );
 
@@ -120,7 +128,7 @@ describe('TagForm', () => {
   });
 
   it('starts from the tag being edited and lets it keep its own name', async () => {
-    await render(
+    await renderWithConfirm(
       <TagForm
         categories={categories}
         tags={tags}
@@ -143,9 +151,9 @@ describe('TagForm', () => {
     });
   });
 
-  it('asks before deleting and can back out', async () => {
+  it('asks in the dialog before deleting, and Cancel leaves the tag alone', async () => {
     const onDelete = jest.fn();
-    await render(
+    await renderWithConfirm(
       <TagForm
         categories={categories}
         tags={tags}
@@ -156,29 +164,51 @@ describe('TagForm', () => {
       />,
     );
 
-    await fireEvent.press(screen.getByText('Delete tag'));
-    expect(onDelete).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete tag' }));
+
+    expect(await screen.findByTestId('confirm-dialog')).toBeTruthy();
+    expect(dialog().getByText('Delete tag?')).toBeTruthy();
     expect(
-      screen.getByText('Delete this tag? Entries that mention it keep their text.'),
+      dialog().getByText('Ravi will be deleted. Mentions in your old entries stay as plain text.'),
     ).toBeTruthy();
+    expect(onDelete).not.toHaveBeenCalled();
 
-    await fireEvent.press(screen.getByText('Keep tag'));
-    expect(screen.queryByText(/Delete this tag/)).toBeNull();
+    await fireEvent.press(dialog().getByRole('button', { name: 'Cancel' }));
 
-    await fireEvent.press(screen.getByText('Delete tag'));
-    await fireEvent.press(screen.getByText('Delete tag'));
-    expect(onDelete).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes the tag once the dialog is confirmed', async () => {
+    const onDelete = jest.fn();
+    await renderWithConfirm(
+      <TagForm
+        categories={categories}
+        tags={tags}
+        initial={ravi}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        onDelete={onDelete}
+      />,
+    );
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete tag' }));
+    await screen.findByTestId('confirm-dialog');
+    await fireEvent.press(dialog().getByRole('button', { name: 'Delete tag' }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
   });
 
   it('offers no delete when creating', async () => {
-    await render(
+    await renderWithConfirm(
       <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
     );
     expect(screen.queryByText('Delete tag')).toBeNull();
   });
 
   it('cancels', async () => {
-    await render(
+    await renderWithConfirm(
       <TagForm categories={categories} tags={tags} onSubmit={onSubmit} onCancel={onCancel} />,
     );
     await fireEvent.press(screen.getByText('Cancel'));
@@ -192,7 +222,7 @@ describe('CategoryManager', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('shows tag counts and marks the built-in categories', async () => {
-    await render(<CategoryManager categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(<CategoryManager categories={categories} tags={tags} {...handlers} />);
 
     expect(screen.getByText('People')).toBeTruthy();
     expect(screen.getAllByText('1 tag').length).toBe(3);
@@ -203,7 +233,7 @@ describe('CategoryManager', () => {
   });
 
   it('adds a category with a trimmed name', async () => {
-    await render(<CategoryManager categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(<CategoryManager categories={categories} tags={tags} {...handlers} />);
 
     await fireEvent.changeText(screen.getByLabelText('New category name'), '  Foods ');
     await fireEvent.press(screen.getByText('Add'));
@@ -212,7 +242,7 @@ describe('CategoryManager', () => {
   });
 
   it('refuses a duplicate or empty category name', async () => {
-    await render(<CategoryManager categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(<CategoryManager categories={categories} tags={tags} {...handlers} />);
 
     await fireEvent.changeText(screen.getByLabelText('New category name'), 'people');
     await fireEvent.press(screen.getByText('Add'));
@@ -225,7 +255,7 @@ describe('CategoryManager', () => {
   });
 
   it('renames a custom category', async () => {
-    await render(<CategoryManager categories={categories} tags={[]} {...handlers} />);
+    await renderWithConfirm(<CategoryManager categories={categories} tags={[]} {...handlers} />);
 
     await fireEvent.press(screen.getByText('Rename Songs'));
     await fireEvent.changeText(screen.getByLabelText('Rename Songs'), 'Tunes');
@@ -235,7 +265,7 @@ describe('CategoryManager', () => {
   });
 
   it('does not save a rename that changes nothing', async () => {
-    await render(<CategoryManager categories={categories} tags={[]} {...handlers} />);
+    await renderWithConfirm(<CategoryManager categories={categories} tags={[]} {...handlers} />);
 
     await fireEvent.press(screen.getByText('Rename Songs'));
     await fireEvent.press(screen.getByText('Save'));
@@ -243,25 +273,40 @@ describe('CategoryManager', () => {
     expect(handlers.onRename).not.toHaveBeenCalled();
   });
 
-  it('deletes an empty custom category only after confirming', async () => {
-    await render(<CategoryManager categories={categories} tags={[]} {...handlers} />);
+  it('asks in the dialog before deleting, and Cancel leaves the category alone', async () => {
+    await renderWithConfirm(<CategoryManager categories={categories} tags={[]} {...handlers} />);
 
     await fireEvent.press(screen.getByText('Delete Songs'));
-    expect(handlers.onDelete).not.toHaveBeenCalled();
-    expect(screen.getByText('Delete the category Songs?')).toBeTruthy();
 
-    await fireEvent.press(screen.getByText('Confirm delete'));
-    expect(handlers.onDelete).toHaveBeenCalledWith('c-songs');
+    expect(await screen.findByTestId('confirm-dialog')).toBeTruthy();
+    expect(dialog().getByText('Delete category?')).toBeTruthy();
+    expect(dialog().getByText(/Songs will be deleted\. It has no tags/)).toBeTruthy();
+    expect(handlers.onDelete).not.toHaveBeenCalled();
+
+    await fireEvent.press(dialog().getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(handlers.onDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes an empty custom category once the dialog is confirmed', async () => {
+    await renderWithConfirm(<CategoryManager categories={categories} tags={[]} {...handlers} />);
+
+    await fireEvent.press(screen.getByText('Delete Songs'));
+    await screen.findByTestId('confirm-dialog');
+    await fireEvent.press(dialog().getByRole('button', { name: 'Delete category' }));
+
+    await waitFor(() => expect(handlers.onDelete).toHaveBeenCalledWith('c-songs'));
   });
 
   it('blocks deleting a category that tags still use', async () => {
     const used = [tag('t9', 'Hello', 'c-songs')];
-    await render(<CategoryManager categories={categories} tags={used} {...handlers} />);
+    await renderWithConfirm(<CategoryManager categories={categories} tags={used} {...handlers} />);
 
     await fireEvent.press(screen.getByText('Delete Songs'));
 
     expect(screen.getByText('1 tag uses this category. Move or delete them first.')).toBeTruthy();
-    expect(screen.queryByText('Confirm delete')).toBeNull();
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
     expect(handlers.onDelete).not.toHaveBeenCalled();
   });
 });

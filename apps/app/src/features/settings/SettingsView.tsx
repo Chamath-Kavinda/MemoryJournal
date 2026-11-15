@@ -1,7 +1,9 @@
 import type { ThemePreference } from '@memory-journal/core';
+import { TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { useConfirm } from '@/components/useConfirm';
 import { Text } from '@/theme/themed';
 
 import { useAuthStore } from '@/features/auth/authStore';
@@ -26,6 +28,7 @@ const THEMES: { value: ThemePreference; label: string }[] = [
 export function SettingsView() {
   const user = useAuthStore((s) => s.user);
   const todayId = useTodayId();
+  const confirm = useConfirm();
   const { status, settings } = useSettings();
   const [notice, setNotice] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -49,6 +52,16 @@ export function SettingsView() {
     } finally {
       setExporting(false);
     }
+  };
+
+  const askSignOut = async () => {
+    const confirmed = await confirm({
+      title: 'Sign out?',
+      message: `Sign out of ${user.email ?? 'this account'}? Your journal stays safe in your Google account, and signing in again brings it back.`,
+      confirmLabel: 'Sign out',
+      icon: TriangleAlert,
+    });
+    if (confirmed) void signOut();
   };
 
   return (
@@ -119,7 +132,7 @@ export function SettingsView() {
 
       <DeleteAccountSection uid={uid} />
 
-      <Pressable accessibilityRole="button" onPress={() => void signOut()}>
+      <Pressable accessibilityRole="button" onPress={() => void askSignOut()}>
         <Text>Sign out</Text>
       </Pressable>
     </ScrollView>

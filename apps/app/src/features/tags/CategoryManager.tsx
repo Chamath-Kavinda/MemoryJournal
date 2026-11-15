@@ -8,6 +8,7 @@ import {
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { useConfirm } from '@/components/useConfirm';
 import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, usePalette } from './ui';
@@ -17,16 +18,17 @@ interface Props {
   tags: readonly Tag[];
   onCreate: (name: string) => void;
   onRename: (categoryId: string, name: string) => void;
+  /** Called after the person confirms in the dialog. */
   onDelete: (categoryId: string) => void;
 }
 
 /** Add, rename and delete categories. People, Places and Numbers are fixed. */
 export function CategoryManager({ categories, tags, onCreate, onRename, onDelete }: Props) {
   const palette = usePalette();
+  const confirm = useConfirm();
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const input = {
@@ -52,7 +54,6 @@ export function CategoryManager({ categories, tags, onCreate, onRename, onDelete
     const allowed = canRenameCategory(category);
     if (!allowed.ok) return setMessage(allowed.error);
     setMessage(null);
-    setConfirmingId(null);
     setEditingId(category.id);
     setEditName(category.name);
   };
@@ -65,12 +66,18 @@ export function CategoryManager({ categories, tags, onCreate, onRename, onDelete
     if (result.value !== category.name) onRename(category.id, result.value);
   };
 
-  const askDelete = (category: TagCategory) => {
+  const askDelete = async (category: TagCategory) => {
     const allowed = canDeleteCategory(category, tags);
     if (!allowed.ok) return setMessage(allowed.error);
     setMessage(null);
     setEditingId(null);
-    setConfirmingId(category.id);
+    // A category that tags still use cannot be deleted, so no tag ever goes with it.
+    const confirmed = await confirm({
+      title: 'Delete category?',
+      message: `${category.name} will be deleted. It has no tags, so no tags are removed with it. Mentions in your old entries stay as plain text.`,
+      confirmLabel: 'Delete category',
+    });
+    if (confirmed) onDelete(category.id);
   };
 
   return (
@@ -139,31 +146,12 @@ export function CategoryManager({ categories, tags, onCreate, onRename, onDelete
                       <ActionButton
                         label={`Delete ${category.name}`}
                         tone="danger"
-                        onPress={() => askDelete(category)}
+                        onPress={() => void askDelete(category)}
                       />
                     </View>
                   )}
                 </>
               )}
-
-              {confirmingId === category.id ? (
-                <View style={{ gap: 8 }}>
-                  <Text style={{ color: palette.text, fontSize: 15 }}>
-                    Delete the category {category.name}?
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <ActionButton
-                      label="Confirm delete"
-                      tone="danger"
-                      onPress={() => {
-                        setConfirmingId(null);
-                        onDelete(category.id);
-                      }}
-                    />
-                    <ActionButton label="Keep category" onPress={() => setConfirmingId(null)} />
-                  </View>
-                </View>
-              ) : null}
             </View>
           );
         })}

@@ -7,8 +7,10 @@ import {
 } from '@memory-journal/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useState } from 'react';
+import { ConfirmProvider } from '@/components/useConfirm';
 
 import { DayWriter } from './DayWriter';
+
 import type { Tagging } from './tagging';
 
 const categories: TagCategory[] = [
@@ -31,15 +33,18 @@ function Harness({
 }) {
   const [content, setContent] = useState(initial);
   return (
-    <DayWriter
-      content={content}
-      editable
-      tagging={tagging}
-      onChange={(next) => {
-        setContent(next);
-        onChange?.(next);
-      }}
-    />
+    // The inline tag form asks through the shared confirm dialog, so it needs the provider.
+    <ConfirmProvider>
+      <DayWriter
+        content={content}
+        editable
+        tagging={tagging}
+        onChange={(next) => {
+          setContent(next);
+          onChange?.(next);
+        }}
+      />
+    </ConfirmProvider>
   );
 }
 

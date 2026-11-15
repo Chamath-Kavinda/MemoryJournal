@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
 
+import { ConfirmProvider } from '@/components/useConfirm';
 import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
 import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
@@ -62,11 +63,14 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider preference={settings.settings.theme}>
-      {status === 'loading' || !fontsReady ? (
-        <LoadingShell />
-      ) : (
-        <Shell showNav={status === 'signed-in' && segments[0] !== 'sign-in'} />
-      )}
+      {/* Every delete, remove, discard and sign-out asks through this one dialog. */}
+      <ConfirmProvider>
+        {status === 'loading' || !fontsReady ? (
+          <LoadingShell />
+        ) : (
+          <Shell showNav={status === 'signed-in' && segments[0] !== 'sign-in'} />
+        )}
+      </ConfirmProvider>
     </ThemeProvider>
   );
 }
