@@ -12,6 +12,8 @@ interface Props {
   initial?: Tag;
   /** Category chosen at first when creating. */
   defaultCategoryId?: string;
+  /** Name filled in at first when creating, for example the text that was selected. */
+  defaultName?: string;
   onSubmit: (draft: TagDraft) => void;
   onCancel: () => void;
   /** Only passed when editing. */
@@ -24,12 +26,13 @@ export function TagForm({
   tags,
   initial,
   defaultCategoryId,
+  defaultName,
   onSubmit,
   onCancel,
   onDelete,
 }: Props) {
   const palette = usePalette();
-  const [name, setName] = useState(initial?.name ?? '');
+  const [name, setName] = useState(initial?.name ?? defaultName ?? '');
   const [categoryId, setCategoryId] = useState(
     initial?.categoryId ?? defaultCategoryId ?? categories[0]?.id ?? '',
   );

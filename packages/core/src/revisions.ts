@@ -19,7 +19,9 @@ export interface TextSegment {
 // Words and mentions
 // ---------------------------------------------------------------------------
 
-const MENTION_PATTERN = /\{\{tag:([A-Za-z0-9_-]+)\}\}/g;
+// `{{tag:ID}}` or `{{tag:ID|Name}}`. The name is URL-encoded, so a token never contains spaces
+// and always counts as one word.
+const MENTION_PATTERN = /\{\{tag:([A-Za-z0-9_-]+)(?:\|[^{}|\s]*)?\}\}/g;
 const WORD_EDGE_PATTERN = /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu;
 
 /** Counts whitespace-separated words. A mention token counts as one word. */
@@ -27,9 +29,14 @@ export function countWords(text: string): number {
   return text.match(/\S+/g)?.length ?? 0;
 }
 
-/** The token stored in text for a tag mention, for example `{{tag:abc123}}`. */
-export function mentionToken(tagId: string): string {
-  return `{{tag:${tagId}}}`;
+/**
+ * The token stored in text for a tag mention, for example `{{tag:abc123}}`. With a name it is
+ * `{{tag:abc123|Ravi}}`: the name keeps the mention readable after the tag is deleted
+ * (section 5.4). It is URL-encoded, so the token never holds spaces, braces or `|`.
+ */
+export function mentionToken(tagId: string, name?: string): string {
+  const label = name === undefined || name === '' ? '' : `|${encodeURIComponent(name)}`;
+  return `{{tag:${tagId}${label}}}`;
 }
 
 /** Tag ids mentioned in the given texts, unique, in order of first appearance. */
@@ -46,11 +53,12 @@ export function extractMentionIds(...texts: string[]): string[] {
 
 /**
  * The comparison key of a word: lower case without surrounding punctuation.
- * Mention tokens keep their exact id, since ids are case sensitive.
+ * Mention tokens keep their exact id (ids are case sensitive) and ignore the stored name,
+ * so renaming a tag does not make its old mentions count as additions.
  */
 function wordKey(token: string): string {
-  const mention = /\{\{tag:[A-Za-z0-9_-]+\}\}/.exec(token);
-  if (mention) return mention[0];
+  const mention = /\{\{tag:([A-Za-z0-9_-]+)(?:\|[^{}|\s]*)?\}\}/.exec(token);
+  if (mention) return `{{tag:${mention[1] ?? ''}}}`;
   return token.toLowerCase().replace(WORD_EDGE_PATTERN, '');
 }
 

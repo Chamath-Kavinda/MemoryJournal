@@ -1,11 +1,12 @@
 import {
   HOURS,
+  PREVIEW_MAX_LENGTH,
   addMinuteMarker,
+  blocksOfHour,
   getHourText,
   hasMinuteMarker,
   hourHasText,
   hourLabel,
-  hourPreview,
   minuteBlocksOfHour,
   minuteLabel,
   parseMinute,
@@ -14,19 +15,25 @@ import {
   setHourText,
   setMinuteText,
   timeLabel,
+  toDisplayText,
   type DayContent,
 } from '@memory-journal/core';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+
+import { MentionInput } from './MentionInput';
+import type { Tagging } from './tagging';
 
 interface Props {
   content: DayContent;
   onChange: (content: DayContent) => void;
   /** False while today is locked: the text can be read but nothing can be typed. */
   editable: boolean;
+  /** The user's tags. Leave out to write without the `@` picker. Mentions still show as names. */
+  tagging?: Tagging | undefined;
 }
 
-/** The last known cursor of the open row: which block it was in and where. */
+/** The last known cursor of the open row: which block it was in and where (in stored text). */
 interface Cursor {
   minute: number | null;
   offset: number;
@@ -43,8 +50,21 @@ function colorsFor(dark: boolean) {
   };
 }
 
+/**
+ * One line for a collapsed row: the first text of the hour as the person sees it (mentions as
+ * `@Name`), cut with an ellipsis. Cut after the conversion so a mention is never split.
+ */
+function previewOf(content: DayContent, hour: number, names: ReadonlyMap<string, string>): string {
+  const first = blocksOfHour(content, hour).find((block) => block.text.trim() !== '');
+  if (!first) return '';
+  const line = toDisplayText(first.text, names).replace(/\s+/g, ' ').trim();
+  return line.length > PREVIEW_MAX_LENGTH
+    ? `${line.slice(0, PREVIEW_MAX_LENGTH - 1).trimEnd()}…`
+    : line;
+}
+
 /** Free Notes block followed by the 24 hourly rows. Empty rows stay collapsed. */
-export function DayWriter({ content, onChange, editable }: Props) {
+export function DayWriter({ content, onChange, editable, tagging }: Props) {
   const colors = colorsFor(useColorScheme() === 'dark');
   const [expandedHour, setExpandedHour] = useState<number | null>(null);
   const [addingMinute, setAddingMinute] = useState(false);
@@ -53,6 +73,12 @@ export function DayWriter({ content, onChange, editable }: Props) {
   const [focusMinute, setFocusMinute] = useState<number | null>(null);
   // Kept in a ref: the cursor moves with every key press and must not re-render the day.
   const cursorRef = useRef<Cursor | null>(null);
+
+  const tags = tagging?.tags;
+  const names = useMemo(
+    () => new Map((tags ?? []).map((tag) => [tag.id, tag.name] as const)),
+    [tags],
+  );
 
   const inputStyle = {
     color: colors.text,
@@ -111,12 +137,12 @@ export function DayWriter({ content, onChange, editable }: Props) {
         <Text style={{ color: colors.muted, fontSize: 13 }}>
           Things you remember but cannot place in time.
         </Text>
-        <TextInput
-          accessibilityLabel="Free notes"
-          multiline
+        <MentionInput
+          label="Free notes"
           editable={editable}
+          tagging={tagging}
           value={content.freeNotes}
-          onChangeText={(text) => onChange(setFreeNotes(content, text))}
+          onChangeValue={(text) => onChange(setFreeNotes(content, text))}
           style={{ ...inputStyle, minHeight: 88 }}
         />
       </View>
@@ -124,7 +150,7 @@ export function DayWriter({ content, onChange, editable }: Props) {
       <View style={{ borderTopWidth: 1, borderColor: colors.border }}>
         {HOURS.map((hour) => {
           const label = hourLabel(hour);
-          const preview = hourPreview(content, hour);
+          const preview = previewOf(content, hour, names);
           const hasText = hourHasText(content, hour);
           const expanded = expandedHour === hour;
           // A locked day only lets you open rows that already have text.
@@ -150,18 +176,15 @@ export function DayWriter({ content, onChange, editable }: Props) {
 
               {expanded ? (
                 <View style={{ paddingBottom: 12, gap: 12 }}>
-                  <TextInput
-                    accessibilityLabel={`Notes for ${label}`}
-                    multiline
+                  <MentionInput
+                    label={`Notes for ${label}`}
                     autoFocus={editable && focusMinute === null}
                     editable={editable}
+                    tagging={tagging}
                     value={getHourText(content, hour)}
-                    onChangeText={(text) => onChange(setHourText(content, hour, text))}
-                    onSelectionChange={(event) => {
-                      cursorRef.current = {
-                        minute: null,
-                        offset: event.nativeEvent.selection.start,
-                      };
+                    onChangeValue={(text) => onChange(setHourText(content, hour, text))}
+                    onCursorChange={(offset) => {
+                      cursorRef.current = { minute: null, offset };
                     }}
                     style={{ ...inputStyle, minHeight: 96 }}
                   />
@@ -202,20 +225,17 @@ export function DayWriter({ content, onChange, editable }: Props) {
                             </Pressable>
                           ) : null}
                         </View>
-                        <TextInput
-                          accessibilityLabel={`Notes at ${time}`}
-                          multiline
+                        <MentionInput
+                          label={`Notes at ${time}`}
                           autoFocus={editable && focusMinute === minute}
                           editable={editable}
+                          tagging={tagging}
                           value={block.text}
-                          onChangeText={(text) =>
+                          onChangeValue={(text) =>
                             onChange(setMinuteText(content, hour, minute, text))
                           }
-                          onSelectionChange={(event) => {
-                            cursorRef.current = {
-                              minute,
-                              offset: event.nativeEvent.selection.start,
-                            };
+                          onCursorChange={(offset) => {
+                            cursorRef.current = { minute, offset };
                           }}
                           style={{ ...inputStyle, minHeight: 64 }}
                         />

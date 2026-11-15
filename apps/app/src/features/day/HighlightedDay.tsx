@@ -4,6 +4,7 @@ import {
   normalizeContent,
   ordinal,
   timeLabel,
+  toDisplayText,
   type DayContent,
   type TextSegment,
 } from '@memory-journal/core';
@@ -16,14 +17,18 @@ interface Props {
   previous: DayContent;
   /** Revision number of `previous`, for the summary line. */
   previousN: number;
+  /** Current tag names by id, so a mention shows as `@Name`. Without it the stored name is used. */
+  names?: ReadonlyMap<string, string>;
 }
+
+const NO_NAMES: ReadonlyMap<string, string> = new Map();
 
 /**
  * A read-only view of one pass in which the words that were not in the previous pass are
  * marked. Added words are bold on a coloured background, so the mark does not depend on
  * colour alone. Only the parts of the day that have text are listed.
  */
-export function HighlightedDay({ current, previous, previousN }: Props) {
+export function HighlightedDay({ current, previous, previousN, names = NO_NAMES }: Props) {
   const dark = useColorScheme() === 'dark';
   const colors = {
     text: dark ? '#f2f2f2' : '#1c1c1e',
@@ -48,10 +53,10 @@ export function HighlightedDay({ current, previous, previousN }: Props) {
               testID="added-text"
               style={{ backgroundColor: colors.added, fontWeight: '700' }}
             >
-              {segment.text}
+              {toDisplayText(segment.text, names)}
             </Text>
           ) : (
-            <Text key={index}>{segment.text}</Text>
+            <Text key={index}>{toDisplayText(segment.text, names)}</Text>
           ),
         )}
       </Text>

@@ -6,9 +6,10 @@ import {
   previousRevision,
   revisionOptions,
   type RevisionSelection,
+  type TagDraft,
 } from '@memory-journal/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,10 +22,15 @@ import { HighlightedDay } from '@/features/day/HighlightedDay';
 import { HighlightSwitch } from '@/features/day/HighlightSwitch';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
 import { SaveBar } from '@/features/day/SaveBar';
+import type { Tagging } from '@/features/day/tagging';
 import { useDayAccess } from '@/features/day/useDayAccess';
 import { useDayDraft } from '@/features/day/useDayDraft';
 import { useDayHistory } from '@/features/day/useDayHistory';
 import { useDaySave } from '@/features/day/useDaySave';
+import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
+import { createTag } from '@/features/tags/tagService';
+import { ErrorBanner } from '@/features/tags/ui';
+import { useTagData } from '@/features/tags/useTagData';
 
 const noop = () => {};
 
@@ -38,6 +44,32 @@ export default function DayRoute() {
 
   const draft = useDayDraft({ uid, dayId, storage: draftStorage });
   const { history, failed: historyFailed } = useDayHistory(uid, dayId);
+
+  // Tags for the `@` picker. The writer works without them while they load.
+  const tagData = useTagData();
+  const tagError = useTagErrorStore((s) => s.message);
+  const clearTagError = useTagErrorStore((s) => s.clear);
+  const createTagNow = useCallback(
+    (tagDraft: TagDraft) => {
+      if (uid === undefined) return '';
+      // The mention is inserted at once; a refused write is reported in the banner below.
+      const { id, saved } = createTag(uid, tagDraft);
+      watchWrite(saved, 'The new tag could not be saved.');
+      return id;
+    },
+    [uid],
+  );
+  const tagging = useMemo<Tagging | undefined>(
+    () =>
+      tagData.status === 'ready' && uid !== undefined
+        ? { tags: tagData.tags, categories: tagData.categories, createTag: createTagNow }
+        : undefined,
+    [tagData.status, tagData.tags, tagData.categories, uid, createTagNow],
+  );
+  const tagNames = useMemo(
+    () => new Map(tagData.tags.map((tag) => [tag.id, tag.name] as const)),
+    [tagData.tags],
+  );
 
   // The draft starts from the latest saved pass when the device has no draft of its own.
   const [seededDay, setSeededDay] = useState<string | null>(null);
@@ -99,6 +131,7 @@ export default function DayRoute() {
             again.
           </Text>
         ) : null}
+        {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
         {showWriter ? (
           <>
             <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
@@ -115,6 +148,7 @@ export default function DayRoute() {
                 current={contentOf(target)}
                 previous={contentOf(previous)}
                 previousN={previous.n}
+                names={tagNames}
               />
             ) : viewed === null ? (
               <>
@@ -133,10 +167,16 @@ export default function DayRoute() {
                   content={draft.content}
                   onChange={draft.setContent}
                   editable={editable}
+                  tagging={tagging}
                 />
               </>
             ) : (
-              <DayWriter content={contentOf(viewed)} onChange={noop} editable={false} />
+              <DayWriter
+                content={contentOf(viewed)}
+                onChange={noop}
+                editable={false}
+                tagging={tagging}
+              />
             )}
           </>
         ) : null}
