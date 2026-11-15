@@ -1,4 +1,4 @@
-import { shortcutIndex, shortcutLabel, type KeyLike } from './shortcuts';
+import { isBackShortcut, shortcutIndex, shortcutLabel, type KeyLike } from './shortcuts';
 
 function key(code: string, modifiers: Partial<KeyLike> = {}): KeyLike {
   return { code, altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, ...modifiers };
@@ -36,5 +36,38 @@ describe('shortcutLabel', () => {
 
   it('has no label beyond the ninth item', () => {
     expect(shortcutLabel(9)).toBe('');
+  });
+});
+
+describe('isBackShortcut', () => {
+  const idle = { typing: false, dialogOpen: false };
+
+  it('treats Alt+Left as Back', () => {
+    expect(isBackShortcut(key('ArrowLeft'), idle)).toBe(true);
+  });
+
+  it('treats Esc as Back when nothing else is using it', () => {
+    expect(isBackShortcut(key('Escape', { altKey: false }), idle)).toBe(true);
+  });
+
+  it('leaves Esc to a text field while the person is typing', () => {
+    expect(isBackShortcut(key('Escape', { altKey: false }), { ...idle, typing: true })).toBe(false);
+  });
+
+  it('leaves Esc to an open dialog, where it means Cancel', () => {
+    expect(isBackShortcut(key('Escape', { altKey: false }), { ...idle, dialogOpen: true })).toBe(
+      false,
+    );
+  });
+
+  it('ignores Left without Alt, and Alt+Left with another modifier', () => {
+    expect(isBackShortcut(key('ArrowLeft', { altKey: false }), idle)).toBe(false);
+    expect(isBackShortcut(key('ArrowLeft', { ctrlKey: true }), idle)).toBe(false);
+    expect(isBackShortcut(key('ArrowLeft', { shiftKey: true }), idle)).toBe(false);
+  });
+
+  it('ignores other keys', () => {
+    expect(isBackShortcut(key('KeyA'), idle)).toBe(false);
+    expect(isBackShortcut(key('Enter', { altKey: false }), idle)).toBe(false);
   });
 });

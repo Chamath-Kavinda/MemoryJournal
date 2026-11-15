@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LessonList } from '@/features/learn/LessonList';
 import { useLearnProgress } from '@/features/learn/useLearnProgress';
-import { ScreenHeader, usePalette } from '@/features/tags/ui';
+import { usePalette } from '@/features/tags/ui';
+import { TabHeader } from '@/navigation/TabHeader';
 
 export default function LearnRoute() {
   const router = useRouter();
@@ -17,10 +18,7 @@ export default function LearnRoute() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-        <ScreenHeader
-          title="Learn"
-          onBack={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
-        />
+        <TabHeader title="Learn" />
         {/* The lessons are bundled with the app, so they show at once, online or not. */}
         <LessonList
           lessons={LESSONS}

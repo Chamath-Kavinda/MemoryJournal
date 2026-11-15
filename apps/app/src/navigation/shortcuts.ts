@@ -29,6 +29,20 @@ export function shortcutLabel(index: number): string {
   return index >= 0 && index < 9 ? `Alt+${index + 1}` : '';
 }
 
+/**
+ * Whether a key press means Back (section 15.8): Alt+Left, or Esc. Esc is left alone while the
+ * person is typing in a field (it closes the field's own panels) and while a dialog is open
+ * (the dialog treats Esc as Cancel).
+ */
+export function isBackShortcut(
+  event: KeyLike,
+  context: { typing: boolean; dialogOpen: boolean },
+): boolean {
+  if (event.ctrlKey || event.metaKey || event.shiftKey) return false;
+  if (event.altKey) return event.code === 'ArrowLeft';
+  return event.code === 'Escape' && !context.typing && !context.dialogOpen;
+}
+
 /** True where a keyboard is the normal way to move around (the web build, so also Electron). */
 export const HAS_KEYBOARD_SHORTCUTS = Platform.OS === 'web';
 
@@ -55,4 +69,28 @@ export function useNavShortcuts(
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [enabled, itemCount]);
+}
+
+/** Calls `onBack` for Alt+Left and Esc on the web build. Phones use the hardware Back button. */
+export function useBackShortcut(onBack: () => void): void {
+  const latest = useRef(onBack);
+  latest.current = onBack;
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target !== null &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName ?? ''));
+      const dialogOpen = document.querySelector('[aria-modal="true"]') !== null;
+      if (!isBackShortcut(event, { typing, dialogOpen })) return;
+      event.preventDefault();
+      latest.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 }

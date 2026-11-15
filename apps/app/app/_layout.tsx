@@ -1,4 +1,4 @@
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Slot, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
@@ -9,7 +9,7 @@ import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
 import { reminderWanted, useSettings } from '@/features/settings/useSettings';
-import { NAV_ITEMS, SideNav } from '@/navigation/AppNav';
+import { BottomTabBar, NAV_ITEMS, SideNav, isTabScreen } from '@/navigation/AppNav';
 import { useNavShortcuts } from '@/navigation/shortcuts';
 import { useFocusRing } from '@/theme/focusRing';
 import { useAppFonts } from '@/theme/fonts';
@@ -21,7 +21,10 @@ function Shell({ showNav }: { showNav: boolean }) {
   const { palette, scheme } = useTheme();
   const { width } = useWindowDimensions();
   const router = useRouter();
+  const pathname = usePathname();
   const sideNav = showNav && isWide(width);
+  // The bottom bar shows on the five tab screens only; Day, Settings and the other screens hide it.
+  const bottomBar = showNav && !isWide(width) && isTabScreen(pathname);
   useFocusRing(palette.accent);
   // Alt+1 to Alt+6 jump between the main sections, on the web build and in the desktop app.
   useNavShortcuts(
@@ -34,7 +37,10 @@ function Shell({ showNav }: { showNav: boolean }) {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {sideNav ? <SideNav /> : null}
       <View style={{ flex: 1 }}>
-        <Slot />
+        <View style={{ flex: 1 }}>
+          <Slot />
+        </View>
+        {bottomBar ? <BottomTabBar /> : null}
       </View>
     </View>
   );

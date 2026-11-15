@@ -1,7 +1,7 @@
 import { addMonths, monthOfDayId, type MonthRef } from '@memory-journal/core';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MonthCalendar } from '@/features/calendar/MonthCalendar';
@@ -9,13 +9,12 @@ import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { StatsBar } from '@/features/insights/StatsBar';
 import { useInsights } from '@/features/insights/useInsights';
-import { LinkList } from '@/navigation/AppNav';
-import { CONTENT_MAX_WIDTH, isWide } from '@/theme/palette';
+import { TabHeader } from '@/navigation/TabHeader';
+import { CONTENT_MAX_WIDTH } from '@/theme/palette';
 import { Text } from '@/theme/themed';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const todayId = useTodayId();
   // Start on the current month, then follow the user's own navigation.
   const [month, setMonth] = useState<MonthRef>(() => monthOfDayId(todayId));
@@ -39,6 +38,8 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={{ width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' }}>
+          {/* The sections are the tabs of the bottom bar (or the sidebar), so Home has no link list. */}
+          <TabHeader title="Memory Journal" />
           <StatsBar
             insights={insights}
             status={insightsStatus}
@@ -57,8 +58,6 @@ export default function HomeScreen() {
               <Text>Could not load this month. Showing nothing for now.</Text>
             ) : null}
           </View>
-          {/* On wide windows the side navigation in the root layout replaces these links. */}
-          {isWide(width) ? null : <LinkList />}
         </View>
       </ScrollView>
     </SafeAreaView>

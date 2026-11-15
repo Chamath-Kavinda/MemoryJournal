@@ -1,5 +1,4 @@
 import { daysBetween, pickMessage } from '@memory-journal/core';
-import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 
@@ -9,10 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { InsightsView } from '@/features/insights/InsightsView';
 import { useInsights } from '@/features/insights/useInsights';
-import { ActionButton, ScreenHeader, usePalette } from '@/features/tags/ui';
+import { ActionButton, usePalette } from '@/features/tags/ui';
+import { TabHeader } from '@/navigation/TabHeader';
 
 export default function InsightsRoute() {
-  const router = useRouter();
   const palette = usePalette();
   const todayId = useTodayId();
   const { insights, status, reload } = useInsights(todayId);
@@ -30,10 +29,7 @@ export default function InsightsRoute() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-        <ScreenHeader
-          title="Insights"
-          onBack={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
-        />
+        <TabHeader title="Insights" />
         {insights !== null && message !== null ? (
           <InsightsView insights={insights} message={message} />
         ) : null}

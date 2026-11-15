@@ -7,7 +7,8 @@ import { LibraryBrowser } from '@/features/library/LibraryBrowser';
 import { createLibraryItem } from '@/features/library/libraryService';
 import { useLibrary } from '@/features/library/useLibrary';
 import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
-import { ErrorBanner, ScreenHeader } from '@/features/tags/ui';
+import { ErrorBanner } from '@/features/tags/ui';
+import { TabHeader } from '@/navigation/TabHeader';
 
 export default function LibraryRoute() {
   const router = useRouter();
@@ -19,10 +20,7 @@ export default function LibraryRoute() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <ScreenHeader
-          title="Library"
-          onBack={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
-        />
+        <TabHeader title="Library" />
         {error !== null ? <ErrorBanner message={error} onDismiss={clearError} /> : null}
         <LibraryBrowser
           items={items}

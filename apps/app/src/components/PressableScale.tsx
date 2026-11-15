@@ -37,6 +37,11 @@ export interface PressableScaleProps {
   /** Look of the part that scales: size, radius, border and fill. */
   innerStyle?: StyleProp<ViewStyle> | ((state: PressState) => StyleProp<ViewStyle>);
   testID?: string | undefined;
+  /** Pointer and keyboard focus, used by the navigation tooltips on the web build. */
+  onHoverIn?: (() => void) | undefined;
+  onHoverOut?: (() => void) | undefined;
+  onFocus?: (() => void) | undefined;
+  onBlur?: (() => void) | undefined;
 }
 
 /**
@@ -56,6 +61,10 @@ export function PressableScale({
   style,
   innerStyle,
   testID,
+  onHoverIn,
+  onHoverOut,
+  onFocus,
+  onBlur,
 }: PressableScaleProps) {
   const reduce = useReduceMotion();
   const scale = useSharedValue(1);
@@ -92,6 +101,10 @@ export function PressableScale({
       disabled={disabled}
       onPress={onPress}
       onLongPress={onLongPress}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
+      onFocus={onFocus}
+      onBlur={onBlur}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={[style, dimmed ? { opacity: 0.5 } : null]}

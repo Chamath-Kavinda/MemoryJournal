@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native';
 
+import { BackButton } from '@/components/BackButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Palette } from '@/theme/palette';
 import { Text } from '@/theme/themed';
@@ -93,7 +94,7 @@ export function ScreenHeader({ title, onBack }: HeaderProps) {
         paddingTop: 8,
       }}
     >
-      <ActionButton label="Back" onPress={onBack} />
+      <BackButton onBack={onBack} />
       <Text
         accessibilityRole="header"
         style={{ color: palette.text, fontSize: 22, fontWeight: '700' }}

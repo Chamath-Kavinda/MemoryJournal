@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TagBrowser } from '@/features/tags/TagBrowser';
 import { useTagErrorStore } from '@/features/tags/tagErrors';
 import { useTagData } from '@/features/tags/useTagData';
-import { ErrorBanner, ScreenHeader } from '@/features/tags/ui';
+import { ErrorBanner } from '@/features/tags/ui';
+import { TabHeader } from '@/navigation/TabHeader';
 
 export default function TagsRoute() {
   const router = useRouter();
@@ -18,10 +19,7 @@ export default function TagsRoute() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled">
-        <ScreenHeader
-          title="Tags"
-          onBack={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
-        />
+        <TabHeader title="Tags" />
         {message !== null ? <ErrorBanner message={message} onDismiss={clearMessage} /> : null}
         {status === 'loading' ? <ActivityIndicator style={{ marginTop: 24 }} /> : null}
         {status === 'error' ? (

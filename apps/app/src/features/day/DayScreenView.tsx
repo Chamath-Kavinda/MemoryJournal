@@ -1,7 +1,8 @@
 import { formatCountdown, parseDayId, type DayAccess, type DayId } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
+import { BackButton } from '@/components/BackButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
@@ -40,15 +41,9 @@ export function DayScreenView({ dayId, access, onBack }: Props) {
 
   return (
     <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 16 }}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-        hitSlop={12}
-        onPress={onBack}
-        style={{ minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' }}
-      >
-        <Text style={{ color: palette.accent, fontSize: 16 }}>‹ Back</Text>
-      </Pressable>
+      <View style={{ alignSelf: 'flex-start' }}>
+        <BackButton onBack={onBack} />
+      </View>
 
       <Text
         accessibilityRole="header"
