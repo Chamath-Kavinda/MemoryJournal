@@ -9,7 +9,6 @@ import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { StatsBar } from '@/features/insights/StatsBar';
 import { useInsights } from '@/features/insights/useInsights';
-import { signOut } from '@/platform/auth/google';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -65,9 +64,8 @@ export default function HomeScreen() {
           <Pressable accessibilityRole="button" onPress={() => router.push('/learn')}>
             <Text>Learn</Text>
           </Pressable>
-          {/* Sign out moves to Settings in a later commit. */}
-          <Pressable accessibilityRole="button" onPress={() => void signOut()}>
-            <Text>Sign out</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/settings')}>
+            <Text>Settings</Text>
           </Pressable>
         </View>
       </ScrollView>

@@ -7,16 +7,18 @@ import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
 import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
+import { reminderWanted, useSettings } from '@/features/settings/useSettings';
 
 export default function RootLayout() {
   const status = useAuthStore((s) => s.status);
   const segments = useSegments();
   const router = useRouter();
+  const reminderOn = reminderWanted(useSettings());
 
   useEffect(() => startAuthListener(), []);
   useProfileSync();
-  useReminder();
-  useDesktopReminder();
+  useReminder(reminderOn);
+  useDesktopReminder(reminderOn);
 
   useEffect(() => {
     if (status === 'loading') return;

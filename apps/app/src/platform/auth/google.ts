@@ -1,5 +1,6 @@
 import {
   GoogleAuthProvider,
+  reauthenticateWithCredential,
   signInWithCredential,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
@@ -23,8 +24,11 @@ function configure(): void {
   configured = true;
 }
 
-/** Android and iOS: native Google sign-in, then hand the ID token to Firebase. */
-export async function signInWithGoogle(): Promise<SignInResult> {
+type IdTokenResult =
+  { status: 'ok'; idToken: string } | Exclude<SignInResult, { status: 'signed-in' }>;
+
+/** Shows the native Google account picker and returns the ID token it produces. */
+async function getGoogleIdToken(): Promise<IdTokenResult> {
   try {
     configure();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -33,10 +37,7 @@ export async function signInWithGoogle(): Promise<SignInResult> {
 
     const idToken = response.data.idToken;
     if (!idToken) return { status: 'error', message: 'Google did not return an ID token.' };
-
-    const credential = GoogleAuthProvider.credential(idToken);
-    await signInWithCredential(getFirebase().auth, credential);
-    return { status: 'signed-in' };
+    return { status: 'ok', idToken };
   } catch (error) {
     if (isErrorWithCode(error)) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return { status: 'cancelled' };
@@ -46,6 +47,40 @@ export async function signInWithGoogle(): Promise<SignInResult> {
       }
     }
     return { status: 'error', message: error instanceof Error ? error.message : 'Sign-in failed.' };
+  }
+}
+
+/** Android and iOS: native Google sign-in, then hand the ID token to Firebase. */
+export async function signInWithGoogle(): Promise<SignInResult> {
+  const token = await getGoogleIdToken();
+  if (token.status !== 'ok') return token;
+  try {
+    const credential = GoogleAuthProvider.credential(token.idToken);
+    await signInWithCredential(getFirebase().auth, credential);
+    return { status: 'signed-in' };
+  } catch (error) {
+    return { status: 'error', message: error instanceof Error ? error.message : 'Sign-in failed.' };
+  }
+}
+
+/**
+ * Asks the person to sign in with Google again and confirms it to Firebase. Firebase wants a
+ * recent sign-in before it deletes an account. Choosing a different Google account fails, so
+ * one account cannot delete another's data.
+ */
+export async function reauthenticateWithGoogle(): Promise<SignInResult> {
+  const user = getFirebase().auth.currentUser;
+  if (!user) return { status: 'error', message: 'You are not signed in.' };
+  const token = await getGoogleIdToken();
+  if (token.status !== 'ok') return token;
+  try {
+    await reauthenticateWithCredential(user, GoogleAuthProvider.credential(token.idToken));
+    return { status: 'signed-in' };
+  } catch (error) {
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Could not confirm your sign-in.',
+    };
   }
 }
 

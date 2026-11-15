@@ -1,3 +1,4 @@
+export * from './accountData';
 export * from './calendar';
 export * from './clock';
 export * from './dayContent';
