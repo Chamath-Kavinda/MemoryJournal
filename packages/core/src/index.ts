@@ -4,6 +4,7 @@ export * from './dayContent';
 export * from './library';
 export * from './mentionHistory';
 export * from './mentions';
+export * from './messages';
 export * from './minuteMarkers';
 export * from './profile';
 export * from './revisionLabels';
