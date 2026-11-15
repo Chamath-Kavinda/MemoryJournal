@@ -293,3 +293,72 @@ describe('revision immutability after the sitting closes', () => {
     );
   });
 });
+
+describe('library pages follow the revision rules of days, without the 21:00 lock', () => {
+  const ref = (uid: string, itemId: string, n = '1') =>
+    doc(env.authenticatedContext(uid).firestore(), 'users', uid, 'library', itemId, 'revisions', n);
+
+  function pageData(extra: Record<string, unknown> = {}) {
+    return {
+      n: 1,
+      createdAt: Date.now(),
+      closedAt: null,
+      kind: 'first',
+      text: 'I loved the ending',
+      mentions: [],
+      wordCount: 4,
+      addedWordCount: 4,
+      ...extra,
+    };
+  }
+
+  async function seedPage(uid: string, itemId: string, n: string, extra = {}) {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', uid, 'library', itemId, 'revisions', n), {
+        ...pageData(),
+        ...extra,
+      });
+    });
+  }
+
+  test('a page can be written before 21:00, because it has no lock', async () => {
+    await seedUser('alice', BEFORE_UNLOCK);
+    await assertSucceeds(setDoc(ref('alice', 'l1'), pageData()));
+  });
+
+  test('an open page revision can be updated and closed', async () => {
+    await seedUser('alice');
+    await seedPage('alice', 'l1', '1');
+    await assertSucceeds(updateDoc(ref('alice', 'l1'), { text: 'more detail' }));
+    await assertSucceeds(updateDoc(ref('alice', 'l1'), { closedAt: Date.now() }));
+  });
+
+  test('a closed page revision cannot be updated or deleted, but can be read', async () => {
+    await seedUser('alice');
+    await seedPage('alice', 'l1', '1', { closedAt: Date.now() });
+    await assertFails(updateDoc(ref('alice', 'l1'), { text: 'rewrite history' }));
+    await assertFails(updateDoc(ref('alice', 'l1'), { closedAt: null }));
+    await assertFails(deleteDoc(ref('alice', 'l1')));
+    await assertSucceeds(getDoc(ref('alice', 'l1')));
+  });
+
+  test('closed page revisions can be deleted once account deletion has been requested', async () => {
+    await seedUser('alice');
+    await seedPage('alice', 'l1', '1', { closedAt: Date.now() });
+    const alice = env.authenticatedContext('alice').firestore();
+    await assertFails(deleteDoc(ref('alice', 'l1')));
+    await assertSucceeds(
+      updateDoc(doc(alice, 'users', 'alice'), { deletionRequestedAt: Timestamp.now() }),
+    );
+    await assertSucceeds(deleteDoc(ref('alice', 'l1')));
+  });
+
+  test('another user cannot write into alice’s page', async () => {
+    await seedUser('alice');
+    await seedUser('bob');
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(
+      setDoc(doc(bob, 'users', 'alice', 'library', 'l1', 'revisions', '1'), pageData()),
+    );
+  });
+});

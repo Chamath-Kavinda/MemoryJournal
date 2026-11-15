@@ -117,14 +117,24 @@ export interface LibraryItem {
   text: string;
   latestRevision: number;
   updatedAt: EpochMs;
+  /** Words in the latest pass, for lists. */
+  wordCount: number;
+  /** Ids of tags mentioned in the latest pass, so a tag finds its items with one query (D-025). */
+  mentions: string[];
 }
 
 /** `users/{uid}/library/{itemId}/revisions/{n}` */
 export interface LibraryRevision {
   n: number;
   createdAt: EpochMs;
+  /** Set when the sitting ends. A closed revision is immutable (D-025). */
+  closedAt: EpochMs | null;
+  kind: RevisionKind;
   text: string;
   mentions: string[];
+  wordCount: number;
+  /** Words that were not present in the previous revision. */
+  addedWordCount: number;
 }
 
 /** `users/{uid}/progress/tutorials` */

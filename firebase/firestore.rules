@@ -82,7 +82,11 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
 
         match /revisions/{n} {
-          allow read, write: if isOwner(uid);
+          allow read: if isOwner(uid);
+          // Same rule as days, without the 9 PM lock: a page is always writable (section 5.5).
+          allow create: if isOwner(uid);
+          allow update: if isOwner(uid) && isOpen(resource.data);
+          allow delete: if isOwner(uid) && (isOpen(resource.data) || deletionRequested(uid));
         }
       }
 

@@ -33,6 +33,8 @@ interface Options {
   dayId: string;
   storage: KeyValueStorage;
   delayMs?: number;
+  /** Tells a usable id from a bad one. Days use real dates; other pages bring their own check. */
+  isValidId?: (id: string) => boolean;
 }
 
 interface Actions {
@@ -51,6 +53,7 @@ export function useDayDraft({
   dayId,
   storage,
   delayMs = DRAFT_SAVE_DELAY_MS,
+  isValidId = isValidDayId,
 }: Options): DayDraft {
   const [content, setContentState] = useState<DayContent>(emptyContent);
   const [ready, setReady] = useState(false);
@@ -78,7 +81,7 @@ export function useDayDraft({
     schedule.current = null;
     actions.current = null;
 
-    if (!uid || !isValidDayId(dayId)) return;
+    if (!uid || !isValidId(dayId)) return;
 
     const writeNow = () => {
       if (timer !== null) {
@@ -166,7 +169,7 @@ export function useDayDraft({
       actions.current = null;
       writeNow();
     };
-  }, [uid, dayId, storage, delayMs]);
+  }, [uid, dayId, storage, delayMs, isValidId]);
 
   const setContent = useCallback((next: DayContent) => {
     latest.current = next;

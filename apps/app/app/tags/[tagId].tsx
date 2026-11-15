@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useMentionedLibraryItems } from '@/features/library/useLibrary';
+import { LibraryMentions } from '@/features/tags/LibraryMentions';
 import { MentionHistory } from '@/features/tags/MentionHistory';
 import { TagForm } from '@/features/tags/TagForm';
 import { deleteTag, updateTag } from '@/features/tags/tagService';
@@ -16,6 +18,7 @@ export default function TagRoute() {
   const router = useRouter();
   const { uid, categories, tags, status } = useTagData();
   const { days: mentionedDays, status: mentionStatus } = useMentionedDays(uid, tagId);
+  const { items: mentionedItems, status: libraryStatus } = useMentionedLibraryItems(uid, tagId);
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/tags'));
   const tag = tags.find((t) => t.id === tagId);
 
@@ -33,6 +36,11 @@ export default function TagRoute() {
               days={mentionedDays}
               status={mentionStatus}
               onOpenDay={(dayId) => router.push(`/day/${dayId}`)}
+            />
+            <LibraryMentions
+              items={mentionedItems}
+              status={libraryStatus}
+              onOpenItem={(itemId) => router.push(`/library/${itemId}`)}
             />
             <TagForm
               // A new key resets the form if the tag is replaced while the screen is open.
