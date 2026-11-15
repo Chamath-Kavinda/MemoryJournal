@@ -324,6 +324,27 @@ describe('TagForm', () => {
     expect(screen.queryByTestId('confirm-dialog')).toBeNull();
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ aliases: ['Rav', 'Ravindu'] }));
   });
+
+  it('tells the screen around it when it holds unsaved changes', async () => {
+    const onDirtyChange = jest.fn();
+    await renderWithConfirm(
+      <TagForm
+        categories={categories}
+        tags={tags}
+        initial={ravi}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        onDirtyChange={onDirtyChange}
+      />,
+    );
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Met at the market');
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+
+    await fireEvent.changeText(screen.getByLabelText('Note'), 'Met at the library');
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
 });
 
 describe('CategoryManager', () => {

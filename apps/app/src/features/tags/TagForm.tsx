@@ -1,6 +1,6 @@
 import { validateTagInput, type Tag, type TagCategory, type TagDraft } from '@memory-journal/core';
 import { TriangleAlert } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { useConfirm } from '@/components/useConfirm';
@@ -22,6 +22,8 @@ interface Props {
   onCancel: () => void;
   /** Only passed when editing. Called after the person confirms in the dialog. */
   onDelete?: () => void;
+  /** Called with true while the form holds changes that are not saved, and false otherwise. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /** Create or edit a tag: name, category, optional note, optional aliases. */
@@ -34,6 +36,7 @@ export function TagForm({
   onSubmit,
   onCancel,
   onDelete,
+  onDirtyChange,
 }: Props) {
   const palette = usePalette();
   const confirm = useConfirm();
@@ -55,6 +58,11 @@ export function TagForm({
     categoryId !== start.categoryId ||
     note !== start.note ||
     aliasesText !== start.aliasesText;
+
+  // Lets the screen around the form ask before its own Back button leaves with changes unsaved.
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const submit = async () => {
     const result = validateTagInput(

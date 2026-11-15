@@ -34,6 +34,7 @@ import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { createTag } from '@/features/tags/tagService';
 import { ActionButton, ErrorBanner, ScreenHeader, usePalette } from '@/features/tags/ui';
 import { useTagData } from '@/features/tags/useTagData';
+import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 
 const noop = () => {};
 
@@ -113,10 +114,21 @@ export default function LibraryItemRoute() {
     ? [libraryTypeLabel(item.type), item.date].filter((part) => part !== null).join(' · ')
     : '';
 
+  // Leaving with unsaved writing asks first. Confirming drops the text and its stored draft.
+  const back = useLeaveGuard({
+    dirty: showPage && canSave,
+    leave,
+    message: `Your unsaved changes to ${item?.title ?? 'this page'} will be lost.`,
+    onDiscard: () => {
+      draft.setContent(libraryContent(latestText));
+      draft.discard(libraryContent(latestText));
+    },
+  });
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <ScreenHeader title={item?.title ?? 'Library'} onBack={leave} />
+        <ScreenHeader title={item?.title ?? 'Library'} onBack={back} />
         {historyFailed ? (
           <Text
             accessibilityRole="alert"

@@ -34,6 +34,7 @@ import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { createTag } from '@/features/tags/tagService';
 import { ErrorBanner } from '@/features/tags/ui';
 import { useTagData } from '@/features/tags/useTagData';
+import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 
 const noop = () => {};
 
@@ -118,14 +119,21 @@ export default function DayRoute() {
     history !== null &&
     seededDay === dayId;
 
+  // Leaving with unsaved writing asks first. Confirming drops the text and its stored draft.
+  const back = useLeaveGuard({
+    dirty: showWriter && canSave,
+    leave: () => (router.canGoBack() ? router.back() : router.replace('/home')),
+    message: 'Your unsaved changes to this day will be lost.',
+    onDiscard: () => {
+      draft.setContent(savedContent);
+      draft.discard(savedContent);
+    },
+  });
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <DayScreenView
-          dayId={dayId}
-          access={access}
-          onBack={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
-        />
+        <DayScreenView dayId={dayId} access={access} onBack={back} />
         {historyFailed ? (
           <Text
             accessibilityRole="alert"

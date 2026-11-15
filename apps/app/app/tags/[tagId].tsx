@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, ScrollView } from 'react-native';
 
 import { Text } from '@/theme/themed';
@@ -13,6 +14,7 @@ import { watchWrite } from '@/features/tags/tagErrors';
 import { useMentionedDays } from '@/features/tags/useMentionedDays';
 import { useTagData } from '@/features/tags/useTagData';
 import { ScreenHeader } from '@/features/tags/ui';
+import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 
 export default function TagRoute() {
   const { tagId: rawTagId } = useLocalSearchParams<{ tagId: string }>();
@@ -23,11 +25,18 @@ export default function TagRoute() {
   const { items: mentionedItems, status: libraryStatus } = useMentionedLibraryItems(uid, tagId);
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/tags'));
   const tag = tags.find((t) => t.id === tagId);
+  // The form asks for itself when its own Cancel is pressed; Back, Esc and Alt+Left ask here.
+  const [dirty, setDirty] = useState(false);
+  const back = useLeaveGuard({
+    dirty,
+    leave,
+    message: `Your changes to ${tag?.name ?? 'this tag'} will not be saved.`,
+  });
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <ScreenHeader title={tag?.name ?? 'Tag'} onBack={leave} />
+        <ScreenHeader title={tag?.name ?? 'Tag'} onBack={back} />
         {status === 'loading' || uid === undefined ? (
           <ActivityIndicator style={{ marginTop: 24 }} />
         ) : tag === undefined ? (
@@ -51,6 +60,7 @@ export default function TagRoute() {
               tags={tags}
               initial={tag}
               onCancel={leave}
+              onDirtyChange={setDirty}
               onSubmit={(draft) => {
                 watchWrite(updateTag(uid, tag.id, draft), 'The tag changes could not be saved.');
                 leave();
