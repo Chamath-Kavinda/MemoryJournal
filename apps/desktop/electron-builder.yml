@@ -15,6 +15,7 @@ extraResources:
   - from: ../app/dist
     to: web
 win:
+  icon: assets/icon.png
   target:
     - target: nsis
       arch: [x64]
