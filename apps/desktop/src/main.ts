@@ -2,7 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { BrowserWindow, app, ipcMain, net, protocol, shell } from 'electron';
+import { BrowserWindow, Menu, app, ipcMain, net, protocol, shell } from 'electron';
 
 import { setupDesktopReminder } from './desktopReminder';
 import { googleSignIn } from './googleSignIn';
@@ -16,6 +16,7 @@ if (!app.isPackaged) {
 }
 
 const APP_SCHEME = 'app';
+const APP_NAME = 'Memory Journal';
 const DEV_URL = process.env.MJ_DEV_URL;
 
 // Windows shows notifications under this id once the app is installed. In development the default
@@ -53,6 +54,8 @@ function createWindow(): BrowserWindow {
     height: 760,
     minWidth: 420,
     minHeight: 600,
+    title: APP_NAME,
+    icon: join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -60,6 +63,9 @@ function createWindow(): BrowserWindow {
       sandbox: true,
     },
   });
+
+  // The window keeps the app name; the page must not rename it.
+  win.on('page-title-updated', (event) => event.preventDefault());
 
   // Links to other sites open in the system browser, never inside the app window.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -80,6 +86,19 @@ function createWindow(): BrowserWindow {
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null;
   });
+
+  // Diagnostics for a blank window: page errors and load failures go to the terminal, and
+  // MJ_DEBUG=1 also opens the developer tools.
+  win.webContents.on('did-fail-load', (_event, code, description, url) => {
+    console.error(`[window] load failed (${code} ${description}): ${url}`);
+  });
+  win.webContents.on('render-process-gone', (_event, details) => {
+    console.error(`[window] renderer gone: ${details.reason}`);
+  });
+  win.webContents.on('console-message', (event) => {
+    console.log(`[page:${event.level}] ${event.message} (${event.sourceId}:${event.lineNumber})`);
+  });
+  if (process.env.MJ_DEBUG === '1') win.webContents.openDevTools({ mode: 'detach' });
 
   void win.loadURL(DEV_URL ?? `${APP_SCHEME}://bundle/`);
   mainWindow = win;
@@ -116,6 +135,8 @@ if (!gotLock) {
   });
 
   void app.whenReady().then(() => {
+    // No File / Edit / View / Window menu bar. Copy and paste still work inside the page.
+    Menu.setApplicationMenu(null);
     protocol.handle(APP_SCHEME, (request) => {
       const { pathname } = new URL(request.url);
       return net.fetch(pathToFileURL(resolveWebFile(pathname)).toString());
