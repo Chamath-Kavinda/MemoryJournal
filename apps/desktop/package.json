@@ -3,13 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "description": "Electron shell that wraps the Expo web build for Windows.",
+  "author": "Memory Journal",
   "main": "dist/main.js",
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "pnpm build && electron .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "jest",
-    "dist": "pnpm build && electron-builder --config electron-builder.yml --win"
+    "dist:dir": "pnpm --filter app export:web && pnpm build && electron-builder --config electron-builder.yml --win --dir",
+    "dist": "pnpm --filter app export:web && pnpm build && electron-builder --config electron-builder.yml --win"
   },
   "dependencies": {
     "@memory-journal/core": "workspace:*"

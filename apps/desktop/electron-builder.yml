@@ -1,11 +1,16 @@
 appId: com.memoryjournal.desktop
 productName: Memory Journal
+copyright: Copyright (c) 2026 Memory Journal
 directories:
   output: release
+asar: true
+compression: normal
+publish: null
 files:
   - dist/**
   - assets/**
   - package.json
+  - '!dist/**/*.map'
 extraResources:
   - from: ../app/dist
     to: web
@@ -13,6 +18,9 @@ win:
   target:
     - target: nsis
       arch: [x64]
+  artifactName: ${productName}-Setup-${version}.${ext}
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  perMachine: false
+  shortcutName: Memory Journal

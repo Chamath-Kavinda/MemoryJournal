@@ -9,6 +9,10 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "export:web": "expo export --platform web",
+    "build:android:dev": "pnpm dlx eas-cli build --platform android --profile development",
+    "build:android:preview": "pnpm dlx eas-cli build --platform android --profile preview",
+    "build:android": "pnpm dlx eas-cli build --platform android --profile production",
+    "build:ios": "pnpm dlx eas-cli build --platform ios --profile production",
     "typecheck": "tsc -p tsconfig.json",
     "test": "jest"
   },
