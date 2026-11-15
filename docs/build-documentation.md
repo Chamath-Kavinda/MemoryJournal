@@ -634,7 +634,7 @@ Numbering continues from 42:
 
 43. `docs: plan v0.2.0 guest mode, neon theme, navigation and size reduction`
 44. `build(app): move config to app.config.ts with per-profile CPU types`
-45. `build(app): enable shrinking and remove unused dependencies and assets`
+45. `build(app): enable shrinking and compress the app icon`
 46. `build: add release script that names Android artifacts with the version`
 47. `feat(app): add theme tokens, neon gradient palette and dark default`
 48. `feat(app): add fonts, icons and shared button, card, chip components`

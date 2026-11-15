@@ -45,7 +45,16 @@ const config: ExpoConfig = {
     'expo-router',
     '@react-native-google-signin/google-signin',
     'expo-notifications',
-    ['expo-build-properties', { android: { buildArchs: androidArchs() } }],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          buildArchs: androidArchs(),
+          enableProguardInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+        },
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
