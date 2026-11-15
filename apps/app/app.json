@@ -20,6 +20,17 @@
     "plugins": ["expo-router", "@react-native-google-signin/google-signin", "expo-notifications"],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "0388f7bd-c63d-4e7d-ba36-74356cbc1d45"
+      }
+    },
+    "owner": "chamabro"
   }
 }
