@@ -4,7 +4,9 @@ import { pathToFileURL } from 'node:url';
 
 import { BrowserWindow, app, ipcMain, net, protocol, shell } from 'electron';
 
+import { setupDesktopReminder } from './desktopReminder';
 import { googleSignIn } from './googleSignIn';
+import { createTray } from './tray';
 
 // In development, read the Google desktop client settings from apps/desktop/.env.
 // Variables already set in the shell win over the file.
@@ -15,6 +17,10 @@ if (!app.isPackaged) {
 
 const APP_SCHEME = 'app';
 const DEV_URL = process.env.MJ_DEV_URL;
+
+// Windows shows notifications under this id once the app is installed. In development the default
+// id of the Electron executable is kept, because a made-up id with no shortcut shows nothing.
+if (app.isPackaged) app.setAppUserModelId('com.memoryjournal.desktop');
 
 // The static Expo export lives next to the packaged app, or in apps/app/dist in development.
 const webRoot = app.isPackaged
@@ -37,7 +43,11 @@ function resolveWebFile(pathname: string): string {
   return join(webRoot, 'index.html');
 }
 
-function createWindow(): void {
+let mainWindow: BrowserWindow | null = null;
+// True once the app is really quitting; until then closing the window only hides it to the tray.
+let quitting = false;
+
+function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1100,
     height: 760,
@@ -57,7 +67,40 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
+  // Closing the window keeps the app in the system tray so the 21:00 reminder still comes (5.8).
+  win.on('close', (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    win.hide();
+  });
+  // Windows asks every app to end when the person logs off or shuts down; do not stand in the way.
+  win.on('session-end', () => {
+    quitting = true;
+  });
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+
   void win.loadURL(DEV_URL ?? `${APP_SCHEME}://bundle/`);
+  mainWindow = win;
+  return win;
+}
+
+/** Brings the window to the front, from the tray or minimised, and makes one if there is none. */
+function showMainWindow(): BrowserWindow {
+  const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : createWindow();
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible()) win.show();
+  win.focus();
+  return win;
+}
+
+/** What a click on the reminder does: show the window and have the app open today's page. */
+function openToday(): void {
+  const win = showMainWindow();
+  const send = (): void => win.webContents.send('reminder:open-today');
+  if (win.webContents.isLoading()) win.webContents.once('did-finish-load', send);
+  else send();
 }
 
 const gotLock = app.requestSingleInstanceLock();
@@ -65,11 +108,11 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    const [win] = BrowserWindow.getAllWindows();
-    if (win) {
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
+    showMainWindow();
+  });
+
+  app.on('before-quit', () => {
+    quitting = true;
   });
 
   void app.whenReady().then(() => {
@@ -80,6 +123,13 @@ if (!gotLock) {
 
     ipcMain.handle('auth:google-sign-in', () => googleSignIn());
     createWindow();
+    createTray({
+      open: () => {
+        showMainWindow();
+      },
+      quit: () => app.quit(),
+    });
+    setupDesktopReminder(openToday);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
