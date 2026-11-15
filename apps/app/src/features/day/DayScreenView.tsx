@@ -1,6 +1,9 @@
 import { formatCountdown, parseDayId, type DayAccess, type DayId } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { Pressable, Text, View, useColorScheme } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 interface Props {
   dayId: DayId;
@@ -26,7 +29,7 @@ function bannerFor(access: DayAccess | null): { title: string; detail?: string }
 
 /** Date header and status banner of the Day screen. The writer itself arrives in later commits. */
 export function DayScreenView({ dayId, access, onBack }: Props) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useTheme().scheme === 'dark';
   const parts = parseDayId(dayId);
   const heading = parts
     ? format(new Date(parts.year, parts.month - 1, parts.day), 'EEEE, d MMMM yyyy')

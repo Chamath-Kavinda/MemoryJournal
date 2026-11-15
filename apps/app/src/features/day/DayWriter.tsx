@@ -19,7 +19,10 @@ import {
   type DayContent,
 } from '@memory-journal/core';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View, useColorScheme } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text, TextInput } from '@/theme/themed';
 
 import { MentionInput } from './MentionInput';
 import type { Tagging } from './tagging';
@@ -65,7 +68,7 @@ function previewOf(content: DayContent, hour: number, names: ReadonlyMap<string,
 
 /** Free Notes block followed by the 24 hourly rows. Empty rows stay collapsed. */
 export function DayWriter({ content, onChange, editable, tagging }: Props) {
-  const colors = colorsFor(useColorScheme() === 'dark');
+  const colors = colorsFor(useTheme().scheme === 'dark');
   const [expandedHour, setExpandedHour] = useState<number | null>(null);
   const [addingMinute, setAddingMinute] = useState(false);
   const [minuteInput, setMinuteInput] = useState('');

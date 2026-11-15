@@ -1,4 +1,7 @@
-import { Text, View, useColorScheme } from 'react-native';
+import { View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 import type { DraftSaveState } from './useDayDraft';
 
@@ -7,7 +10,7 @@ import type { DraftSaveState } from './useDayDraft';
  * not. Its height is reserved so the page does not jump while typing.
  */
 export function DraftStatus({ state }: { state: DraftSaveState }) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useTheme().scheme === 'dark';
   const failed = state === 'error';
   const visible = state === 'saved' || failed;
 

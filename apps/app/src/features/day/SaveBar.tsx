@@ -1,4 +1,7 @@
-import { Pressable, Text, View, useColorScheme } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 interface Props {
   /** True when the text on screen differs from the latest saved pass. */
@@ -14,7 +17,7 @@ interface Props {
 
 /** The Save button of the writer, with one quiet line that says where the text stands. */
 export function SaveBar({ canSave, hasSaved, saving, failed, pendingSync, onSave }: Props) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useTheme().scheme === 'dark';
   // Offline, a save waits for the server for a long time; it must not block more saving.
   const busy = saving && !pendingSync;
   const disabled = !canSave || busy;

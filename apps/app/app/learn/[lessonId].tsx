@@ -1,6 +1,8 @@
 import { getLesson } from '@memory-journal/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView } from 'react-native';
+
+import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTodayId } from '@/features/calendar/useTodayId';

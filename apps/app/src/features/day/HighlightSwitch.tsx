@@ -1,4 +1,7 @@
-import { Switch, Text, View, useColorScheme } from 'react-native';
+import { Switch, View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 interface Props {
   value: boolean;
@@ -11,7 +14,7 @@ interface Props {
 
 /** The Highlight additions switch under the revision toggle (section 5.3). */
 export function HighlightSwitch({ value, onChange, disabled, readOnlyNote }: Props) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useTheme().scheme === 'dark';
   const muted = dark ? '#8e8e93' : '#6c6c70';
 
   let hint = '';

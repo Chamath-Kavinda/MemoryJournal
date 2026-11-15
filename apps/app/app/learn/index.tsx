@@ -1,6 +1,8 @@
 import { LESSONS } from '@memory-journal/core';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LessonList } from '@/features/learn/LessonList';

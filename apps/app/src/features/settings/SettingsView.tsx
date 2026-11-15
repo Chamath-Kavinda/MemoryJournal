@@ -1,6 +1,8 @@
 import type { ThemePreference } from '@memory-journal/core';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Switch, View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import { useAuthStore } from '@/features/auth/authStore';
 import { useTodayId } from '@/features/calendar/useTodayId';

@@ -1,27 +1,14 @@
-import { Pressable, Text, View, useColorScheme } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-export interface Palette {
-  text: string;
-  muted: string;
-  border: string;
-  surface: string;
-  accent: string;
-  onAccent: string;
-  danger: string;
-}
+import { useTheme } from '@/theme/ThemeProvider';
+import type { Palette } from '@/theme/palette';
+import { Text } from '@/theme/themed';
 
-/** Colours for the tag screens, following the system light or dark setting. */
+export type { Palette };
+
+/** Colours for the screens, following the saved theme choice (or the system when it says so). */
 export function usePalette(): Palette {
-  const dark = useColorScheme() === 'dark';
-  return {
-    text: dark ? '#f2f2f2' : '#1c1c1e',
-    muted: dark ? '#8e8e93' : '#6c6c70',
-    border: dark ? '#3a3a3c' : '#d1d1d6',
-    surface: dark ? '#2c2c2e' : '#f2f2f7',
-    accent: dark ? '#0a84ff' : '#0a60d6',
-    onAccent: '#ffffff',
-    danger: dark ? '#ff453a' : '#d70015',
-  };
+  return useTheme().palette;
 }
 
 interface ButtonProps {

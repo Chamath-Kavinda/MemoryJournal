@@ -1,6 +1,8 @@
 import { parseDayId, type DayId, type MentionedDay } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import type { MentionedDaysStatus } from './useMentionedDays';
 import { usePalette } from './ui';

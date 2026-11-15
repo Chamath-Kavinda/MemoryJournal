@@ -8,7 +8,10 @@ import {
   type DayContent,
   type TextSegment,
 } from '@memory-journal/core';
-import { Text, View, useColorScheme } from 'react-native';
+import { View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 interface Props {
   /** The pass on screen. */
@@ -29,7 +32,7 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
  * colour alone. Only the parts of the day that have text are listed.
  */
 export function HighlightedDay({ current, previous, previousN, names = NO_NAMES }: Props) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useTheme().scheme === 'dark';
   const colors = {
     text: dark ? '#f2f2f2' : '#1c1c1e',
     muted: dark ? '#8e8e93' : '#6c6c70',

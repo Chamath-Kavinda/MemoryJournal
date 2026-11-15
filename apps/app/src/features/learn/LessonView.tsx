@@ -1,5 +1,7 @@
 import { parseLesson, TRY_IT_HEADING, type Lesson } from '@memory-journal/core';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import { ActionButton, usePalette } from '@/features/tags/ui';
 

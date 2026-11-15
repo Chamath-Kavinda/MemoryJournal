@@ -13,7 +13,9 @@ import {
   type TagGroup,
 } from '@memory-journal/core';
 import { useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View, type StyleProp, type TextStyle } from 'react-native';
+import { Pressable, View, type StyleProp, type TextStyle } from 'react-native';
+
+import { Text, TextInput } from '@/theme/themed';
 
 import { TagForm } from '@/features/tags/TagForm';
 import { ActionButton, usePalette, type Palette } from '@/features/tags/ui';

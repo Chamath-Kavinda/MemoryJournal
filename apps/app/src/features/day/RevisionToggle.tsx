@@ -1,5 +1,8 @@
 import type { RevisionOption, RevisionSelection } from '@memory-journal/core';
-import { Pressable, ScrollView, Text, View, useColorScheme } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 interface Props {
   options: RevisionOption[];
@@ -12,7 +15,7 @@ interface Props {
  * the day as it was then. A day with a single pass has no options, so nothing is drawn.
  */
 export function RevisionToggle({ options, selected, onSelect }: Props) {
-  const dark = useColorScheme() === 'dark';
+  const dark = useTheme().scheme === 'dark';
   if (options.length === 0) return null;
 
   return (

@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text } from 'react-native';
+import { ActivityIndicator, ScrollView } from 'react-native';
+
+import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TagBrowser } from '@/features/tags/TagBrowser';

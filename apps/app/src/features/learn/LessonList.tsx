@@ -1,5 +1,7 @@
 import { learnProgress, nextLesson, type Lesson } from '@memory-journal/core';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import { usePalette } from '@/features/tags/ui';
 

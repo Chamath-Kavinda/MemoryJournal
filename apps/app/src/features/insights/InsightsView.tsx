@@ -1,6 +1,8 @@
 import { nextMilestone, type Insights, type TrendPoint } from '@memory-journal/core';
 import { useState, type ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import { ActionButton, usePalette } from '@/features/tags/ui';
 

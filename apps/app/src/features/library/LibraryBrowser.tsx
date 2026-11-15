@@ -7,7 +7,9 @@ import {
   type LibraryItemType,
 } from '@memory-journal/core';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import { ActionButton, Chip, usePalette } from '@/features/tags/ui';
 

@@ -1,5 +1,7 @@
 import { libraryTypeLabel, type MentionedLibraryItem } from '@memory-journal/core';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+
+import { Text } from '@/theme/themed';
 
 import type { LoadStatus } from '@/features/library/useLibrary';
 

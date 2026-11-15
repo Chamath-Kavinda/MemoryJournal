@@ -1,19 +1,39 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
 
 import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
 import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
 import { reminderWanted, useSettings } from '@/features/settings/useSettings';
+import { SideNav } from '@/navigation/AppNav';
+import { isWide } from '@/theme/palette';
+import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
+
+/** The page background, the status bar and, on wide windows, the side navigation. */
+function Shell({ showNav }: { showNav: boolean }) {
+  const { palette, scheme } = useTheme();
+  const { width } = useWindowDimensions();
+  const sideNav = showNav && isWide(width);
+  return (
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: palette.background }}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {sideNav ? <SideNav /> : null}
+      <View style={{ flex: 1 }}>
+        <Slot />
+      </View>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const status = useAuthStore((s) => s.status);
   const segments = useSegments();
   const router = useRouter();
-  const reminderOn = reminderWanted(useSettings());
+  const settings = useSettings();
+  const reminderOn = reminderWanted(settings);
 
   useEffect(() => startAuthListener(), []);
   useProfileSync();
@@ -27,18 +47,29 @@ export default function RootLayout() {
     if (status === 'signed-in' && onSignIn) router.replace('/home');
   }, [status, segments, router]);
 
-  if (status === 'loading') {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
   return (
-    <>
-      <StatusBar style="auto" />
-      <Slot />
-    </>
+    <ThemeProvider preference={settings.settings.theme}>
+      {status === 'loading' ? (
+        <LoadingShell />
+      ) : (
+        <Shell showNav={status === 'signed-in' && segments[0] !== 'sign-in'} />
+      )}
+    </ThemeProvider>
+  );
+}
+
+function LoadingShell() {
+  const { palette } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: palette.background,
+      }}
+    >
+      <ActivityIndicator color={palette.accent} />
+    </View>
   );
 }

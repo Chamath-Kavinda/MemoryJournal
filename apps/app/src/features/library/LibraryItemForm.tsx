@@ -6,7 +6,9 @@ import {
   type LibraryItemType,
 } from '@memory-journal/core';
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, usePalette } from '@/features/tags/ui';
 

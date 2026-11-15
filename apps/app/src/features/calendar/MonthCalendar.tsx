@@ -6,7 +6,10 @@ import {
   type MonthRef,
 } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { Pressable, Text, View, useColorScheme } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const CELL_WIDTH = `${100 / 7}%` as const;
@@ -41,7 +44,7 @@ interface Props {
 
 /** Month calendar: a dot marks written days, a ring marks today, future days are disabled. */
 export function MonthCalendar({ month, todayId, writtenDays, onSelectDay, onChangeMonth }: Props) {
-  const colors = palette(useColorScheme());
+  const colors = palette(useTheme().scheme);
   const weeks = buildMonthGrid({ month, todayId, writtenDays });
   const todayMonth = { year: Number(todayId.slice(0, 4)), month: Number(todayId.slice(5, 7)) };
   const canGoNext = compareMonths(month, todayMonth) < 0;

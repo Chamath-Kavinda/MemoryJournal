@@ -1,6 +1,8 @@
 import { filterTags, type Tag, type TagCategory } from '@memory-journal/core';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+
+import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, Chip, usePalette } from './ui';
 
