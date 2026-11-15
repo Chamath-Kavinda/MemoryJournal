@@ -1,6 +1,6 @@
 # Release notes
 
-## v0.1.0 (first release, not yet tagged)
+## v0.1.0 (2026-11-15)
 
 Memory Journal is a private journal that trains memory: you write the day from memory each evening, from 21:00, and can come back later to add what you remember. It runs on Android and Windows from one codebase. This is the first version, so the notes describe what is in it and what has not been checked yet.
 

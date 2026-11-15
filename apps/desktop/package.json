@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Electron shell that wraps the Expo web build for Windows.",
   "author": "Memory Journal",
