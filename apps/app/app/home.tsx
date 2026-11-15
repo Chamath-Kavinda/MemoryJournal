@@ -1,12 +1,14 @@
 import { addMonths, monthOfDayId, type MonthRef } from '@memory-journal/core';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MonthCalendar } from '@/features/calendar/MonthCalendar';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
+import { StatsBar } from '@/features/insights/StatsBar';
+import { useInsights } from '@/features/insights/useInsights';
 import { signOut } from '@/platform/auth/google';
 
 export default function HomeScreen() {
@@ -15,10 +17,29 @@ export default function HomeScreen() {
   // Start on the current month, then follow the user's own navigation.
   const [month, setMonth] = useState<MonthRef>(() => monthOfDayId(todayId));
   const { writtenDays, status } = useWrittenDays(month);
+  const { insights, status: insightsStatus, reload } = useInsights(todayId);
+
+  // Home stays mounted under the Day screen, so read the numbers again when it regains focus.
+  // The first focus is skipped because useInsights has just started its own read.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      reload();
+    }, [reload]),
+  );
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+        <StatsBar
+          insights={insights}
+          status={insightsStatus}
+          onOpen={() => router.push('/insights')}
+        />
         <MonthCalendar
           month={month}
           todayId={todayId}
