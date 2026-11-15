@@ -18,3 +18,5 @@ allowBuilds:
   esbuild: false
   # Skipped on purpose: install script only prepares the optional protobufjs CLI, unused here.
   protobufjs: false
+  # Native regex engine pulled in by firebase-tools, a dev tool that is not part of the app build.
+  re2: false
