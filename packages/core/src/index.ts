@@ -14,4 +14,5 @@ export * from './score';
 export * from './streak';
 export * from './tags';
 export * from './time';
+export * from './tutorials';
 export * from './types';
