@@ -102,7 +102,7 @@ describe('HighlightSwitch', () => {
       <HighlightSwitch value={false} onChange={onChange} disabled={false} readOnlyNote={false} />,
     );
 
-    await fireEvent(screen.getByLabelText('Highlight additions'), 'valueChange', true);
+    await fireEvent.press(screen.getByLabelText('Highlight additions'));
 
     expect(onChange).toHaveBeenCalledWith(true);
   });
@@ -113,7 +113,10 @@ describe('HighlightSwitch', () => {
     );
 
     expect(screen.getByText('The first pass has nothing earlier to compare with.')).toBeTruthy();
-    expect(screen.getByLabelText('Highlight additions').props.value).toBe(false);
+    expect(screen.getByLabelText('Highlight additions').props.accessibilityState).toMatchObject({
+      checked: false,
+      disabled: true,
+    });
   });
 
   it('tells the writer that the highlighted view is read-only', async () => {

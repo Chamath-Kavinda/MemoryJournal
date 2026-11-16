@@ -1,5 +1,9 @@
-import { Switch, View } from 'react-native';
+import { Highlighter } from 'lucide-react-native';
+import { View } from 'react-native';
 
+import { Icon } from '@/components/Icon';
+import { Toggle } from '@/components/Toggle';
+import { SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
@@ -26,21 +30,28 @@ export function HighlightSwitch({ value, onChange, disabled, readOnlyNote }: Pro
         width: '100%',
         maxWidth: 720,
         alignSelf: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        gap: 4,
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: SPACING.sm,
+        gap: SPACING.xs,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ color: palette.text, fontSize: 15 }}>Highlight additions</Text>
-        <Switch
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <Icon icon={Highlighter} color={palette.accent} />
+          <Text variant="body">Highlight additions</Text>
+        </View>
+        <Toggle
           accessibilityLabel="Highlight additions"
           value={value && !disabled}
           disabled={disabled}
           onValueChange={onChange}
         />
       </View>
-      {hint !== '' ? <Text style={{ color: palette.muted, fontSize: 13 }}>{hint}</Text> : null}
+      {hint !== '' ? (
+        <Text variant="caption" style={{ color: palette.muted }}>
+          {hint}
+        </Text>
+      ) : null}
     </View>
   );
 }

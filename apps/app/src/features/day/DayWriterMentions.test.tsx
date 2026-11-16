@@ -146,7 +146,7 @@ describe('DayWriter tag mentions', () => {
     const input = screen.getByLabelText('Free notes');
     await fireEvent(input, 'focus');
     await fireEvent(input, 'selectionChange', selection(5));
-    await fireEvent.press(screen.getByText('Insert tag'));
+    await fireEvent.press(screen.getByLabelText('Insert tag'));
     await fireEvent.press(screen.getByLabelText('Mention Ravi'));
 
     expect(onChange).toHaveBeenLastCalledWith({
@@ -164,7 +164,7 @@ describe('DayWriter tag mentions', () => {
 
     const input = screen.getByLabelText('Free notes');
     await fireEvent(input, 'focus');
-    await fireEvent.press(screen.getByText('Insert tag'));
+    await fireEvent.press(screen.getByLabelText('Insert tag'));
 
     expect(screen.getByLabelText('Mention Ravi')).toBeTruthy();
     expect(screen.getByLabelText('Mention Galle Fort')).toBeTruthy();
@@ -210,7 +210,7 @@ describe('DayWriter tag mentions', () => {
     const input = screen.getByLabelText('Free notes');
     await fireEvent(input, 'focus');
     await fireEvent(input, 'selectionChange', selection(14, 24));
-    await fireEvent.press(screen.getByText('Save as tag'));
+    await fireEvent.press(screen.getByLabelText('Save as tag'));
 
     expect(screen.getByLabelText('Name').props.value).toBe('Galle Fort');
     await fireEvent.press(screen.getByText('Create tag'));
@@ -235,7 +235,7 @@ describe('DayWriter tag mentions', () => {
     const input = screen.getByLabelText('Free notes');
     await fireEvent(input, 'focus');
 
-    expect(screen.queryByText('Insert tag')).toBeNull();
+    expect(screen.queryByLabelText('Insert tag')).toBeNull();
   });
 
   it('shows mentions as names in the collapsed row preview', async () => {

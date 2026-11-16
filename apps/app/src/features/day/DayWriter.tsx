@@ -18,10 +18,20 @@ import {
   toDisplayText,
   type DayContent,
 } from '@memory-journal/core';
+import { ChevronDown, Clock, NotebookPen, Timer, X } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
-import type { Palette } from '@/theme/palette';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
+import { IconButton } from '@/components/IconButton';
+import { Pop } from '@/components/Pop';
+import { PressableScale } from '@/components/PressableScale';
+import { Reflow } from '@/components/Reflow';
+import { Reveal } from '@/components/Reveal';
+import { Rotate } from '@/components/Rotate';
+import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text, TextInput } from '@/theme/themed';
 
@@ -43,20 +53,6 @@ interface Cursor {
   offset: number;
 }
 
-function colorsFrom(palette: Palette) {
-  return {
-    text: palette.text,
-    muted: palette.muted,
-    border: palette.border,
-    surface: palette.surface,
-    accent: palette.accent,
-    error: palette.danger,
-  };
-}
-
-/** Small text buttons still get a comfortable target to press or click. */
-const targetStyle = { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 } as const;
-
 /**
  * One line for a collapsed row: the first text of the hour as the person sees it (mentions as
  * `@Name`), cut with an ellipsis. Cut after the conversion so a mention is never split.
@@ -70,9 +66,9 @@ function previewOf(content: DayContent, hour: number, names: ReadonlyMap<string,
     : line;
 }
 
-/** Free Notes block followed by the 24 hourly rows. Empty rows stay collapsed. */
+/** Free Notes card followed by the 24 hourly rows. Empty rows stay collapsed. */
 export function DayWriter({ content, onChange, editable, tagging }: Props) {
-  const colors = colorsFrom(useTheme().palette);
+  const { palette } = useTheme();
   const [expandedHour, setExpandedHour] = useState<number | null>(null);
   const [addingMinute, setAddingMinute] = useState(false);
   const [minuteInput, setMinuteInput] = useState('');
@@ -88,12 +84,12 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
   );
 
   const inputStyle = {
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
+    color: palette.text,
+    backgroundColor: palette.surfaceRaised,
+    borderColor: palette.border,
+    borderWidth: BORDER_WIDTH,
+    borderRadius: RADIUS.input,
+    padding: SPACING.md,
     textAlignVertical: 'top' as const,
   };
 
@@ -132,16 +128,22 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
 
   return (
     <View
-      style={{ width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 20 }}
+      style={{
+        width: '100%',
+        maxWidth: 720,
+        alignSelf: 'center',
+        paddingHorizontal: SPACING.lg,
+        gap: SPACING.lg,
+      }}
     >
-      <View style={{ gap: 6 }}>
-        <Text
-          accessibilityRole="header"
-          style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}
-        >
-          Free notes
-        </Text>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>
+      <Card style={{ gap: SPACING.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <Icon icon={NotebookPen} size="control" color={palette.accent} />
+          <Text accessibilityRole="header" variant="heading">
+            Free notes
+          </Text>
+        </View>
+        <Text variant="caption" style={{ color: palette.muted }}>
           Things you remember but cannot place in time.
         </Text>
         <MentionInput
@@ -152,9 +154,9 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
           onChangeValue={(text) => onChange(setFreeNotes(content, text))}
           style={{ ...inputStyle, minHeight: 88 }}
         />
-      </View>
+      </Card>
 
-      <View style={{ borderTopWidth: 1, borderColor: colors.border }}>
+      <View style={{ gap: SPACING.sm }}>
         {HOURS.map((hour) => {
           const label = hourLabel(hour);
           const preview = previewOf(content, hour, names);
@@ -164,25 +166,46 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
           const canOpen = editable || hasText;
 
           return (
-            <View key={hour} style={{ borderBottomWidth: 1, borderColor: colors.border }}>
-              <Pressable
+            <Reflow
+              key={hour}
+              style={{
+                borderRadius: RADIUS.card,
+                borderWidth: BORDER_WIDTH,
+                borderColor: expanded ? palette.accent : palette.border,
+                backgroundColor: palette.surface,
+                overflow: 'hidden',
+              }}
+            >
+              <PressableScale
                 accessibilityRole="button"
                 accessibilityLabel={`${label}, ${preview || 'empty'}`}
                 accessibilityState={{ expanded, disabled: !canOpen }}
                 disabled={!canOpen}
+                dimmed={false}
                 onPress={() => toggleRow(hour, expanded)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 }}
+                innerStyle={{
+                  minHeight: MIN_TARGET,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: SPACING.md,
+                  paddingHorizontal: SPACING.md,
+                  paddingVertical: SPACING.sm,
+                }}
               >
-                <Text style={{ width: 52, color: colors.muted, fontVariant: ['tabular-nums'] }}>
+                <Icon icon={Clock} color={hasText ? palette.accent : palette.muted} />
+                <Text style={{ width: 52, color: palette.muted, fontVariant: ['tabular-nums'] }}>
                   {label}
                 </Text>
-                <Text numberOfLines={1} style={{ flex: 1, color: colors.text }}>
+                <Text numberOfLines={1} style={{ flex: 1, color: palette.text }}>
                   {preview}
                 </Text>
-              </Pressable>
+                <Rotate turned={expanded}>
+                  <Icon icon={ChevronDown} color={palette.muted} />
+                </Rotate>
+              </PressableScale>
 
               {expanded ? (
-                <View style={{ paddingBottom: 12, gap: 12 }}>
+                <Reveal style={{ padding: SPACING.md, paddingTop: 0, gap: SPACING.md }}>
                   <MentionInput
                     label={`Notes for ${label}`}
                     autoFocus={editable && focusMinute === null}
@@ -201,7 +224,7 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                     const minute = block.minute as number;
                     const time = timeLabel(hour, minute);
                     return (
-                      <View key={minute} style={{ gap: 6 }}>
+                      <View key={minute} style={{ gap: SPACING.xs }}>
                         <View
                           style={{
                             flexDirection: 'row',
@@ -209,27 +232,32 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                             justifyContent: 'space-between',
                           }}
                         >
-                          <Text
-                            style={{
-                              color: colors.accent,
-                              fontWeight: '600',
-                              fontVariant: ['tabular-nums'],
-                            }}
+                          <Pop
+                            trigger={minute}
+                            playOnMount={focusMinute === minute}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.xs }}
                           >
-                            {minuteLabel(minute)}
-                          </Text>
+                            <Icon icon={Timer} color={palette.accent} />
+                            <Text
+                              style={{
+                                color: palette.accent,
+                                fontWeight: '600',
+                                fontVariant: ['tabular-nums'],
+                              }}
+                            >
+                              {minuteLabel(minute)}
+                            </Text>
+                          </Pop>
                           {editable ? (
-                            <Pressable
-                              accessibilityRole="button"
+                            <IconButton
+                              icon={X}
                               accessibilityLabel={`Remove ${time}`}
+                              color={palette.muted}
                               onPress={() => {
                                 cursorRef.current = null;
                                 onChange(removeMinuteMarker(content, hour, minute));
                               }}
-                              style={targetStyle}
-                            >
-                              <Text style={{ color: colors.muted }}>Remove</Text>
-                            </Pressable>
+                            />
                           ) : null}
                         </View>
                         <MentionInput
@@ -251,27 +279,33 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                   })}
 
                   {editable && !addingMinute ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Add minute"
+                    <Button
+                      label="Add minute"
+                      icon={Timer}
+                      variant="ghost"
                       onPress={() => setAddingMinute(true)}
-                      style={{ ...targetStyle, alignSelf: 'flex-start' }}
-                    >
-                      <Text style={{ color: colors.accent, fontWeight: '600' }}>+ Add minute</Text>
-                    </Pressable>
+                      style={{ alignSelf: 'flex-start' }}
+                    />
                   ) : null}
 
                   {editable && addingMinute ? (
-                    <View style={{ gap: 6 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <Text style={{ color: colors.muted }}>{label.slice(0, 3)}</Text>
+                    <View style={{ gap: SPACING.xs }}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: SPACING.md,
+                        }}
+                      >
+                        <Text style={{ color: palette.muted }}>{label.slice(0, 3)}</Text>
                         <TextInput
                           accessibilityLabel="Minute"
                           autoFocus
                           keyboardType="number-pad"
                           maxLength={3}
                           placeholder="0–59"
-                          placeholderTextColor={colors.muted}
+                          placeholderTextColor={palette.muted}
                           value={minuteInput}
                           onChangeText={(text) => {
                             setMinuteInput(text);
@@ -281,35 +315,30 @@ export function DayWriter({ content, onChange, editable, tagging }: Props) {
                           onKeyPress={(event) => {
                             if (event.nativeEvent.key === 'Escape') closeMinuteForm();
                           }}
-                          style={{ ...inputStyle, width: 88, paddingVertical: 8 }}
+                          style={{ ...inputStyle, width: 88, paddingVertical: SPACING.sm }}
                         />
-                        <Pressable
-                          accessibilityRole="button"
+                        <Button
+                          label="Insert"
                           accessibilityLabel="Insert minute marker"
                           onPress={() => insertMinute(hour)}
-                          style={targetStyle}
-                        >
-                          <Text style={{ color: colors.accent, fontWeight: '600' }}>Insert</Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
+                        />
+                        <Button
+                          label="Cancel"
                           accessibilityLabel="Cancel adding a minute"
+                          variant="ghost"
                           onPress={closeMinuteForm}
-                          style={targetStyle}
-                        >
-                          <Text style={{ color: colors.muted }}>Cancel</Text>
-                        </Pressable>
+                        />
                       </View>
                       {minuteError ? (
-                        <Text accessibilityRole="alert" style={{ color: colors.error }}>
+                        <Text accessibilityRole="alert" style={{ color: palette.danger }}>
                           {minuteError}
                         </Text>
                       ) : null}
                     </View>
                   ) : null}
-                </View>
+                </Reveal>
               ) : null}
-            </View>
+            </Reflow>
           );
         })}
       </View>

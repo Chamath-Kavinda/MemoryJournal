@@ -12,9 +12,12 @@ import {
   type TagCategory,
   type TagGroup,
 } from '@memory-journal/core';
+import { AtSign, Tag as TagIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, View, type StyleProp, type TextStyle } from 'react-native';
 
+import { IconButton } from '@/components/IconButton';
+import { SPACING } from '@/theme/layout';
 import { Text, TextInput } from '@/theme/themed';
 
 import { TagForm } from '@/features/tags/TagForm';
@@ -176,13 +179,17 @@ export function MentionInput({
       />
 
       {editable && tagging !== undefined && (touched || panel !== null) ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          <ActionButton
-            label="Insert tag"
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.xs }}>
+          <IconButton
+            icon={AtSign}
+            accessibilityLabel="Insert tag"
+            color={palette.accent}
             onPress={() => setPanel({ kind: 'pick', at: selection.end, search: '' })}
           />
-          <ActionButton
-            label="Save as tag"
+          <IconButton
+            icon={TagIcon}
+            accessibilityLabel="Save as tag"
+            color={palette.accent}
             disabled={!canCreate || selectedText === ''}
             onPress={() =>
               setPanel({

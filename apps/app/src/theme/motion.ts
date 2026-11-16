@@ -36,6 +36,9 @@ export const POP_SCALE = 1.2;
 /** How far, in points, new content slides in sideways, for example a calendar changing month. */
 export const SLIDE_DISTANCE = 24;
 
+/** How far, in points, a sticky bottom bar rests below its place before it slides up. */
+export const BAR_SLIDE_DISTANCE = 96;
+
 /** A tapped date ripples from the first scale to the second while it fades out. */
 export const RIPPLE_START_SCALE = 0.6;
 export const RIPPLE_END_SCALE = 1.15;

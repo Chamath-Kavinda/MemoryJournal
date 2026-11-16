@@ -185,7 +185,7 @@ export default function LibraryItemRoute() {
                 <DraftStatus state={draft.saveState} />
                 <SaveBar
                   canSave={canSave}
-                  hasSaved={latest !== null}
+
                   saving={save.saving}
                   failed={save.failed}
                   pendingSync={history?.hasPendingWrites ?? false}

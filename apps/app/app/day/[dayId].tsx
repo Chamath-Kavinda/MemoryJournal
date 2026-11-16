@@ -10,12 +10,13 @@ import {
 } from '@memory-journal/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Snackbar } from '@/components/Snackbar';
 import { useConfirm } from '@/components/useConfirm';
 import { useAuthStore } from '@/features/auth/authStore';
 import { DayScreenView } from '@/features/day/DayScreenView';
@@ -27,7 +28,7 @@ import { showFirstSaveNoticeOnce } from '@/features/day/firstSaveNotice';
 import { HighlightedDay } from '@/features/day/HighlightedDay';
 import { HighlightSwitch } from '@/features/day/HighlightSwitch';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
-import { SaveBar } from '@/features/day/SaveBar';
+import { SAVE_BAR_CLEARANCE, SaveBar } from '@/features/day/SaveBar';
 import type { Tagging } from '@/features/day/tagging';
 import { useDayAccess } from '@/features/day/useDayAccess';
 import { useDayDraft } from '@/features/day/useDayDraft';
@@ -39,6 +40,7 @@ import { ErrorBanner } from '@/features/tags/ui';
 import { useTagData } from '@/features/tags/useTagData';
 import { useJournalRepository } from '@/lib/journal';
 import { useLeaveGuard } from '@/navigation/useLeaveGuard';
+import { SPACING } from '@/theme/layout';
 
 const noop = () => {};
 
@@ -110,10 +112,18 @@ export default function DayRoute() {
     storage: draftStorage,
   });
 
+  // A short confirmation after a save. The id changes with every save so the timer restarts.
+  const [snack, setSnack] = useState<{ message: string | null; id: number }>({
+    message: null,
+    id: 0,
+  });
+  const dismissSnack = useCallback(() => setSnack((s) => ({ ...s, message: null })), []);
+
   // A guest is told once, after their first revision is really saved, where the journal lives.
   const confirm = useConfirm();
   const saveAndNotify = async () => {
     const saved = await daySave.save();
+    if (saved) setSnack((s) => ({ message: 'Saved', id: s.id + 1 }));
     if (saved && uid === undefined) await showFirstSaveNoticeOnce(draftStorage, confirm);
   };
 
@@ -133,6 +143,9 @@ export default function DayRoute() {
     history !== null &&
     seededDay === dayId;
 
+  // The Save bar sticks to the bottom while the editable draft is on screen.
+  const showSaveBar = showWriter && editable && !highlighting && viewed === null;
+
   // Leaving with unsaved writing asks first. Confirming drops the text and its stored draft.
   const back = useLeaveGuard({
     dirty: showWriter && canSave,
@@ -146,67 +159,73 @@ export default function DayRoute() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <DayScreenView dayId={dayId} access={access} onBack={back} />
-        {historyFailed ? (
-          <Text
-            accessibilityRole="alert"
-            style={{ padding: 16, fontSize: 14, color: palette.danger, textAlign: 'center' }}
-          >
-            The saved passes of this day could not be loaded. Check your connection and open the day
-            again.
-          </Text>
-        ) : null}
-        {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
-        {showWriter ? (
-          <>
-            <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
-            {options.length > 0 ? (
-              <HighlightSwitch
-                value={highlight}
-                onChange={setHighlight}
-                disabled={previous === null}
-                readOnlyNote={selection === 'latest' && editable}
-              />
-            ) : null}
-            {highlighting && target !== null && previous !== null ? (
-              <HighlightedDay
-                current={contentOf(target)}
-                previous={contentOf(previous)}
-                previousN={previous.n}
-                names={tagNames}
-              />
-            ) : viewed === null ? (
-              <>
-                <DraftStatus state={draft.saveState} />
-                {editable ? (
-                  <SaveBar
-                    canSave={canSave}
-                    hasSaved={latest !== null}
-                    saving={daySave.saving}
-                    failed={daySave.failed}
-                    pendingSync={history?.hasPendingWrites ?? false}
-                    onSave={() => void saveAndNotify()}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={{ paddingBottom: showSaveBar ? SAVE_BAR_CLEARANCE : SPACING.xl }}
+        >
+          <DayScreenView dayId={dayId} access={access} onBack={back} />
+          {historyFailed ? (
+            <Text
+              accessibilityRole="alert"
+              style={{ padding: 16, fontSize: 14, color: palette.danger, textAlign: 'center' }}
+            >
+              The saved passes of this day could not be loaded. Check your connection and open the
+              day again.
+            </Text>
+          ) : null}
+          {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
+          {showWriter ? (
+            <>
+              <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
+              {options.length > 0 ? (
+                <HighlightSwitch
+                  value={highlight}
+                  onChange={setHighlight}
+                  disabled={previous === null}
+                  readOnlyNote={selection === 'latest' && editable}
+                />
+              ) : null}
+              {highlighting && target !== null && previous !== null ? (
+                <HighlightedDay
+                  current={contentOf(target)}
+                  previous={contentOf(previous)}
+                  previousN={previous.n}
+                  names={tagNames}
+                />
+              ) : viewed === null ? (
+                <>
+                  <DraftStatus state={draft.saveState} />
+                  <DayWriter
+                    content={draft.content}
+                    onChange={draft.setContent}
+                    editable={editable}
+                    tagging={tagging}
                   />
-                ) : null}
+                </>
+              ) : (
                 <DayWriter
-                  content={draft.content}
-                  onChange={draft.setContent}
-                  editable={editable}
+                  content={contentOf(viewed)}
+                  onChange={noop}
+                  editable={false}
                   tagging={tagging}
                 />
-              </>
-            ) : (
-              <DayWriter
-                content={contentOf(viewed)}
-                onChange={noop}
-                editable={false}
-                tagging={tagging}
-              />
-            )}
-          </>
+              )}
+            </>
+          ) : null}
+        </ScrollView>
+        {showSaveBar ? (
+          <SaveBar
+            canSave={canSave}
+            saving={daySave.saving}
+            failed={daySave.failed}
+            pendingSync={history?.hasPendingWrites ?? false}
+            onSave={() => void saveAndNotify()}
+          />
         ) : null}
-      </ScrollView>
+        <Snackbar message={snack.message} id={snack.id} onDismiss={dismissSnack} />
+      </View>
     </SafeAreaView>
   );
 }
