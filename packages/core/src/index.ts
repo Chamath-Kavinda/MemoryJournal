@@ -2,6 +2,7 @@ export * from './accountData';
 export * from './calendar';
 export * from './clock';
 export * from './dayContent';
+export * from './guestMerge';
 export * from './ids';
 export * from './insights';
 export * from './journalRepository';
