@@ -21,6 +21,7 @@ import { DayScreenView } from '@/features/day/DayScreenView';
 import { DayWriter } from '@/features/day/DayWriter';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
+import { draftOwner } from '@/features/day/draftStore';
 import { HighlightedDay } from '@/features/day/HighlightedDay';
 import { HighlightSwitch } from '@/features/day/HighlightSwitch';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
@@ -34,6 +35,7 @@ import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { createTag } from '@/features/tags/tagService';
 import { ErrorBanner } from '@/features/tags/ui';
 import { useTagData } from '@/features/tags/useTagData';
+import { useJournalRepository } from '@/lib/journal';
 import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 
 const noop = () => {};
@@ -44,11 +46,13 @@ export default function DayRoute() {
   const router = useRouter();
   const { palette } = useTheme();
   const uid = useAuthStore((s) => s.user?.uid);
+  const repository = useJournalRepository();
+  const owner = draftOwner(uid);
   const access = useDayAccess(dayId);
   const editable = access?.state === 'open';
 
-  const draft = useDayDraft({ uid, dayId, storage: draftStorage });
-  const { history, failed: historyFailed } = useDayHistory(uid, dayId);
+  const draft = useDayDraft({ uid: owner, dayId, storage: draftStorage });
+  const { history, failed: historyFailed } = useDayHistory(repository, dayId);
 
   // Tags for the `@` picker. The writer works without them while they load.
   const tagData = useTagData();
@@ -94,7 +98,8 @@ export default function DayRoute() {
   }, [dayId]);
 
   const daySave = useDaySave({
-    uid,
+    repository,
+    owner,
     dayId,
     history,
     content: draft.content,

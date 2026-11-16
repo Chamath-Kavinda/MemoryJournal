@@ -6,22 +6,12 @@ import {
   previousRevision,
   type DayContent,
   type DayId,
+  type DayMeta,
   type DayRevision,
   type EpochMs,
+  type JournalRepository,
 } from '@memory-journal/core';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  updateDoc,
-  writeBatch,
-  type Unsubscribe,
-} from 'firebase/firestore';
 import { z } from 'zod';
-
-import { getFirebase } from '@/lib/firebase';
 
 export const revisionSchema = z.object({
   n: z.number().int().min(1),
@@ -41,72 +31,56 @@ export const revisionSchema = z.object({
   addedWordCount: z.number(),
 });
 
-const dayMetaSchema = z.object({ updatedAt: z.number() });
-
 /** Everything the Day screen needs to know about the passes already saved for a day. */
 export interface DayHistory {
-  /** Saved passes, oldest first. Passes that do not match the expected shape are left out. */
+  /** Saved passes, oldest first. */
   revisions: DayRevision[];
   /** When the day was last saved, used to tell whether a sitting is still open. */
   lastActivityAt: EpochMs | null;
-  /** True while a save is on this device but not yet confirmed by the server. */
+  /** True while a save made on this device has not been confirmed yet. Never true for a guest. */
   hasPendingWrites: boolean;
 }
 
-function revisionRef(uid: string, dayId: DayId, n: number) {
-  return doc(getFirebase().db, 'users', uid, 'days', dayId, 'revisions', String(n));
-}
-
 /**
- * Listens to the saved passes of one day and to the day's last save time. The callback
- * first fires once both are known. Works offline: Firestore serves its local cache, and
- * a save made offline shows up here at once, marked as pending until it syncs.
+ * Reports the saved passes of one day and the day's last save time, now and again whenever
+ * the journal changes. A save made offline shows up here at once, marked as pending until it
+ * is confirmed. A slow read that is overtaken by a newer one is dropped, so the screen never
+ * goes back to older text.
  */
 export function subscribeDayHistory(
-  uid: string,
+  repository: JournalRepository,
   dayId: DayId,
   onChange: (history: DayHistory) => void,
   onError: (error: Error) => void,
-): Unsubscribe {
-  const { db } = getFirebase();
-  let revisions: DayRevision[] | null = null;
-  let hasPendingWrites = false;
-  let lastActivityAt: EpochMs | null = null;
-  let metaKnown = false;
+): () => void {
+  let active = true;
+  let latest = 0;
 
-  const emit = () => {
-    if (revisions === null || !metaKnown) return;
-    onChange({ revisions, lastActivityAt, hasPendingWrites });
+  const load = (): void => {
+    const read = ++latest;
+    Promise.all([repository.listRevisions(dayId), repository.getDay(dayId)]).then(
+      ([revisions, meta]) => {
+        if (!active || read !== latest) return;
+        onChange({
+          // Numbered order, whatever order the repository returned them in.
+          revisions: [...revisions].sort((a, b) => a.n - b.n),
+          lastActivityAt: meta?.updatedAt ?? null,
+          hasPendingWrites: repository.hasPendingWrites(),
+        });
+      },
+      (error: unknown) => {
+        if (active && read === latest) {
+          onError(error instanceof Error ? error : new Error(String(error)));
+        }
+      },
+    );
   };
 
-  const stopRevisions = onSnapshot(
-    // Document ids are text ("10" sorts before "2"), so the order comes from the field.
-    query(collection(db, 'users', uid, 'days', dayId, 'revisions'), orderBy('n')),
-    (snapshot) => {
-      revisions = snapshot.docs.flatMap((document) => {
-        const parsed = revisionSchema.safeParse(document.data());
-        return parsed.success ? [parsed.data] : [];
-      });
-      hasPendingWrites = snapshot.metadata.hasPendingWrites;
-      emit();
-    },
-    onError,
-  );
-
-  const stopMeta = onSnapshot(
-    doc(db, 'users', uid, 'days', dayId),
-    (snapshot) => {
-      const parsed = dayMetaSchema.safeParse(snapshot.data());
-      lastActivityAt = parsed.success ? parsed.data.updatedAt : null;
-      metaKnown = true;
-      emit();
-    },
-    onError,
-  );
-
+  load();
+  const stop = repository.subscribe(load);
   return () => {
-    stopRevisions();
-    stopMeta();
+    active = false;
+    stop();
   };
 }
 
@@ -118,12 +92,12 @@ export type SaveOutcome = { saved: false } | { saved: true; revision: DayRevisio
  * sitting is still going, and otherwise the next numbered revision is created.
  * The revision and the day's metadata are written together, so the calendar never shows
  * a day without its text. When a new sitting starts after the last one ran out, the old
- * revision is closed in the same write. Resolves when the server has confirmed it; while
- * offline it waits until the connection returns, and the saved text is already visible
- * through `subscribeDayHistory` in the meantime.
+ * revision is closed in the same write. For a signed-in user this resolves when the server
+ * has confirmed it; while offline it waits, and the saved text is already visible through
+ * `subscribeDayHistory` in the meantime.
  */
 export async function saveDayContent(
-  uid: string,
+  repository: JournalRepository,
   dayId: DayId,
   history: Pick<DayHistory, 'revisions' | 'lastActivityAt'>,
   content: DayContent,
@@ -142,36 +116,37 @@ export async function saveDayContent(
     now,
   });
 
-  const firstWrittenAt = pickRevision(history.revisions, 1)?.createdAt ?? now;
-  const batch = writeBatch(getFirebase().db);
-
-  if (plan.action === 'create' && latest !== null && latest.closedAt === null) {
-    // The last sitting ran out without the screen being closed; it ended when it went quiet.
-    const ended = closeRevision(latest, history.lastActivityAt ?? latest.createdAt);
-    batch.update(revisionRef(uid, dayId, latest.n), { closedAt: ended.closedAt });
-  }
-
-  batch.set(revisionRef(uid, dayId, revision.n), revision);
-  batch.set(doc(getFirebase().db, 'users', uid, 'days', dayId), {
+  const meta: DayMeta = {
     date: dayId,
     latestRevision: revision.n,
     wordCount: revision.wordCount,
     updatedAt: now,
-    firstWrittenAt,
+    firstWrittenAt: pickRevision(history.revisions, 1)?.createdAt ?? now,
     // The tags of the latest pass, so a tag can find its days with one query (D-024).
     mentions: revision.mentions,
-  });
-  await batch.commit();
+  };
+
+  if (plan.action === 'create' && latest !== null && latest.closedAt === null) {
+    // The last sitting ran out without the screen being closed; it ended when it went quiet.
+    const ended = closeRevision(latest, history.lastActivityAt ?? latest.createdAt);
+    await repository.saveDay({
+      dayId,
+      revision,
+      meta,
+      close: { n: latest.n, closedAt: ended.closedAt as EpochMs },
+    });
+  } else {
+    await repository.saveDay({ dayId, revision, meta });
+  }
   return { saved: true, revision };
 }
 
 /** Ends the sitting of an open revision, which makes it immutable (section 7.1). */
 export async function closeSitting(
-  uid: string,
+  repository: JournalRepository,
   dayId: DayId,
   revision: DayRevision,
   now: EpochMs,
 ): Promise<void> {
-  const closed = closeRevision(revision, now);
-  await updateDoc(revisionRef(uid, dayId, revision.n), { closedAt: closed.closedAt });
+  await repository.putRevision(dayId, closeRevision(revision, now));
 }

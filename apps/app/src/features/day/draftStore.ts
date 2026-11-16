@@ -33,6 +33,14 @@ export function draftKey(uid: string, dayId: string): string {
   return `draft:v1:${uid}:${dayId}`;
 }
 
+/** The owner name used for a guest's drafts. A Firebase account id never looks like this. */
+export const GUEST_DRAFT_OWNER = 'guest';
+
+/** Who a draft belongs to: the signed-in account, or the guest when nobody is signed in. */
+export function draftOwner(uid: string | undefined): string {
+  return uid ?? GUEST_DRAFT_OWNER;
+}
+
 /**
  * The local draft of a day, or null if there is none. A draft that cannot be parsed or does
  * not match the expected shape is treated as missing instead of crashing the screen. A
