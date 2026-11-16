@@ -2,9 +2,11 @@ import {
   buildExport,
   chunk,
   exportFileName,
+  exportFromRepository,
   serializeExport,
   type ExportBundle,
   type ExportNode,
+  type JournalRepository,
 } from '@memory-journal/core';
 import { collection, doc, getDoc, getDocs, type DocumentData } from 'firebase/firestore';
 
@@ -79,5 +81,18 @@ export async function exportAllData(
   nowMs: number = Date.now(),
 ): Promise<DeliveryResult> {
   const bundle = await loadExport(uid, nowMs);
+  return deliverExport(exportFileName(todayId), serializeExport(bundle));
+}
+
+/**
+ * The same file for a guest, read from the on-device journal. It never touches Firebase, so it
+ * works offline (docs section 15.6, points 2 and 11).
+ */
+export async function exportGuestData(
+  repository: JournalRepository,
+  todayId: string,
+  nowMs: number = Date.now(),
+): Promise<DeliveryResult> {
+  const bundle = await exportFromRepository(repository, nowMs);
   return deliverExport(exportFileName(todayId), serializeExport(bundle));
 }
