@@ -119,6 +119,51 @@ Android device / version: ________   Windows version: ________
 - [ ] The installer installs per user, lets you choose the folder, creates a shortcut named Memory Journal, and the installed app loads the bundled web build with no network except Firebase and Google.
 - [ ] Windows shows a SmartScreen warning because the installer is not code signed. This is expected for v0.1.0.
 
+## 14. v0.2.0: guest mode, theme, navigation and size
+
+Run sections 1 to 13 first. Where a v0.1.0 line says "returns to the sign-in screen" or "an empty calendar", v0.2.0 returns to an empty guest Home instead.
+
+### Guest mode (acceptance 1 to 4)
+
+- [ ] Fresh install, airplane mode on: the splash shows the app name and a loading bar (no icon), then Home. There is no sign-in screen.
+- [ ] As a guest, after 21:00 on the device clock, the writer opens and saves. Tags, library, insights and learn work.
+- [ ] Set the device clock backwards: the guest lock does not open early (backwards-clock guard).
+- [ ] Uninstall as a guest and reinstall: the journal is gone (auto-backup is off). Firestore holds nothing of the guest journal.
+- [ ] Guest with some days: Continue with Google shows the merge confirmation, then the days appear in the account and the local guest copy is cleared.
+- [ ] The merged journal is visible on a second device signed in with the same account.
+- [ ] Sign out asks for confirmation, then shows an empty guest mode with no data and no cache left on the device.
+- [ ] Sign in with a second Google account: only its data shows (empty if new). Sign back in with the first: its data returns.
+- [ ] Sign out with unsynced changes (airplane mode, then a save) shows a warning first.
+
+### Theme and navigation (acceptance 5, 6)
+
+- [ ] Fresh install is dark. Light and System still apply on every screen.
+- [ ] Upgrade a v0.1.0 install that had Light selected: it switches to dark once. Choose Light again, close and reopen: it stays Light.
+- [ ] The bottom bar and the sidebar show icons only. Each icon has an accessibility label, and desktop shows a tooltip.
+- [ ] Back is an icon on every screen. Settings opens from the top bar.
+- [ ] Text contrast looks right in both themes.
+
+### Confirmations (acceptance 7)
+
+- [ ] Delete a library item, delete a tag, delete a category, discard a draft, erase guest data, delete account and sign out: each shows the confirmation dialog, and Cancel leaves the data unchanged.
+- [ ] Search the code for `delete`, `remove`, `discard`, `erase` and `signOut` call sites and confirm each goes through `useConfirm()` (section 15.10).
+
+### Motion and layout (acceptance 8, 9)
+
+- [ ] Animations run smoothly on a low-end Android phone.
+- [ ] Turn on the system reduce motion setting: looping and large motion stop.
+- [ ] Phone portrait and landscape, tablet and a desktop window show the right layout with no sideways scrolling.
+- [ ] Font scale 130 and 200 percent: no clipped text on any screen.
+- [ ] Windows: the window at 480 wide, resize and restore behave. The window background, sidebar and splash match the theme.
+
+### Size and release (acceptance 10, 11)
+
+- [ ] `pnpm release:android` produces `MemoryJournal-v0.2.0-android.apk` and `MemoryJournal-v0.2.0-android-arm64.apk` and prints their SHA-256. Record both sizes in `docs/decisions.md` and `docs/release-notes.md`. The `preview` APK should be 50 MB or less; if not, record the measured breakdown and the reason.
+- [ ] The APK installs over a v0.1.0 build without uninstalling, and the package name is `com.memoryjournal.app`.
+- [ ] The production App Bundle builds.
+- [ ] Settings footer shows v0.2.0. The Windows installer is named `Memory Journal-Setup-0.2.0.exe`.
+- [ ] `git log` has no version-only commit, and the `v0.2.0` tag is on the final commit.
+
 ## Results
 
 Write down every failed box with the steps, the device and the build, and fix it in a separate commit before releasing.

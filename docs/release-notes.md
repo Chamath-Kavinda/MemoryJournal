@@ -1,5 +1,46 @@
 # Release notes
 
+## v0.2.0 (2026-11-16)
+
+Version 0.2.0 changes how the app opens, how it looks and how big it is. You can now use it without signing in, the default look is a dark neon-gradient theme, navigation is icon-only, every delete asks first, and the Android build is set up to be much smaller. The first phone test of v0.1.0 drove this version (section 15 of the build document).
+
+### What is new
+
+- **Guest mode:** a fresh install shows a brand splash (the app name and a loading bar) and then Home, with no sign-in screen and no network needed. A guest can write (after 21:00 on the device clock), use tags, the library, insights and learn. Everything is stored on the device only, and nothing of a guest journal is sent to the cloud.
+- **Sign-in and sign-out with a guest journal:** signing in with Google shows a merge confirmation, then adds the guest journal to the account and clears the local copy. Signing out asks first, removes the journal data and cache from the device and returns to an empty guest mode. A different account sees only its own data. Signing out with unsynced changes shows a warning first.
+- **New default look:** dark is the default theme with a neon gradient palette, bundled Plus Jakarta Sans, an icon set and shared gradient buttons, cards and chips. Light and System are still available in Settings. People who upgrade from v0.1.0 are switched to dark once; after that their own choice is never overridden.
+- **Icon-only navigation:** an icon bottom bar on phones and an icon sidebar on wide windows, with Settings in the top bar and an icon Back button on every screen. Every icon has an accessibility label, and desktop adds tooltips.
+- **Confirmation for every delete:** every delete, remove, discard, erase and sign-out action shows a confirmation dialog, and Cancel leaves the data unchanged.
+- **Motion:** animated screens and components built on `react-native-reanimated`. The system reduce-motion setting removes looping and large motion.
+- **Responsive layouts:** screens adapt across phone, tablet and desktop sizes.
+- **Windows app:** the window background, sidebar and splash match the new theme.
+- **Android:** auto-backup is turned off, so a reinstall starts clean and a guest journal is never restored from a backup.
+
+### Builds and size
+
+- The app config is now `apps/app/app.config.ts`. The `preview` APK builds for two CPU types (arm64-v8a and armeabi-v7a), a new `preview-arm64` profile builds arm64 only, `development` keeps all four for emulators, and `production` builds an App Bundle with all four.
+- Code and resource shrinking are on for release builds, and unused dependencies and assets were removed.
+- `pnpm release:android` builds through EAS, downloads the artifact and saves it as `MemoryJournal-v<version>-android.apk` (and `...-android-arm64.apk`), then prints the SHA-256 of each file. Publish both files on the GitHub Release page with the checksums in the release text.
+- The `preview` profiles raise the Android version code automatically, so each APK installs over the previous one without uninstalling. The package name `com.memoryjournal.app` is unchanged.
+- **APK size before and after: not measured yet.** v0.1.0 had a recorded size of about 94 MB (all four CPU types, no shrinking). The target for the `preview` APK is 50 MB or less. No v0.2.0 build has been made yet, so the real numbers will be added here and in `docs/decisions.md` after the first `pnpm release:android` run.
+
+### Known limits that no longer apply
+
+- The default splash icon: the splash now shows only the app name and a loading bar.
+- The Android navigation bar follows the system theme rather than the saved choice: v0.2.0 sets the theme through `expo-system-ui`. This still needs checking on a real phone.
+
+### Known limits that remain
+
+- **Not tried on real devices yet.** The automated tests pass, but the checks in section 15 of `docs/qa.md` (the 480-wide window, resize and restore, the layout matrix, 130 and 200 percent font scale, animation smoothness on a low-end phone, reduce motion) have not been run by a person.
+- **No build has been made.** No EAS build and no Windows installer exist yet for this version.
+- **Play Protect** may show "App blocked" on an APK installed outside Google Play. See Installing on Android in the README. Google Play testing or Firebase App Distribution avoids it.
+- **The Windows installer is not code signed**, so Windows SmartScreen will show a warning.
+- **iOS** is configured but has not been built, and Sign in with Apple has not been added.
+- **Accessibility** has not been checked with a screen reader (TalkBack, Narrator, NVDA).
+- The guest 21:00 lock uses the device clock, with a guard against the clock being set backwards, so a guest can open today early by changing the clock. Signed-in users are still protected by the server rules.
+
+The reasoning behind these choices is in `docs/decisions.md` (D-040 onwards).
+
 ## v0.1.0 (2026-11-15)
 
 Memory Journal is a private journal that trains memory: you write the day from memory each evening, from 21:00, and can come back later to add what you remember. It runs on Android and Windows from one codebase. This is the first version, so the notes describe what is in it and what has not been checked yet.

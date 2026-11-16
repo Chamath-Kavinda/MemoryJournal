@@ -1,6 +1,6 @@
 {
   "name": "app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Expo app for Android, iOS and the web build.",
   "main": "expo-router/entry",
