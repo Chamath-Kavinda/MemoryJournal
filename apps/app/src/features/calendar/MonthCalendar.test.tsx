@@ -69,4 +69,32 @@ describe('MonthCalendar', () => {
 
     expect(onChangeMonth).toHaveBeenCalledWith(1);
   });
+
+  it('explains the ring and the dot in a legend', async () => {
+    const { element } = setup();
+    await render(element);
+
+    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.getByText('Written')).toBeTruthy();
+    expect(screen.getByText('Empty')).toBeTruthy();
+  });
+
+  it('shows the new month and keeps its days tappable after the month changes', async () => {
+    const { element, onSelectDay } = setup();
+    const { rerender } = await render(element);
+
+    await rerender(
+      <MonthCalendar
+        month={{ year: 2026, month: 10 }}
+        todayId="2026-11-14"
+        writtenDays={new Set()}
+        onSelectDay={onSelectDay}
+        onChangeMonth={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('October 2026')).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('20 October 2026'));
+    expect(onSelectDay).toHaveBeenCalledWith('2026-10-20');
+  });
 });

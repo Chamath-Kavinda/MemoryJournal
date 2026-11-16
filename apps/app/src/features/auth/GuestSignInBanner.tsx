@@ -1,6 +1,12 @@
-import { Pressable, View } from 'react-native';
+import { CloudOff, LogIn } from 'lucide-react-native';
+import { View } from 'react-native';
 import { create } from 'zustand';
 
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { FadeUp } from '@/components/FadeUp';
+import { Icon } from '@/components/Icon';
+import { SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
@@ -36,35 +42,32 @@ export function GuestSignInBanner({ onSignIn }: Props) {
   return (
     <View
       accessibilityRole="summary"
-      style={{
-        margin: 16,
-        padding: 14,
-        gap: 8,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: palette.accent,
-      }}
+      style={{ marginHorizontal: SPACING.lg, marginTop: SPACING.md }}
     >
-      <Text style={{ fontWeight: '600' }}>Stored on this device only</Text>
-      <Text>Sign in to back it up. Uninstalling the app removes a guest journal.</Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sign in"
-          onPress={onSignIn}
-          style={{ minHeight: 44, paddingHorizontal: 16, justifyContent: 'center' }}
-        >
-          <Text style={{ color: palette.accent, fontWeight: '600' }}>Sign in</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss"
-          onPress={dismiss}
-          style={{ minHeight: 44, paddingHorizontal: 16, justifyContent: 'center' }}
-        >
-          <Text>Dismiss</Text>
-        </Pressable>
-      </View>
+      <FadeUp>
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md }}>
+            <Icon icon={CloudOff} size="control" color={palette.neonViolet} />
+            <View style={{ flex: 1, flexShrink: 1, gap: SPACING.xs }}>
+              <Text variant="heading">Stored on this device only</Text>
+              <Text style={{ color: palette.muted }}>
+                Sign in to back it up. Uninstalling the app removes a guest journal.
+              </Text>
+            </View>
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: SPACING.sm,
+              marginTop: SPACING.md,
+            }}
+          >
+            <Button label="Sign in" icon={LogIn} onPress={onSignIn} />
+            <Button label="Dismiss" variant="ghost" onPress={dismiss} />
+          </View>
+        </Card>
+      </FadeUp>
     </View>
   );
 }

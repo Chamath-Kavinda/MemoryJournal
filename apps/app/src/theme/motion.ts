@@ -33,6 +33,13 @@ export const DIALOG_ENTER_SCALE = 0.92;
 /** The icon pop on selection goes 1, 1.2, 1. */
 export const POP_SCALE = 1.2;
 
+/** How far, in points, new content slides in sideways, for example a calendar changing month. */
+export const SLIDE_DISTANCE = 24;
+
+/** A tapped date ripples from the first scale to the second while it fades out. */
+export const RIPPLE_START_SCALE = 0.6;
+export const RIPPLE_END_SCALE = 1.15;
+
 /** Lists stagger by 50 ms per item, for at most 8 items; the rest appear together. */
 export const STAGGER_STEP = 50;
 export const STAGGER_MAX_ITEMS = 8;

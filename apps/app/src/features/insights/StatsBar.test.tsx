@@ -3,8 +3,13 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { StatsBar } from './StatsBar';
 
+// With reduce motion on the numbers show their final value at once, so these tests can read them
+// without waiting for the count-up. The count-up itself is covered in CountUp.test.tsx.
+jest.mock('@/motion/useReduceMotion', () => ({ useReduceMotion: () => true }));
+
 const OFFSET = 330;
 const TODAY = '2026-11-14';
+const DASH = '–';
 
 function at(dayId: string, hour: number, minute = 0): number {
   const [year, month, day] = dayId.split('-').map(Number) as [number, number, number];
@@ -40,7 +45,8 @@ describe('StatsBar', () => {
   it('shows dashes and says it is loading before the first read', async () => {
     await render(<StatsBar insights={null} status="loading" onOpen={() => {}} />);
 
-    expect(screen.getAllByText('\u2013')).toHaveLength(2);
+    expect(screen.getByText(DASH)).toBeTruthy();
+    expect(screen.getByText(`${DASH}${DASH}`)).toBeTruthy();
     expect(
       screen.getByLabelText(
         'Streak not available. Recall score not available. Loading. Open insights',
@@ -51,7 +57,8 @@ describe('StatsBar', () => {
   it('shows dashes and says so when the first read failed', async () => {
     await render(<StatsBar insights={null} status="error" onOpen={() => {}} />);
 
-    expect(screen.getAllByText('\u2013')).toHaveLength(2);
+    expect(screen.getByText(DASH)).toBeTruthy();
+    expect(screen.getByText(`${DASH}${DASH}`)).toBeTruthy();
     expect(
       screen.getByLabelText(
         'Streak not available. Recall score not available. Could not be refreshed. Open insights',
@@ -59,11 +66,18 @@ describe('StatsBar', () => {
     ).toBeTruthy();
   });
 
-  it('shows a zero streak and no score for an empty journal', async () => {
+  it('labels the two cards Streak and Recall score', async () => {
+    await render(<StatsBar insights={insightsFor([])} status="ready" onOpen={() => {}} />);
+
+    expect(screen.getByText('Streak')).toBeTruthy();
+    expect(screen.getByText('Recall score')).toBeTruthy();
+  });
+
+  it('shows a zero streak and two dashes for an empty journal', async () => {
     await render(<StatsBar insights={insightsFor([])} status="ready" onOpen={() => {}} />);
 
     expect(screen.getByText('0 days')).toBeTruthy();
-    expect(screen.getByText('\u2013')).toBeTruthy();
+    expect(screen.getByText(`${DASH}${DASH}`)).toBeTruthy();
     expect(screen.getByLabelText('Streak 0 days. No recall score yet. Open insights')).toBeTruthy();
   });
 
