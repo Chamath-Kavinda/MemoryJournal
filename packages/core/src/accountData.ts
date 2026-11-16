@@ -1,6 +1,6 @@
 import type { DayId, EpochMs, ThemePreference, UserSettings } from './types';
 
-/** Settings a person has when nothing is stored yet: reminder on, theme follows the system. */
+/** Settings a person has when nothing is stored yet: reminder on, theme Dark (section 15.7). */
 export const DEFAULT_SETTINGS: UserSettings = { reminderEnabled: true, theme: 'dark' };
 
 const THEMES: readonly ThemePreference[] = ['system', 'light', 'dark'];

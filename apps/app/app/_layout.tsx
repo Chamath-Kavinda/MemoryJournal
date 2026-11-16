@@ -12,6 +12,7 @@ import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
 import { reminderWanted, useSettings } from '@/features/settings/useSettings';
+import { useThemeDefaultV2 } from '@/features/settings/useThemeDefaultV2';
 import { BottomTabBar, NAV_ITEMS, SideNav, isTabScreen } from '@/navigation/AppNav';
 import { useNavShortcuts } from '@/navigation/shortcuts';
 import { useFocusRing } from '@/theme/focusRing';
@@ -66,6 +67,8 @@ export default function RootLayout() {
   useReminder(reminderOn);
   useDesktopReminder(reminderOn);
   useRecordLastSeen();
+  // v0.1.0 defaulted to System, so upgraders are moved to Dark once (section 15.7).
+  useThemeDefaultV2(settings);
 
   useEffect(() => {
     if (status === 'loading') return;
