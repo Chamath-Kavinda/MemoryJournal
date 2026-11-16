@@ -1,38 +1,44 @@
-import { monthDayRange, writtenDayIds, type DayId, type MonthRef } from '@memory-journal/core';
-import { collection, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore';
-import { z } from 'zod';
-
-import { getFirebase } from '@/lib/firebase';
-
-// Only the metadata the calendar needs; journal text never reaches this screen.
-const dayMetaSchema = z.object({ date: z.string(), wordCount: z.number() });
+import {
+  monthDayRange,
+  writtenDayIds,
+  type DayId,
+  type JournalRepository,
+  type MonthRef,
+} from '@memory-journal/core';
 
 /**
- * Listens to the day documents of one month and reports which days have writing.
- * Works offline: Firestore serves the local cache and the callback fires again on sync.
+ * Reports which days of one month have writing, now and again whenever the journal changes.
+ * It reads only day metadata; journal text never reaches this screen. A slow read that is
+ * overtaken by a newer one is dropped, so the calendar never goes back to older data.
  */
 export function subscribeWrittenDays(
-  uid: string,
+  repository: JournalRepository,
   month: MonthRef,
   onChange: (writtenDays: Set<DayId>) => void,
   onError: (error: Error) => void,
-): Unsubscribe {
-  const { first, last } = monthDayRange(month);
-  const days = query(
-    collection(getFirebase().db, 'users', uid, 'days'),
-    where('date', '>=', first),
-    where('date', '<=', last),
-  );
+): () => void {
+  const range = monthDayRange(month);
+  let active = true;
+  let latest = 0;
 
-  return onSnapshot(
-    days,
-    (snapshot) => {
-      const metas = snapshot.docs.flatMap((document) => {
-        const parsed = dayMetaSchema.safeParse(document.data());
-        return parsed.success ? [parsed.data] : [];
-      });
-      onChange(writtenDayIds(metas));
-    },
-    onError,
-  );
+  const load = (): void => {
+    const read = ++latest;
+    repository.listDays(range).then(
+      (days) => {
+        if (active && read === latest) onChange(writtenDayIds(days));
+      },
+      (error: unknown) => {
+        if (active && read === latest) {
+          onError(error instanceof Error ? error : new Error(String(error)));
+        }
+      },
+    );
+  };
+
+  load();
+  const stop = repository.subscribe(load);
+  return () => {
+    active = false;
+    stop();
+  };
 }

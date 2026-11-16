@@ -1,62 +1,128 @@
-const mockOnSnapshot = jest.fn();
-const mockUnsubscribe = jest.fn();
-
-jest.mock('@/lib/firebase', () => ({ getFirebase: () => ({ db: {} }) }));
-jest.mock('firebase/firestore', () => ({
-  collection: (_db: unknown, ...path: string[]) => ({ path: path.join('/') }),
-  where: (field: string, op: string, value: string) => ({ field, op, value }),
-  query: (ref: unknown, ...filters: unknown[]) => ({ ref, filters }),
-  onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
-}));
+import { LocalRepository, type DayMeta, type KeyValueStore } from '@memory-journal/core';
 
 import { subscribeWrittenDays } from './calendarService';
 
-const docs = (...rows: unknown[]) => ({ docs: rows.map((row) => ({ data: () => row })) });
+function memoryStore(): KeyValueStore {
+  const data = new Map<string, string>();
+  return {
+    getItem: (key) => Promise.resolve(data.get(key) ?? null),
+    setItem: (key, value) => {
+      data.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key) => {
+      data.delete(key);
+      return Promise.resolve();
+    },
+    getAllKeys: () => Promise.resolve([...data.keys()]),
+  };
+}
+
+const day = (date: string, wordCount: number): DayMeta => ({
+  date,
+  latestRevision: 1,
+  wordCount,
+  updatedAt: 1,
+  firstWrittenAt: 1,
+});
+
+const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+const november = { year: 2026, month: 11 };
 
 describe('subscribeWrittenDays', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockOnSnapshot.mockReturnValue(mockUnsubscribe);
-  });
-
-  it('queries only the days of the given month under the user', () => {
-    subscribeWrittenDays('u1', { year: 2026, month: 11 }, jest.fn(), jest.fn());
-
-    const [days] = mockOnSnapshot.mock.calls[0] as [
-      { ref: { path: string }; filters: { field: string; op: string; value: string }[] },
-    ];
-    expect(days.ref.path).toBe('users/u1/days');
-    expect(days.filters).toEqual([
-      { field: 'date', op: '>=', value: '2026-11-01' },
-      { field: 'date', op: '<=', value: '2026-11-30' },
-    ]);
-  });
-
-  it('reports days with words and ignores empty or malformed documents', () => {
+  it('reports the days of the month that have words and ignores empty ones', async () => {
+    const repository = new LocalRepository(memoryStore());
+    await repository.putDay(day('2026-10-31', 40));
+    await repository.putDay(day('2026-11-01', 80));
+    await repository.putDay(day('2026-11-02', 0));
+    await repository.putDay(day('2026-12-01', 20));
     const onChange = jest.fn();
-    subscribeWrittenDays('u1', { year: 2026, month: 11 }, onChange, jest.fn());
 
-    const [, handleSnapshot] = mockOnSnapshot.mock.calls[0] as [unknown, (snap: unknown) => void];
-    handleSnapshot(
-      docs(
-        { date: '2026-11-01', wordCount: 80 },
-        { date: '2026-11-02', wordCount: 0 },
-        { date: '2026-11-03' },
-      ),
-    );
+    const stop = subscribeWrittenDays(repository, november, onChange, jest.fn());
+    await settle();
 
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(new Set(['2026-11-01']));
+    stop();
   });
 
-  it('passes errors on and returns the unsubscribe function', () => {
+  it('reports again when the journal changes, and stops after unsubscribe', async () => {
+    const repository = new LocalRepository(memoryStore());
+    const onChange = jest.fn();
+    const stop = subscribeWrittenDays(repository, november, onChange, jest.fn());
+    await settle();
+
+    await repository.putDay(day('2026-11-05', 12));
+    await settle();
+    expect(onChange).toHaveBeenLastCalledWith(new Set(['2026-11-05']));
+
+    stop();
+    await repository.putDay(day('2026-11-06', 12));
+    await settle();
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops an older read that finishes after a newer one', async () => {
+    let finishFirst: (days: DayMeta[]) => void = () => undefined;
+    const listDays = jest
+      .fn()
+      .mockReturnValueOnce(new Promise<DayMeta[]>((resolve) => (finishFirst = resolve)))
+      .mockResolvedValueOnce([day('2026-11-02', 5)]);
+    let notify: () => void = () => undefined;
+    const repository = {
+      listDays,
+      subscribe: (listener: () => void) => {
+        notify = listener;
+        return () => undefined;
+      },
+    };
+    const onChange = jest.fn();
+
+    subscribeWrittenDays(repository as never, november, onChange, jest.fn());
+    notify();
+    await settle();
+    finishFirst([day('2026-11-01', 5)]);
+    await settle();
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(new Set(['2026-11-02']));
+  });
+
+  it('passes read errors on, wrapping anything that is not an Error', async () => {
     const onError = jest.fn();
-    const unsubscribe = subscribeWrittenDays('u1', { year: 2026, month: 11 }, jest.fn(), onError);
-
-    const [, , handleError] = mockOnSnapshot.mock.calls[0] as [unknown, unknown, typeof onError];
     const failure = new Error('offline');
-    handleError(failure);
+    const listDays = jest.fn().mockRejectedValueOnce(failure).mockRejectedValueOnce('denied');
+    let notify: () => void = () => undefined;
+    const repository = {
+      listDays,
+      subscribe: (listener: () => void) => {
+        notify = listener;
+        return () => undefined;
+      },
+    };
 
-    expect(onError).toHaveBeenCalledWith(failure);
-    expect(unsubscribe).toBe(mockUnsubscribe);
+    subscribeWrittenDays(repository as never, november, jest.fn(), onError);
+    await settle();
+    expect(onError).toHaveBeenLastCalledWith(failure);
+
+    notify();
+    await settle();
+    expect(onError).toHaveBeenLastCalledWith(new Error('denied'));
+  });
+
+  it('ignores a read that finishes after unsubscribe', async () => {
+    let finish: (days: DayMeta[]) => void = () => undefined;
+    const repository = {
+      listDays: () => new Promise<DayMeta[]>((resolve) => (finish = resolve)),
+      subscribe: () => () => undefined,
+    };
+    const onChange = jest.fn();
+
+    const stop = subscribeWrittenDays(repository as never, november, onChange, jest.fn());
+    stop();
+    finish([day('2026-11-01', 5)]);
+    await settle();
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
