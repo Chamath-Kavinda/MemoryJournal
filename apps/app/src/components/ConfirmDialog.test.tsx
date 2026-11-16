@@ -151,6 +151,40 @@ describe('ConfirmDialog', () => {
     expect(screen.queryByTestId('confirm-dialog')).toBeNull();
   });
 
+  it('shows a notice with one button, no Cancel, and resolves true on it', async () => {
+    const onResult = await open(jest.fn(), {
+      title: 'Your journal is only on this device',
+      message: 'Stored on this device only. Sign in to back it up.',
+      confirmLabel: 'Got it',
+      notice: true,
+    });
+
+    const labels = dialog()
+      .getAllByRole('button')
+      .map((button) => button.props.accessibilityLabel as string);
+    expect(labels).toEqual(['Got it']);
+    expect(dialog().queryByRole('button', { name: 'Cancel' })).toBeNull();
+
+    await fireEvent.press(dialog().getByRole('button', { name: 'Got it' }));
+
+    expect(onResult).toHaveBeenCalledWith(true);
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+  });
+
+  it('closes a notice as dismissed on the backdrop, so the caller can still carry on', async () => {
+    const onResult = await open(jest.fn(), {
+      title: 'Your journal is only on this device',
+      message: 'Stored on this device only.',
+      confirmLabel: 'Got it',
+      notice: true,
+    });
+
+    await fireEvent.press(screen.getByTestId('confirm-backdrop'));
+
+    expect(onResult).toHaveBeenCalledWith(false);
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+  });
+
   it('is announced as a modal alert dialog', async () => {
     await open();
 

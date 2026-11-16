@@ -1,4 +1,4 @@
-import { Trash2, type LucideIcon } from 'lucide-react-native';
+import { Info, Trash2, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
@@ -35,8 +35,13 @@ export interface ConfirmOptions {
   /** A verb that names the action, for example Delete tag. Never OK or Yes. */
   confirmLabel: string;
   cancelLabel?: string;
-  /** Trash2 for deleting, TriangleAlert for other risky actions. */
+  /** Trash2 for deleting, TriangleAlert for other risky actions, Info for a notice. */
   icon?: LucideIcon;
+  /**
+   * A one-button notice instead of a question: no Cancel, a primary confirm button and a neutral
+   * tint. For one-time information such as the guest warning on a first save.
+   */
+  notice?: boolean;
   typed?: TypedConfirmation;
 }
 
@@ -55,7 +60,8 @@ export function ConfirmDialog({
   message,
   confirmLabel,
   cancelLabel = 'Cancel',
-  icon = Trash2,
+  icon,
+  notice = false,
   typed,
   onConfirm,
   onCancel,
@@ -89,6 +95,8 @@ export function ConfirmDialog({
   }));
 
   const canConfirm = typed === undefined || typed.matches(typedText);
+  const shownIcon = icon ?? (notice ? Info : Trash2);
+  const tint = notice ? palette.accent : palette.danger;
 
   return (
     <Modal
@@ -147,11 +155,11 @@ export function ConfirmDialog({
                     borderRadius: RADIUS.pill,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    // The danger colour at 15 percent, as a hex alpha.
-                    backgroundColor: `${palette.danger}26`,
+                    // The tint colour at 15 percent, as a hex alpha.
+                    backgroundColor: `${tint}26`,
                   }}
                 >
-                  <Icon icon={icon} size="control" color={palette.danger} />
+                  <Icon icon={shownIcon} size="control" color={tint} />
                 </View>
               </Shake>
 
@@ -201,15 +209,17 @@ export function ConfirmDialog({
                   paddingTop: SPACING.sm,
                 }}
               >
-                {/* Cancel is first, so it is the first control focus reaches. */}
+                {/* Cancel is first, so it is the first control focus reaches. A notice has no Cancel. */}
+                {notice ? null : (
+                  <Button
+                    variant="secondary"
+                    label={cancelLabel}
+                    onPress={onCancel}
+                    style={{ flexGrow: 1, flexBasis: 120 }}
+                  />
+                )}
                 <Button
-                  variant="secondary"
-                  label={cancelLabel}
-                  onPress={onCancel}
-                  style={{ flexGrow: 1, flexBasis: 120 }}
-                />
-                <Button
-                  variant="danger"
+                  variant={notice ? 'primary' : 'danger'}
                   label={confirmLabel}
                   onPress={onConfirm}
                   disabled={!canConfirm}
