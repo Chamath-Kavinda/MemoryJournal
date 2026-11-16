@@ -6,6 +6,7 @@ import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMentionedLibraryItems } from '@/features/library/useLibrary';
+import { useJournalRepository } from '@/lib/journal';
 import { LibraryMentions } from '@/features/tags/LibraryMentions';
 import { MentionHistory } from '@/features/tags/MentionHistory';
 import { TagForm } from '@/features/tags/TagForm';
@@ -21,8 +22,12 @@ export default function TagRoute() {
   const tagId = Array.isArray(rawTagId) ? (rawTagId[0] ?? '') : (rawTagId ?? '');
   const router = useRouter();
   const { uid, categories, tags, status } = useTagData();
+  const repository = useJournalRepository();
   const { days: mentionedDays, status: mentionStatus } = useMentionedDays(uid, tagId);
-  const { items: mentionedItems, status: libraryStatus } = useMentionedLibraryItems(uid, tagId);
+  const { items: mentionedItems, status: libraryStatus } = useMentionedLibraryItems(
+    repository,
+    tagId,
+  );
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/tags'));
   const tag = tags.find((t) => t.id === tagId);
   // The form asks for itself when its own Cancel is pressed; Back, Esc and Alt+Left ask here.

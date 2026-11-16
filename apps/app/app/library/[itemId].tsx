@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/features/auth/authStore';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
+import { draftOwner } from '@/features/day/draftStore';
 import { MentionInput } from '@/features/day/MentionInput';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
 import { SaveBar } from '@/features/day/SaveBar';
@@ -34,6 +35,7 @@ import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { createTag } from '@/features/tags/tagService';
 import { ActionButton, ErrorBanner, ScreenHeader, usePalette } from '@/features/tags/ui';
 import { useTagData } from '@/features/tags/useTagData';
+import { useJournalRepository } from '@/lib/journal';
 import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 
 const noop = () => {};
@@ -44,15 +46,17 @@ export default function LibraryItemRoute() {
   const router = useRouter();
   const palette = usePalette();
   const uid = useAuthStore((s) => s.user?.uid);
+  const repository = useJournalRepository();
+  const owner = draftOwner(uid);
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/library'));
 
   const draft = useDayDraft({
-    uid,
+    uid: owner,
     dayId: libraryDraftId(itemId),
     storage: draftStorage,
     isValidId: isLibraryDraftId,
   });
-  const { history, failed: historyFailed } = useLibraryHistory(uid, itemId);
+  const { history, failed: historyFailed } = useLibraryHistory(repository, itemId);
   const item = history?.item ?? null;
 
   // Tags for the `@` picker. The writer works without them while they load.
@@ -98,7 +102,8 @@ export default function LibraryItemRoute() {
 
   const text = draft.content.freeNotes;
   const save = useLibrarySave({
-    uid,
+    repository,
+    owner,
     itemId,
     history,
     text,
@@ -142,7 +147,8 @@ export default function LibraryItemRoute() {
             This item no longer exists.
           </Text>
         ) : null}
-        {uid === undefined || (!historyFailed && !showPage && item === null && history === null) ? (
+        {repository === null ||
+        (!historyFailed && !showPage && item === null && history === null) ? (
           <ActivityIndicator style={{ marginTop: 24 }} />
         ) : null}
         {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
@@ -156,9 +162,9 @@ export default function LibraryItemRoute() {
                 submitLabel="Save details"
                 onCancel={() => setEditingInfo(false)}
                 onSubmit={(info) => {
-                  if (uid !== undefined) {
+                  if (repository !== null) {
                     watchWrite(
-                      updateLibraryItemInfo(uid, itemId, info),
+                      updateLibraryItemInfo(repository, itemId, info),
                       'The details could not be saved.',
                     );
                   }

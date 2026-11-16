@@ -1,4 +1,9 @@
-import { libraryContent, type DayContent, type EpochMs } from '@memory-journal/core';
+import {
+  libraryContent,
+  type DayContent,
+  type EpochMs,
+  type JournalRepository,
+} from '@memory-journal/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { clearDraft, type KeyValueStorage } from '@/features/day/draftStore';
@@ -25,14 +30,17 @@ export function lastSaveOf(history: LibraryHistory): EpochMs | null {
 export interface LibrarySave {
   /** Saves the text on screen as a revision. Does nothing if it did not change. */
   save: () => Promise<void>;
-  /** True while a save has been sent and the server has not confirmed it yet. */
+  /** True while a save has been sent and has not been confirmed yet. */
   saving: boolean;
   /** True when the last save was refused or failed. Cleared by the next save. */
   failed: boolean;
 }
 
 interface Options {
-  uid: string | undefined;
+  /** The guest journal or the signed-in account's journal; null while that is not known yet. */
+  repository: JournalRepository | null;
+  /** Whose draft this is on the device: the account id, or a fixed name for the guest. */
+  owner: string;
   itemId: string;
   /** The saved passes, or null while they are not known yet. */
   history: LibraryHistory | null;
@@ -57,15 +65,14 @@ export function useLibrarySave(options: Options): LibrarySave {
   });
 
   const save = useCallback(async () => {
-    const { uid, itemId, history, text, discardDraft } = live.current;
-    if (!uid || !history || history.item === null) return;
+    const { repository, history, text, discardDraft } = live.current;
+    if (!repository || !history || history.item === null) return;
     setPending((count) => count + 1);
     setFailed(false);
     try {
       await saveLibraryText(
-        uid,
-        itemId,
-        { revisions: history.revisions, lastActivityAt: lastSaveOf(history) },
+        repository,
+        { item: history.item, revisions: history.revisions, lastActivityAt: lastSaveOf(history) },
         text,
         Date.now(),
       );
@@ -77,18 +84,22 @@ export function useLibrarySave(options: Options): LibrarySave {
     }
   }, []);
 
-  const { uid, itemId } = options;
+  const { repository, owner, itemId } = options;
   useEffect(() => {
     return () => {
       const { history, text, storage } = live.current;
-      if (!uid || !history || history.item === null) return;
+      const item = history?.item ?? null;
+      if (!repository || !history || item === null) return;
       void (async () => {
         try {
           const now = Date.now();
           const outcome = await saveLibraryText(
-            uid,
-            itemId,
-            { revisions: history.revisions, lastActivityAt: lastSaveOf(history) },
+            repository,
+            {
+              item,
+              revisions: history.revisions,
+              lastActivityAt: lastSaveOf(history),
+            },
             text,
             now,
           );
@@ -96,15 +107,15 @@ export function useLibrarySave(options: Options): LibrarySave {
             ? outcome.revision
             : (history.revisions[history.revisions.length - 1] ?? null);
           if (open !== null && open.closedAt === null) {
-            await closeLibrarySitting(uid, itemId, open, now);
+            await closeLibrarySitting(repository, itemId, open, now);
           }
-          if (outcome.saved) await clearDraft(storage, uid, libraryDraftId(itemId));
+          if (outcome.saved) await clearDraft(storage, owner, libraryDraftId(itemId));
         } catch {
           // The text is still in the draft on the device, so it is saved on the next visit.
         }
       })();
     };
-  }, [uid, itemId]);
+  }, [repository, owner, itemId]);
 
   return { save, saving: pending > 0, failed };
 }
