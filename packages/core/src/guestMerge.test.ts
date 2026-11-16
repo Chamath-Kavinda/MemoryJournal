@@ -208,3 +208,61 @@ describe('mergeGuestJournal', () => {
     expect(await account.getSettings()).toEqual({ reminderEnabled: true, theme: 'dark' });
   });
 });
+
+describe('guest, account A, new account B and account A again', () => {
+  it('each shows only its own data, and the device keeps nothing between sign-ins', async () => {
+    const device = new LocalRepository(memoryStore());
+    const accountA = new LocalRepository(memoryStore());
+    const accountB = new LocalRepository(memoryStore());
+    const dayCount = async (repo: LocalRepository) => (await repo.listDays()).length;
+
+    // A guest writes on the device, then signs in as A and the journal is merged.
+    await device.putCategory(category('people', 'People'));
+    await device.putTag(tag('g1', 'Ana', 'people'));
+    await saveDay(device, meta('2026-11-10', 1, 100), [revision(1, 'guest day', 100)]);
+    const merged = await mergeGuestJournal(device, accountA, options);
+    expect(merged.complete).toBe(true);
+
+    // Only after a complete merge is the guest copy removed from the device.
+    await device.clearAll();
+    expect(await countGuestJournal(device)).toMatchObject({ days: 0, tags: 0, isEmpty: true });
+    expect(await dayCount(accountA)).toBe(1);
+
+    // A also writes a second day in the cloud; sign out wipes the device again.
+    await saveDay(accountA, meta('2026-11-11', 1, 200), [revision(1, 'account day', 200)]);
+
+    // A new account B starts empty and never receives anything of A.
+    expect(await dayCount(accountB)).toBe(0);
+    expect(await accountB.listTags()).toEqual([]);
+    expect((await countGuestJournal(device)).isEmpty).toBe(true);
+
+    // B writes its own day. A is unchanged.
+    await saveDay(accountB, meta('2026-11-12', 1, 300), [revision(1, 'b day', 300)]);
+    expect((await accountA.listDays()).map((d) => d.date).sort()).toEqual([
+      '2026-11-10',
+      '2026-11-11',
+    ]);
+    expect((await accountB.listDays()).map((d) => d.date)).toEqual(['2026-11-12']);
+
+    // Signing back in as A brings A's data and tags back, and nothing of B.
+    expect((await accountA.listTags()).map((t) => t.name)).toEqual(['Ana']);
+    expect(await accountA.getDay('2026-11-12')).toBeNull();
+    expect((await accountA.listRevisions('2026-11-10'))[0]?.blocks[0]?.text).toBe('guest day');
+  });
+
+  it('keeps the guest data on the device when the merge is incomplete', async () => {
+    const device = new LocalRepository(memoryStore());
+    const account = new LocalRepository(memoryStore());
+    await saveDay(device, meta('2026-11-10', 1, 100), [revision(1, 'guest day', 100)]);
+    const failing = Object.create(account) as LocalRepository;
+    failing.putRevision = async () => {
+      throw new Error('offline');
+    };
+
+    const result = await mergeGuestJournal(device, failing, options);
+
+    expect(result.complete).toBe(false);
+    // The caller deletes the guest copy only when `complete` is true, so it is still there.
+    expect(await countGuestJournal(device)).toMatchObject({ days: 1, isEmpty: false });
+  });
+});

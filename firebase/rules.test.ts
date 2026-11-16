@@ -7,7 +7,15 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { addDays, dayIdFromUtc } from '@memory-journal/core';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  Timestamp,
+} from 'firebase/firestore';
 
 // The emulator evaluates request.time with the real clock and it cannot be mocked.
 // So each test picks a stored UTC offset that puts the user's local time a safe
@@ -360,5 +368,146 @@ describe('library pages follow the revision rules of days, without the 21:00 loc
     await assertFails(
       setDoc(doc(bob, 'users', 'alice', 'library', 'l1', 'revisions', '1'), pageData()),
     );
+  });
+});
+
+describe('guest merge writes (section 15.6)', () => {
+  const OLD = Timestamp.fromMillis(Date.UTC(2024, 0, 5, 21, 30));
+  const mergedRevision = (n: number) =>
+    revisionData({ n, kind: 'later', createdAt: OLD, closedAt: OLD });
+  const revisionDoc = (uid: string, dayId: string, n: string) =>
+    doc(env.authenticatedContext(uid).firestore(), 'users', uid, 'days', dayId, 'revisions', n);
+
+  test('a closed guest revision with its original createdAt is accepted on a past day', async () => {
+    await seedUser('alice', BEFORE_UNLOCK);
+    await assertSucceeds(setDoc(revisionDoc('alice', '2024-01-05', '1'), mergedRevision(1)));
+  });
+
+  test('a guest revision appended to an existing day leaves the account’s own revision unchanged', async () => {
+    await seedUser('alice', AFTER_UNLOCK);
+    await seedRevision('alice', '2024-01-05', '1', { closedAt: OLD, freeNotes: 'account text' });
+    await assertSucceeds(setDoc(revisionDoc('alice', '2024-01-05', '2'), mergedRevision(2)));
+    await env.withSecurityRulesDisabled(async (context) => {
+      const own = await getDoc(
+        doc(context.firestore(), 'users', 'alice', 'days', '2024-01-05', 'revisions', '1'),
+      );
+      expect(own.data()?.['freeNotes']).toBe('account text');
+    });
+  });
+
+  test('a merged revision is closed, so it cannot be edited or deleted afterwards', async () => {
+    await seedUser('alice', AFTER_UNLOCK);
+    const ref = revisionDoc('alice', '2024-01-05', '1');
+    await assertSucceeds(setDoc(ref, mergedRevision(1)));
+    await assertFails(updateDoc(ref, { freeNotes: 'changed' }));
+    await assertFails(deleteDoc(ref));
+  });
+
+  test('a guest entry dated in the future is rejected', async () => {
+    await seedUser('alice', AFTER_UNLOCK);
+    const tomorrow = addDays(todayFor(AFTER_UNLOCK), 1);
+    await assertFails(setDoc(revisionDoc('alice', tomorrow, '1'), mergedRevision(1)));
+  });
+
+  test('a guest entry for today before 21:00 local is rejected', async () => {
+    await seedUser('alice', BEFORE_UNLOCK);
+    await assertFails(
+      setDoc(revisionDoc('alice', todayFor(BEFORE_UNLOCK), '1'), mergedRevision(1)),
+    );
+  });
+
+  test('a batch with one rejected entry writes nothing, so the guest data can be retried', async () => {
+    await seedUser('alice', BEFORE_UNLOCK);
+    const alice = env.authenticatedContext('alice').firestore();
+    const dayRevision = (db: typeof alice, dayId: string) =>
+      doc(db, 'users', 'alice', 'days', dayId, 'revisions', '1');
+    const batch = writeBatch(alice);
+    batch.set(doc(alice, 'users', 'alice', 'tags', 'g1'), { name: 'Ana' });
+    batch.set(dayRevision(alice, '2024-01-05'), mergedRevision(1));
+    batch.set(dayRevision(alice, todayFor(BEFORE_UNLOCK)), mergedRevision(1));
+    await assertFails(batch.commit());
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      expect((await getDoc(doc(db, 'users', 'alice', 'tags', 'g1'))).exists()).toBe(false);
+      expect((await getDoc(dayRevision(db, '2024-01-05'))).exists()).toBe(false);
+    });
+  });
+
+  test('tags, categories, library items and progress merge into the account’s own tree', async () => {
+    await seedUser('alice', AFTER_UNLOCK);
+    const alice = env.authenticatedContext('alice').firestore();
+    const batch = writeBatch(alice);
+    batch.set(doc(alice, 'users', 'alice', 'tagCategories', 'c1'), { name: 'People' });
+    batch.set(doc(alice, 'users', 'alice', 'tags', 'g1'), { name: 'Ana', aliases: ['A'] });
+    batch.set(doc(alice, 'users', 'alice', 'library', 'l1'), { type: 'movie', title: 'x' });
+    batch.set(
+      doc(alice, 'users', 'alice', 'progress', 'tutorials'),
+      { completed: ['l1'] },
+      { merge: true },
+    );
+    await assertSucceeds(batch.commit());
+  });
+
+  test('running the same merge twice with the same ids is accepted', async () => {
+    await seedUser('alice', AFTER_UNLOCK);
+    const alice = env.authenticatedContext('alice').firestore();
+    const tag = doc(alice, 'users', 'alice', 'tags', 'g1');
+    await assertSucceeds(setDoc(tag, { name: 'Ana' }, { merge: true }));
+    await assertSucceeds(setDoc(tag, { name: 'Ana' }, { merge: true }));
+  });
+});
+
+describe('account isolation when switching accounts (section 15.6, point 10)', () => {
+  async function seedAliceJournal() {
+    await seedUser('alice', AFTER_UNLOCK);
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'users', 'alice', 'tags', 't1'), { name: 'Mum' });
+      await setDoc(doc(db, 'users', 'alice', 'library', 'l1'), { type: 'book', title: 'x' });
+    });
+    await seedRevision('alice', '2024-01-05', '1', { closedAt: Timestamp.now() });
+  }
+
+  test('a new account B can read only its own, empty, tree', async () => {
+    await seedAliceJournal();
+    const bob = env.authenticatedContext('bob').firestore();
+    const own = await assertSucceeds(getDoc(doc(bob, 'users', 'bob', 'tags', 't1')));
+    expect(own.exists()).toBe(false);
+    await assertFails(getDoc(doc(bob, 'users', 'alice', 'tags', 't1')));
+    await assertFails(getDoc(doc(bob, 'users', 'alice', 'days', '2024-01-05', 'revisions', '1')));
+    await assertFails(getDoc(doc(bob, 'users', 'alice', 'library', 'l1')));
+  });
+
+  test('one account is never merged into another: batch writes into another tree are denied', async () => {
+    await seedAliceJournal();
+    await seedUser('bob', AFTER_UNLOCK);
+    const bob = env.authenticatedContext('bob').firestore();
+    const intoAlice = writeBatch(bob);
+    intoAlice.set(doc(bob, 'users', 'alice', 'tags', 'from-bob'), { name: 'Bob tag' });
+    await assertFails(intoAlice.commit());
+    const intoBob = writeBatch(bob);
+    intoBob.set(doc(bob, 'users', 'bob', 'tags', 'own'), { name: 'Bob tag' });
+    await assertSucceeds(intoBob.commit());
+  });
+
+  test('signing back in as account A still reads A’s data, untouched by B', async () => {
+    await seedAliceJournal();
+    await seedUser('bob', AFTER_UNLOCK);
+    const bob = env.authenticatedContext('bob').firestore();
+    await assertFails(deleteDoc(doc(bob, 'users', 'alice', 'tags', 't1')));
+    await assertFails(
+      deleteDoc(doc(bob, 'users', 'alice', 'days', '2024-01-05', 'revisions', '1')),
+    );
+    const alice = env.authenticatedContext('alice').firestore();
+    const tag = await assertSucceeds(getDoc(doc(alice, 'users', 'alice', 'tags', 't1')));
+    expect(tag.data()?.['name']).toBe('Mum');
+    await assertSucceeds(getDoc(doc(alice, 'users', 'alice', 'library', 'l1')));
+  });
+
+  test('a signed-out guest has no cloud access at all', async () => {
+    await seedAliceJournal();
+    const guest = env.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(guest, 'users', 'alice', 'tags', 't1')));
+    await assertFails(setDoc(doc(guest, 'users', 'guest', 'tags', 't1'), { name: 'x' }));
   });
 });
