@@ -1,5 +1,6 @@
 import type { ThemePreference } from '@memory-journal/core';
-import { TriangleAlert } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { CloudOff, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Switch, View } from 'react-native';
 
@@ -10,9 +11,11 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { useJournalRepository } from '@/lib/journal';
 import { signOut } from '@/platform/auth/google';
+import { useTheme } from '@/theme/ThemeProvider';
 
 import { DeleteAccountSection } from './DeleteAccountSection';
-import { exportAllData } from './exportService';
+import { EraseGuestSection } from './EraseGuestSection';
+import { exportAllData, exportGuestData } from './exportService';
 import { setReminderEnabled, setTheme } from './settingsService';
 import { useSettings } from './useSettings';
 
@@ -23,20 +26,25 @@ const THEMES: { value: ThemePreference; label: string }[] = [
 ];
 
 /**
- * Section 5.9: profile (read-only), reminder toggle, theme, export, delete account, sign out.
- * The 21:00 unlock time is not a setting.
+ * Section 5.9 and docs section 15.6 (points 11 and 12): profile, reminder toggle, theme, export,
+ * and the end-of-journal actions. A signed-in person sees their profile, Delete account and Sign
+ * out. A guest sees Guest with a cloud-off icon, a Sign in with Google button and a note that the
+ * journal lives on this device only; Sign out is hidden and the delete action is Erase guest
+ * data. The 21:00 unlock time is not a setting.
  */
 export function SettingsView() {
   const user = useAuthStore((s) => s.user);
   const todayId = useTodayId();
+  const router = useRouter();
+  const { palette } = useTheme();
   const confirm = useConfirm();
   const { status, settings } = useSettings();
   const repository = useJournalRepository();
   const [notice, setNotice] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  if (!user || !repository) return null;
-  const uid = user.uid;
+  // The repository is null only while the app is still working out who is using it.
+  if (!repository) return null;
 
   const save = (work: Promise<void>) => {
     setNotice(null);
@@ -47,10 +55,16 @@ export function SettingsView() {
     setNotice(null);
     setExporting(true);
     try {
-      const result = await exportAllData(uid, todayId);
+      const result = user
+        ? await exportAllData(user.uid, todayId)
+        : await exportGuestData(repository, todayId);
       if (result === 'delivered') setNotice('Your data was exported.');
     } catch {
-      setNotice('Could not export your data. Check your connection and try again.');
+      setNotice(
+        user
+          ? 'Could not export your data. Check your connection and try again.'
+          : 'Could not export your data. Try again.',
+      );
     } finally {
       setExporting(false);
     }
@@ -59,7 +73,7 @@ export function SettingsView() {
   const askSignOut = async () => {
     const confirmed = await confirm({
       title: 'Sign out?',
-      message: `Sign out of ${user.email ?? 'this account'}? Your journal stays safe in your Google account, and signing in again brings it back.`,
+      message: `Sign out of ${user?.email ?? 'this account'}? Your journal stays safe in your Google account, and signing in again brings it back.`,
       confirmLabel: 'Sign out',
       icon: TriangleAlert,
     });
@@ -68,13 +82,37 @@ export function SettingsView() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 24 }}>
-      <View style={{ gap: 4 }}>
-        <Text accessibilityRole="header" style={{ fontWeight: '600' }}>
-          Profile
-        </Text>
-        <Text>{user.displayName ?? 'No name'}</Text>
-        <Text>{user.email ?? 'No email'}</Text>
-      </View>
+      {user ? (
+        <View style={{ gap: 4 }}>
+          <Text accessibilityRole="header" style={{ fontWeight: '600' }}>
+            Profile
+          </Text>
+          <Text>{user.displayName ?? 'No name'}</Text>
+          <Text>{user.email ?? 'No email'}</Text>
+        </View>
+      ) : (
+        <View accessibilityRole="summary" style={{ gap: 8 }}>
+          <Text accessibilityRole="header" style={{ fontWeight: '600' }}>
+            Profile
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <CloudOff accessibilityLabel="Not backed up" size={20} color={palette.textMuted} />
+            <Text>Guest</Text>
+          </View>
+          <Text>
+            Stored on this device only. Sign in to back it up. Uninstalling the app or clearing its
+            data removes a guest journal.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign in with Google"
+            onPress={() => router.push('/sign-in')}
+            style={{ minHeight: 44, justifyContent: 'center' }}
+          >
+            <Text style={{ fontWeight: '600' }}>Sign in with Google</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View style={{ gap: 8 }}>
         <Text accessibilityRole="header" style={{ fontWeight: '600' }}>
@@ -132,11 +170,17 @@ export function SettingsView() {
 
       {notice ? <Text accessibilityRole="alert">{notice}</Text> : null}
 
-      <DeleteAccountSection uid={uid} />
+      {user ? (
+        <>
+          <DeleteAccountSection uid={user.uid} />
 
-      <Pressable accessibilityRole="button" onPress={() => void askSignOut()}>
-        <Text>Sign out</Text>
-      </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => void askSignOut()}>
+            <Text>Sign out</Text>
+          </Pressable>
+        </>
+      ) : (
+        <EraseGuestSection repository={repository} />
+      )}
     </ScrollView>
   );
 }
