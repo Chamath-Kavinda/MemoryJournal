@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuthStore } from '@/features/auth/authStore';
+import { useJournalRepository } from '@/lib/journal';
 
 import { setLessonDone, subscribeProgress } from './learnService';
 
 export type LearnProgressStatus = 'loading' | 'ready' | 'error';
 
 /**
- * Live list of the lessons the signed-in user has finished. Lessons are bundled, so the screens
- * draw them straight away; only the ticks wait for this. `setDone` does not wait for the write:
- * Firestore shows the change at once and confirms it later, so it works offline. A refused write
- * is reported through `failed` until `dismissError` is called.
+ * Live list of the lessons the user has finished, for a guest on this device or a signed-in
+ * account. Lessons are bundled, so the screens draw them straight away; only the ticks wait for
+ * this. `setDone` does not wait for the write. A refused write is reported through `failed` until
+ * `dismissError` is called.
  */
 export function useLearnProgress(): {
   completed: string[];
@@ -19,24 +19,25 @@ export function useLearnProgress(): {
   setDone: (lessonId: string, done: boolean) => void;
   dismissError: () => void;
 } {
-  const uid = useAuthStore((s) => s.user?.uid);
+  const repository = useJournalRepository();
   const [completed, setCompleted] = useState<string[] | null>(null);
   const [subscriptionFailed, setSubscriptionFailed] = useState(false);
   const [writeFailed, setWriteFailed] = useState(false);
 
   useEffect(() => {
-    if (!uid) return;
+    // A different journal (sign-in or sign-out) starts from nothing.
     setCompleted(null);
     setSubscriptionFailed(false);
-    return subscribeProgress(uid, setCompleted, () => setSubscriptionFailed(true));
-  }, [uid]);
+    if (!repository) return;
+    return subscribeProgress(repository, setCompleted, () => setSubscriptionFailed(true));
+  }, [repository]);
 
   const setDone = useCallback(
     (lessonId: string, done: boolean) => {
-      if (!uid) return;
-      setLessonDone(uid, lessonId, done).catch(() => setWriteFailed(true));
+      if (!repository) return;
+      setLessonDone(repository, lessonId, done).catch(() => setWriteFailed(true));
     },
-    [uid],
+    [repository],
   );
   const dismissError = useCallback(() => setWriteFailed(false), []);
 

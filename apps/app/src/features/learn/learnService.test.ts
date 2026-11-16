@@ -1,106 +1,127 @@
-const mockSetDoc = jest.fn();
-const mockOnSnapshot = jest.fn();
-
-jest.mock('@/lib/firebase', () => ({ getFirebase: () => ({ db: {} }) }));
-jest.mock('firebase/firestore', () => ({
-  doc: (_db: unknown, ...path: string[]) => ({ path: path.join('/') }),
-  arrayUnion: (value: string) => ({ op: 'union', value }),
-  arrayRemove: (value: string) => ({ op: 'remove', value }),
-  setDoc: (...args: unknown[]) => mockSetDoc(...args),
-  onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
-}));
-
-import { LESSONS } from '@memory-journal/core';
+import {
+  LESSONS,
+  LocalRepository,
+  type JournalRepository,
+  type KeyValueStore,
+} from '@memory-journal/core';
 
 import { setLessonDone, subscribeProgress } from './learnService';
 
 const FIRST = LESSONS[0]!.id;
 const SECOND = LESSONS[1]!.id;
+const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+function memoryStore(): KeyValueStore {
+  const data = new Map<string, string>();
+  return {
+    getItem: (key) => Promise.resolve(data.get(key) ?? null),
+    setItem: (key, value) => {
+      data.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key) => {
+      data.delete(key);
+      return Promise.resolve();
+    },
+    getAllKeys: () => Promise.resolve([...data.keys()]),
+  };
+}
 
 describe('subscribeProgress', () => {
-  beforeEach(() => jest.clearAllMocks());
+  let repository: JournalRepository;
 
-  it('listens to the tutorials progress document of the user', () => {
-    const stop = jest.fn();
-    mockOnSnapshot.mockReturnValue(stop);
-
-    const result = subscribeProgress('u1', jest.fn(), jest.fn());
-
-    const [ref] = mockOnSnapshot.mock.calls[0] as [{ path: string }];
-    expect(ref.path).toBe('users/u1/progress/tutorials');
-    expect(result).toBe(stop);
+  beforeEach(() => {
+    repository = new LocalRepository(memoryStore());
   });
 
-  it('reports no progress while the document does not exist', () => {
+  it('reports no progress for a guest who has not finished a lesson', async () => {
     const onChange = jest.fn();
-    mockOnSnapshot.mockImplementation((_ref, next: (snapshot: unknown) => void) =>
-      next({ data: () => undefined }),
-    );
 
-    subscribeProgress('u1', onChange, jest.fn());
+    const stop = subscribeProgress(repository, onChange, jest.fn());
+    await settle();
+    stop();
 
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it('reports finished lessons in teaching order and drops anything unexpected', () => {
+  it('reports finished lessons in teaching order and drops anything unexpected', async () => {
+    await repository.putTutorialProgress({
+      completed: [SECOND, 'removed-lesson', FIRST, SECOND],
+    });
     const onChange = jest.fn();
-    mockOnSnapshot.mockImplementation((_ref, next: (snapshot: unknown) => void) =>
-      next({ data: () => ({ completed: [SECOND, 'removed-lesson', FIRST, SECOND, 7] }) }),
-    );
 
-    subscribeProgress('u1', onChange, jest.fn());
+    const stop = subscribeProgress(repository, onChange, jest.fn());
+    await settle();
+    stop();
 
-    expect(onChange).toHaveBeenCalledWith([FIRST, SECOND]);
+    expect(onChange).toHaveBeenLastCalledWith([FIRST, SECOND]);
   });
 
-  it('passes errors on', () => {
-    const onError = jest.fn();
-    const failure = new Error('denied');
-    mockOnSnapshot.mockImplementation((_ref, _next: unknown, error: (reason: Error) => void) =>
-      error(failure),
-    );
+  it('reports a change made later', async () => {
+    const onChange = jest.fn();
+    const stop = subscribeProgress(repository, onChange, jest.fn());
+    await settle();
 
-    subscribeProgress('u1', jest.fn(), onError);
+    await setLessonDone(repository, FIRST, true);
+    await settle();
+    stop();
+
+    expect(onChange).toHaveBeenLastCalledWith([FIRST]);
+  });
+
+  it('passes errors on', async () => {
+    const failure = new Error('unreadable');
+    jest.spyOn(repository, 'getTutorialProgress').mockRejectedValue(failure);
+    const onError = jest.fn();
+
+    const stop = subscribeProgress(repository, jest.fn(), onError);
+    await settle();
+    stop();
 
     expect(onError).toHaveBeenCalledWith(failure);
   });
 });
 
 describe('setLessonDone', () => {
+  let repository: JournalRepository;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockSetDoc.mockResolvedValue(undefined);
+    repository = new LocalRepository(memoryStore());
   });
 
   it('adds just this lesson when it is marked done', async () => {
-    await setLessonDone('u1', FIRST, true);
+    await setLessonDone(repository, SECOND, true);
+    await setLessonDone(repository, FIRST, true);
 
-    const [ref, data, options] = mockSetDoc.mock.calls[0] as [
-      { path: string },
-      Record<string, unknown>,
-      unknown,
-    ];
-    expect(ref.path).toBe('users/u1/progress/tutorials');
-    expect(data).toEqual({ completed: { op: 'union', value: FIRST } });
-    expect(options).toEqual({ merge: true });
+    expect(await repository.getTutorialProgress()).toEqual({ completed: [FIRST, SECOND] });
+  });
+
+  it('marking a lesson done twice keeps one copy', async () => {
+    await setLessonDone(repository, FIRST, true);
+    await setLessonDone(repository, FIRST, true);
+
+    expect(await repository.getTutorialProgress()).toEqual({ completed: [FIRST] });
   });
 
   it('removes just this lesson when it is marked not done', async () => {
-    await setLessonDone('u1', FIRST, false);
+    await repository.putTutorialProgress({ completed: [FIRST, SECOND] });
 
-    const [, data] = mockSetDoc.mock.calls[0] as [unknown, Record<string, unknown>];
-    expect(data).toEqual({ completed: { op: 'remove', value: FIRST } });
+    await setLessonDone(repository, FIRST, false);
+
+    expect(await repository.getTutorialProgress()).toEqual({ completed: [SECOND] });
   });
 
   it('writes nothing for a lesson that does not exist', async () => {
-    await expect(setLessonDone('u1', 'no-such-lesson', true)).resolves.toBeUndefined();
+    const put = jest.spyOn(repository, 'putTutorialProgress');
 
-    expect(mockSetDoc).not.toHaveBeenCalled();
+    await expect(setLessonDone(repository, 'no-such-lesson', true)).resolves.toBeUndefined();
+
+    expect(put).not.toHaveBeenCalled();
   });
 
-  it('passes a refused write on to the caller', async () => {
-    mockSetDoc.mockRejectedValue(new Error('permission-denied'));
+  it('passes a failed write on to the caller', async () => {
+    jest.spyOn(repository, 'putTutorialProgress').mockRejectedValue(new Error('full'));
 
-    await expect(setLessonDone('u1', FIRST, true)).rejects.toThrow('permission-denied');
+    await expect(setLessonDone(repository, FIRST, true)).rejects.toThrow('full');
   });
 });

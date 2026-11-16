@@ -1,44 +1,39 @@
-import { cleanCompleted, getLesson } from '@memory-journal/core';
-import {
-  arrayRemove,
-  arrayUnion,
-  doc,
-  onSnapshot,
-  setDoc,
-  type Unsubscribe,
-} from 'firebase/firestore';
+import { cleanCompleted, getLesson, type JournalRepository } from '@memory-journal/core';
 
-import { getFirebase } from '@/lib/firebase';
-
-const progressRef = (uid: string) => doc(getFirebase().db, 'users', uid, 'progress', 'tutorials');
+import { watchJournal } from '@/lib/watchJournal';
 
 /**
- * Live list of the lessons the user has finished, in the order the lessons are taught. The
- * document does not exist until the first lesson is marked, which reads as no progress. Anything
- * unexpected in it (a lesson that no longer exists, a repeat, the wrong type) is dropped.
+ * Live list of the lessons the user has finished, in the order the lessons are taught, for a guest
+ * on this device or a signed-in account. No progress yet reads as an empty list. Anything
+ * unexpected in the stored progress (a lesson that no longer exists, a repeat, the wrong type) is
+ * dropped.
  */
 export function subscribeProgress(
-  uid: string,
+  repository: JournalRepository,
   onChange: (completed: string[]) => void,
   onError: (error: Error) => void,
-): Unsubscribe {
-  return onSnapshot(
-    progressRef(uid),
-    (snapshot) => onChange(cleanCompleted(snapshot.data()?.completed)),
+): () => void {
+  return watchJournal(
+    repository,
+    async () => cleanCompleted((await repository.getTutorialProgress()).completed),
+    onChange,
     onError,
   );
 }
 
 /**
- * Marks a lesson as done or not done. The write adds or removes just this lesson, so two devices
- * that mark different lessons do not overwrite each other, and a write made offline waits in
- * Firestore's queue. The screens do not wait for it. An unknown lesson id changes nothing.
+ * Marks a lesson as done or not done. It reads the finished lessons, changes just this one and
+ * writes the list back, so the other lessons stay as they were. Screens do not wait for the
+ * result. An unknown lesson id changes nothing.
  */
-export function setLessonDone(uid: string, lessonId: string, done: boolean): Promise<void> {
-  if (getLesson(lessonId) === undefined) return Promise.resolve();
-  return setDoc(
-    progressRef(uid),
-    { completed: done ? arrayUnion(lessonId) : arrayRemove(lessonId) },
-    { merge: true },
-  );
+export async function setLessonDone(
+  repository: JournalRepository,
+  lessonId: string,
+  done: boolean,
+): Promise<void> {
+  if (getLesson(lessonId) === undefined) return;
+  const current = cleanCompleted((await repository.getTutorialProgress()).completed);
+  const without = current.filter((id) => id !== lessonId);
+  const completed = cleanCompleted(done ? [...without, lessonId] : without);
+  await repository.putTutorialProgress({ completed });
 }
