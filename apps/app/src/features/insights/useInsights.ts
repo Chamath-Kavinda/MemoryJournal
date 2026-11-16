@@ -1,7 +1,7 @@
 import { buildInsights, type DayId, type Insights } from '@memory-journal/core';
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuthStore } from '@/features/auth/authStore';
+import { useJournalRepository } from '@/lib/journal';
 import { deviceZone } from '@/features/profile/profileService';
 
 import { loadInsightsInput } from './insightsService';
@@ -14,20 +14,28 @@ interface State {
 }
 
 /**
- * The recall score, streak, trend and message context for the signed-in user, worked out on this
- * device. It is read again when the day changes or `reload` is called; the numbers from the last
- * successful read stay on screen while a new read is running or after it failed.
+ * The recall score, streak, trend and message context for whoever is using the app (a guest on
+ * this device or a signed-in account), worked out on this device. It is read again when the
+ * journal in use or the day changes, or when `reload` is called; the numbers from the last
+ * successful read stay on screen while a new read is running or after it failed. The numbers of
+ * a previous journal are dropped when the journal changes, so one person's score is never shown
+ * to another.
  */
 export function useInsights(today: DayId): State & { reload: () => void } {
-  const uid = useAuthStore((s) => s.user?.uid);
+  const repository = useJournalRepository();
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<State>({ insights: null, status: 'loading' });
 
+  // A different journal (sign-in or sign-out) starts from nothing.
   useEffect(() => {
-    if (!uid) return;
+    setState({ insights: null, status: 'loading' });
+  }, [repository]);
+
+  useEffect(() => {
+    if (!repository) return;
     let cancelled = false;
     setState((current) => ({ insights: current.insights, status: 'loading' }));
-    loadInsightsInput(uid, today, deviceZone(Date.now()).utcOffsetMinutes)
+    loadInsightsInput(repository, today, deviceZone(Date.now()).utcOffsetMinutes)
       .then((input) => {
         if (!cancelled) setState({ insights: buildInsights(input), status: 'ready' });
       })
@@ -37,7 +45,7 @@ export function useInsights(today: DayId): State & { reload: () => void } {
     return () => {
       cancelled = true;
     };
-  }, [uid, today, attempt]);
+  }, [repository, today, attempt]);
 
   const reload = useCallback(() => setAttempt((count) => count + 1), []);
   return { ...state, reload };

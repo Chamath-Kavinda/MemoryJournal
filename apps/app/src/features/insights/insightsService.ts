@@ -3,36 +3,18 @@ import {
   STREAK_MIN_WORDS,
   countsTowardStreak,
   type DayId,
+  type DayMeta,
   type DayRevision,
   type InsightsInput,
+  type JournalRepository,
   type LibrarySummary,
   type ScoreDay,
 } from '@memory-journal/core';
-import { collection, doc, getDoc, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { z } from 'zod';
 
-import { revisionSchema } from '@/features/day/revisionService';
-import { getFirebase } from '@/lib/firebase';
-
-const dayMetaSchema = z.object({
-  date: z.string(),
-  latestRevision: z.number().int().min(1),
-  wordCount: z.number(),
-  firstWrittenAt: z.number(),
-});
-type DayMetaRow = z.infer<typeof dayMetaSchema>;
-
-const libraryMetaSchema = z.object({ updatedAt: z.number() });
-
-async function readRevisions(uid: string, dayId: DayId): Promise<DayRevision[]> {
-  const snapshot = await getDocs(
-    // Document ids are text ("10" sorts before "2"), so the order comes from the field.
-    query(collection(getFirebase().db, 'users', uid, 'days', dayId, 'revisions'), orderBy('n')),
-  );
-  return snapshot.docs.flatMap((document) => {
-    const parsed = revisionSchema.safeParse(document.data());
-    return parsed.success ? [parsed.data] : [];
-  });
+/** The passes of a day, oldest first whatever order the repository returns them in. */
+async function readRevisions(repository: JournalRepository, dayId: DayId): Promise<DayRevision[]> {
+  const revisions = await repository.listRevisions(dayId);
+  return [...revisions].sort((a, b) => a.n - b.n);
 }
 
 /**
@@ -42,8 +24,8 @@ async function readRevisions(uid: string, dayId: DayId): Promise<DayRevision[]> 
  * because the metadata's word count belongs to the latest pass (D-027).
  */
 async function olderDayCounted(
-  uid: string,
-  meta: DayMetaRow,
+  repository: JournalRepository,
+  meta: DayMeta,
   utcOffsetMinutes: number,
 ): Promise<boolean> {
   const timing = { n: 1, createdAt: meta.firstWrittenAt };
@@ -59,41 +41,31 @@ async function olderDayCounted(
       utcOffsetMinutes,
     );
   }
-  const snapshot = await getDoc(
-    doc(getFirebase().db, 'users', uid, 'days', meta.date, 'revisions', '1'),
-  );
-  const first = revisionSchema.safeParse(snapshot.data());
-  return first.success && countsTowardStreak(meta.date, first.data, utcOffsetMinutes);
+  const first = (await repository.listRevisions(meta.date)).find((revision) => revision.n === 1);
+  return first !== undefined && countsTowardStreak(meta.date, first, utcOffsetMinutes);
 }
 
 /**
  * Reads what the Insights screen works from (D-029): every pass of the most recent written days,
  * which feeds the score and the trend; for older days only whether they counted toward the streak;
- * and a summary of the library. Journal text is read on the device and goes nowhere else.
- * Works offline when Firestore has the data in its local cache.
+ * and a summary of the library. It reads through the journal repository, so it serves a guest's
+ * journal on the device and a signed-in account alike. Journal text is read on the device and goes
+ * nowhere else. Works offline.
  */
 export async function loadInsightsInput(
-  uid: string,
+  repository: JournalRepository,
   today: DayId,
   utcOffsetMinutes: number,
 ): Promise<InsightsInput> {
-  const { db } = getFirebase();
-  const [daySnapshot, librarySnapshot] = await Promise.all([
-    getDocs(
-      query(
-        collection(db, 'users', uid, 'days'),
-        where('date', '<=', today),
-        orderBy('date', 'desc'),
-      ),
-    ),
-    getDocs(collection(db, 'users', uid, 'library')),
+  const [allDays, libraryItems] = await Promise.all([
+    repository.listDays(),
+    repository.listLibrary(),
   ]);
 
-  // Newest first, so the first days are the ones read in full.
-  const metas = daySnapshot.docs.flatMap((document) => {
-    const parsed = dayMetaSchema.safeParse(document.data());
-    return parsed.success ? [parsed.data] : [];
-  });
+  // Newest first, so the first days are the ones read in full. Days after today are not read.
+  const metas = allDays
+    .filter((meta) => meta.date <= today)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const recent = metas.slice(0, INSIGHTS_MAX_WRITTEN_DAYS);
   const older = metas.slice(INSIGHTS_MAX_WRITTEN_DAYS);
 
@@ -101,20 +73,17 @@ export async function loadInsightsInput(
     Promise.all(
       recent.map(async (meta): Promise<ScoreDay> => ({
         dayId: meta.date,
-        revisions: await readRevisions(uid, meta.date),
+        revisions: await readRevisions(repository, meta.date),
       })),
     ),
     Promise.all(
       older.map(async (meta) =>
-        (await olderDayCounted(uid, meta, utcOffsetMinutes)) ? [meta.date] : [],
+        (await olderDayCounted(repository, meta, utcOffsetMinutes)) ? [meta.date] : [],
       ),
     ),
   ]);
 
-  const savedTimes = librarySnapshot.docs.flatMap((document) => {
-    const parsed = libraryMetaSchema.safeParse(document.data());
-    return parsed.success ? [parsed.data.updatedAt] : [];
-  });
+  const savedTimes = libraryItems.map((item) => item.updatedAt);
   const library: LibrarySummary = {
     itemCount: savedTimes.length,
     lastSavedAt: savedTimes.length === 0 ? null : Math.max(...savedTimes),

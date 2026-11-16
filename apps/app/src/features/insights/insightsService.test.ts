@@ -1,25 +1,34 @@
-const mockGetDocs = jest.fn();
-const mockGetDoc = jest.fn();
-
-jest.mock('@/lib/firebase', () => ({ getFirebase: () => ({ db: {} }) }));
-jest.mock('firebase/firestore', () => ({
-  collection: (_db: unknown, ...path: string[]) => ({ path: path.join('/') }),
-  doc: (_db: unknown, ...path: string[]) => ({ path: path.join('/') }),
-  where: (field: string, op: string, value: string) => ({ where: field, op, value }),
-  orderBy: (field: string, direction?: string) => ({ orderBy: field, direction }),
-  query: (ref: { path: string }, ...constraints: unknown[]) => ({ ...ref, constraints }),
-  getDocs: (target: unknown) => mockGetDocs(target),
-  getDoc: (target: unknown) => mockGetDoc(target),
-}));
-
-import { INSIGHTS_MAX_WRITTEN_DAYS, addDays } from '@memory-journal/core';
+import {
+  INSIGHTS_MAX_WRITTEN_DAYS,
+  LocalRepository,
+  addDays,
+  type DayMeta,
+  type DayRevision,
+  type JournalRepository,
+  type KeyValueStore,
+  type LibraryItem,
+} from '@memory-journal/core';
 
 import { loadInsightsInput } from './insightsService';
 
 const OFFSET = 330;
 const TODAY = '2026-11-14';
 
-type Target = { path: string; constraints?: unknown[] };
+function memoryStore(): KeyValueStore {
+  const data = new Map<string, string>();
+  return {
+    getItem: (key) => Promise.resolve(data.get(key) ?? null),
+    setItem: (key, value) => {
+      data.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key) => {
+      data.delete(key);
+      return Promise.resolve();
+    },
+    getAllKeys: () => Promise.resolve([...data.keys()]),
+  };
+}
 
 /** The instant at `hour:minute` local time (UTC+05:30) on a day. */
 function at(dayId: string, hour: number, minute = 0): number {
@@ -27,17 +36,17 @@ function at(dayId: string, hour: number, minute = 0): number {
   return Date.UTC(year, month - 1, day, hour, minute) - OFFSET * 60_000;
 }
 
-const snapshot = (...rows: unknown[]) => ({ docs: rows.map((row) => ({ data: () => row })) });
-
-const meta = (date: string, overrides: Record<string, unknown> = {}) => ({
+const meta = (date: string, overrides: Partial<DayMeta> = {}): DayMeta => ({
   date,
   latestRevision: 1,
   wordCount: 30,
+  updatedAt: at(date, 21, 30),
   firstWrittenAt: at(date, 21, 30),
+  mentions: [],
   ...overrides,
 });
 
-const revision = (n: number, createdAt: number, wordCount = 30) => ({
+const revision = (n: number, createdAt: number, wordCount = 30): DayRevision => ({
   n,
   createdAt,
   closedAt: null,
@@ -49,45 +58,55 @@ const revision = (n: number, createdAt: number, wordCount = 30) => ({
   addedWordCount: 0,
 });
 
-/** Serves each collection from a map of path to rows, and no rows for any other path. */
-function serve(collections: Record<string, unknown[]>) {
-  mockGetDocs.mockImplementation((target: Target) =>
-    Promise.resolve(snapshot(...(collections[target.path] ?? []))),
-  );
+const libraryItem = (id: string, updatedAt: number): LibraryItem => ({
+  id,
+  type: 'movie',
+  title: id,
+  date: null,
+  text: '',
+  latestRevision: 0,
+  updatedAt,
+  wordCount: 0,
+  mentions: [],
+});
+
+async function seedDay(
+  repository: JournalRepository,
+  day: DayMeta,
+  revisions: DayRevision[] = [revision(1, day.firstWrittenAt, day.wordCount)],
+) {
+  await repository.putDay(day);
+  for (const item of revisions) await repository.putRevision(day.date, item);
 }
 
-const queried = (path: string) =>
-  mockGetDocs.mock.calls.map(([target]) => target as Target).find((target) => target.path === path);
-
 describe('loadInsightsInput', () => {
+  let repository: JournalRepository;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockGetDoc.mockResolvedValue({ data: () => undefined });
+    repository = new LocalRepository(memoryStore());
   });
 
-  it('asks for the days up to today, newest first, under the user', async () => {
-    serve({});
+  it('works from an empty guest journal', async () => {
+    const input = await loadInsightsInput(repository, TODAY, OFFSET);
 
-    await loadInsightsInput('u1', TODAY, OFFSET);
-
-    expect(queried('users/u1/days')?.constraints).toEqual([
-      { where: 'date', op: '<=', value: TODAY },
-      { orderBy: 'date', direction: 'desc' },
-    ]);
-  });
-
-  it('reads every pass of the recent days, oldest pass first', async () => {
-    const yesterday = addDays(TODAY, -1);
-    serve({
-      'users/u1/days': [meta(TODAY), meta(yesterday)],
-      [`users/u1/days/${TODAY}/revisions`]: [revision(1, at(TODAY, 21, 30))],
-      [`users/u1/days/${yesterday}/revisions`]: [
-        revision(1, at(yesterday, 21, 30)),
-        revision(2, at(TODAY, 8), 40),
-      ],
+    expect(input).toEqual({
+      today: TODAY,
+      utcOffsetMinutes: OFFSET,
+      days: [],
+      olderStreakDays: [],
+      library: { itemCount: 0, lastSavedAt: null },
     });
+  });
 
-    const input = await loadInsightsInput('u1', TODAY, OFFSET);
+  it('reads every pass of the recent days, newest day first and oldest pass first', async () => {
+    const yesterday = addDays(TODAY, -1);
+    await seedDay(repository, meta(yesterday, { latestRevision: 2 }), [
+      revision(2, at(TODAY, 8), 40),
+      revision(1, at(yesterday, 21, 30)),
+    ]);
+    await seedDay(repository, meta(TODAY));
+
+    const input = await loadInsightsInput(repository, TODAY, OFFSET);
 
     expect(input.today).toBe(TODAY);
     expect(input.utcOffsetMinutes).toBe(OFFSET);
@@ -96,37 +115,24 @@ describe('loadInsightsInput', () => {
       [TODAY, [1]],
       [yesterday, [1, 2]],
     ]);
-    expect(queried(`users/u1/days/${TODAY}/revisions`)?.constraints).toEqual([
-      { orderBy: 'n', direction: undefined },
-    ]);
   });
 
-  it('leaves out documents that do not have the expected shape', async () => {
-    serve({
-      'users/u1/days': [meta(TODAY), { date: '2026-11-13' }, meta('2026-11-12')],
-      [`users/u1/days/${TODAY}/revisions`]: [revision(1, at(TODAY, 21, 30)), { n: 'two' }],
-    });
+  it('leaves out days after today', async () => {
+    await seedDay(repository, meta(TODAY));
+    await seedDay(repository, meta(addDays(TODAY, 1)));
 
-    const input = await loadInsightsInput('u1', TODAY, OFFSET);
+    const input = await loadInsightsInput(repository, TODAY, OFFSET);
 
-    expect(input.days.map((day) => day.dayId)).toEqual([TODAY, '2026-11-12']);
-    expect(input.days[0]?.revisions).toHaveLength(1);
+    expect(input.days.map((day) => day.dayId)).toEqual([TODAY]);
   });
 
   it('summarises the library by its count and its latest save', async () => {
-    serve({ 'users/u1/library': [{ updatedAt: 5 }, { updatedAt: 9 }, { title: 'no time' }] });
+    await repository.putLibraryItem(libraryItem('a', 5));
+    await repository.putLibraryItem(libraryItem('b', 9));
 
-    const { library } = await loadInsightsInput('u1', TODAY, OFFSET);
+    const { library } = await loadInsightsInput(repository, TODAY, OFFSET);
 
     expect(library).toEqual({ itemCount: 2, lastSavedAt: 9 });
-  });
-
-  it('has an empty library summary when there are no items', async () => {
-    serve({});
-
-    const { library } = await loadInsightsInput('u1', TODAY, OFFSET);
-
-    expect(library).toEqual({ itemCount: 0, lastSavedAt: null });
   });
 
   describe('days older than the ones read in full', () => {
@@ -135,53 +141,52 @@ describe('loadInsightsInput', () => {
     );
     const olderDay = (n: number) => addDays(TODAY, -(INSIGHTS_MAX_WRITTEN_DAYS + n));
 
-    it('reads only the metadata of a one-pass evening day, and nothing for the rest', async () => {
-      serve({
-        'users/u1/days': [
-          ...recentDays,
-          meta(olderDay(1)), // one pass, evening, 30 words: counted
-          meta(olderDay(2), { wordCount: 10 }), // one pass, evening, too short
-          meta(olderDay(3), { firstWrittenAt: at(olderDay(3), 10) }), // written in the morning
-        ],
-      });
+    async function seedRecent() {
+      for (const day of recentDays) await seedDay(repository, day);
+    }
 
-      const input = await loadInsightsInput('u1', TODAY, OFFSET);
+    it('counts a one-pass evening day from its metadata alone', async () => {
+      await seedRecent();
+      // Only the metadata is stored for these, so reading a revision would find nothing.
+      await repository.putDay(meta(olderDay(1))); // one pass, evening, 30 words: counted
+      await repository.putDay(meta(olderDay(2), { wordCount: 10 })); // too short
+      await repository.putDay(
+        meta(olderDay(3), { firstWrittenAt: at(olderDay(3), 10) }), // written in the morning
+      );
+      const listRevisions = jest.spyOn(repository, 'listRevisions');
+      listRevisions.mockClear();
+
+      const input = await loadInsightsInput(repository, TODAY, OFFSET);
 
       expect(input.olderStreakDays).toEqual([olderDay(1)]);
       expect(input.days).toHaveLength(INSIGHTS_MAX_WRITTEN_DAYS);
-      expect(mockGetDoc).not.toHaveBeenCalled();
+      const readDays = listRevisions.mock.calls.map(([dayId]) => dayId);
+      expect(readDays.filter((dayId) => dayId <= olderDay(1))).toEqual([]);
     });
 
     it('reads revision 1 of an older evening day that has later passes', async () => {
+      await seedRecent();
       const longEnough = olderDay(1);
       const tooShort = olderDay(2);
-      const firstPasses: Record<string, unknown> = {
-        [`users/u1/days/${longEnough}/revisions/1`]: revision(1, at(longEnough, 21, 30), 25),
-        [`users/u1/days/${tooShort}/revisions/1`]: revision(1, at(tooShort, 21, 30), 12),
-      };
-      serve({
-        'users/u1/days': [
-          ...recentDays,
-          meta(longEnough, { latestRevision: 3, wordCount: 5 }),
-          meta(tooShort, { latestRevision: 2, wordCount: 90 }),
-        ],
-      });
-      mockGetDoc.mockImplementation((target: Target) =>
-        Promise.resolve({ data: () => firstPasses[target.path] }),
-      );
+      await seedDay(repository, meta(longEnough, { latestRevision: 3, wordCount: 5 }), [
+        revision(1, at(longEnough, 21, 30), 25),
+        revision(3, at(longEnough, 22), 5),
+      ]);
+      await seedDay(repository, meta(tooShort, { latestRevision: 2, wordCount: 90 }), [
+        revision(1, at(tooShort, 21, 30), 12),
+        revision(2, at(tooShort, 22), 90),
+      ]);
 
-      const input = await loadInsightsInput('u1', TODAY, OFFSET);
+      const input = await loadInsightsInput(repository, TODAY, OFFSET);
 
       expect(input.olderStreakDays).toEqual([longEnough]);
-      expect(mockGetDoc).toHaveBeenCalledTimes(2);
     });
 
     it('does not count an older day whose first pass cannot be read', async () => {
-      serve({
-        'users/u1/days': [...recentDays, meta(olderDay(1), { latestRevision: 2 })],
-      });
+      await seedRecent();
+      await repository.putDay(meta(olderDay(1), { latestRevision: 2 }));
 
-      const input = await loadInsightsInput('u1', TODAY, OFFSET);
+      const input = await loadInsightsInput(repository, TODAY, OFFSET);
 
       expect(input.olderStreakDays).toEqual([]);
     });
