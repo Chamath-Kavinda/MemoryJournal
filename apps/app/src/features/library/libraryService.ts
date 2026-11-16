@@ -112,6 +112,14 @@ export async function updateLibraryItemInfo(
   });
 }
 
+/**
+ * Deletes the item and all of its saved passes. Callers must ask the person first (section
+ * 15.10).
+ */
+export function deleteLibraryItem(repository: JournalRepository, itemId: string): Promise<void> {
+  return repository.deleteLibraryItem(itemId);
+}
+
 /** Everything the item screen needs to know about the passes already saved for a page. */
 export interface LibraryHistory {
   item: LibraryItem | null;

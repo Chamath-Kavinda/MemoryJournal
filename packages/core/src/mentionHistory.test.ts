@@ -1,4 +1,4 @@
-import { mentionedDays } from './mentionHistory';
+import { mentionCounts, mentionedDays } from './mentionHistory';
 
 function meta(date: string, mentions: string[] | undefined, wordCount = 10) {
   return mentions === undefined ? { date, wordCount } : { date, wordCount, mentions };
@@ -54,5 +54,39 @@ describe('mentionedDays', () => {
   it('returns an empty list when nothing matches', () => {
     expect(mentionedDays([], 't1')).toEqual([]);
     expect(mentionedDays([meta('2026-11-10', ['t2'])], 't1')).toEqual([]);
+  });
+});
+
+describe('mentionCounts', () => {
+  const item = (id: string, mentions: string[]) => ({ id, mentions });
+
+  it('counts the days and the library pages that mention each tag', () => {
+    const counts = mentionCounts(
+      [meta('2026-11-03', ['t1']), meta('2026-11-13', ['t1', 't2']), meta('2026-11-10', ['t2'])],
+      [item('m1', ['t1']), item('b1', ['t3'])],
+    );
+    expect(counts.get('t1')).toBe(3);
+    expect(counts.get('t2')).toBe(2);
+    expect(counts.get('t3')).toBe(1);
+  });
+
+  it('counts a day or page once per tag even when the id is repeated', () => {
+    const counts = mentionCounts([meta('2026-11-03', ['t1', 't1'])], [item('m1', ['t1', 't1'])]);
+    expect(counts.get('t1')).toBe(2);
+  });
+
+  it('counts a day once even if it is given twice, using the later entry', () => {
+    const counts = mentionCounts([meta('2026-11-03', ['t1']), meta('2026-11-03', ['t2'])], []);
+    expect(counts.get('t1')).toBeUndefined();
+    expect(counts.get('t2')).toBe(1);
+  });
+
+  it('ignores days saved before mentions were stored and leaves unmentioned tags out', () => {
+    const counts = mentionCounts([meta('2026-11-03', undefined), meta('2026-11-04', [])], []);
+    expect(counts.size).toBe(0);
+  });
+
+  it('matches the exact tag id only', () => {
+    expect(mentionCounts([meta('2026-11-03', ['t10'])], []).get('t1')).toBeUndefined();
   });
 });

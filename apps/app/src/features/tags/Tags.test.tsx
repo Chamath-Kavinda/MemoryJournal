@@ -24,49 +24,96 @@ const renderWithConfirm = (ui: ReactElement) => render(ui, { wrapper: ConfirmPro
 const dialog = () => within(screen.getByTestId('confirm-dialog'));
 
 describe('TagBrowser', () => {
-  const handlers = { onOpenTag: jest.fn(), onNewTag: jest.fn(), onManageCategories: jest.fn() };
+  const handlers = {
+    onOpenTag: jest.fn(),
+    onNewTag: jest.fn(),
+    onManageCategories: jest.fn(),
+    onDeleteTag: jest.fn(),
+  };
+  const noCounts = new Map<string, number>();
+  const counts = new Map([
+    ['t1', 3],
+    ['t2', 1],
+  ]);
 
   beforeEach(() => jest.clearAllMocks());
 
   it('lists tags with their category and note', async () => {
-    await render(<TagBrowser categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
 
     expect(screen.getByText('Ravi')).toBeTruthy();
-    expect(screen.getByText('People · Met at the library')).toBeTruthy();
-    expect(screen.getByText('Also: Rav')).toBeTruthy();
+    expect(screen.getByText('Met at the library')).toBeTruthy();
+    expect(within(screen.getByTestId('tag-card-t1')).getByText('People')).toBeTruthy();
+
     expect(screen.getByText('Galle Fort')).toBeTruthy();
   });
 
+  it('shows how many days and pages mention each tag', async () => {
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={counts} {...handlers} />,
+    );
+
+    expect(screen.getByText('People · 3 mentions')).toBeTruthy();
+    expect(screen.getByText('Places · 1 mention')).toBeTruthy();
+    // A tag missing from loaded counts has no mentions.
+    expect(screen.getByText('Numbers · 0 mentions')).toBeTruthy();
+  });
+
   it('filters by category', async () => {
-    await render(<TagBrowser categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
 
     await fireEvent.press(screen.getByRole('button', { name: 'Places' }));
 
     expect(screen.getByText('Galle Fort')).toBeTruthy();
-    expect(screen.queryByText('Ravi')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Ravi')).toBeNull());
 
     await fireEvent.press(screen.getByText('All'));
     expect(screen.getByText('Ravi')).toBeTruthy();
   });
 
   it('searches names and aliases', async () => {
-    await render(<TagBrowser categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
 
     await fireEvent.changeText(screen.getByLabelText('Search tags'), 'rav');
     expect(screen.getByText('Ravi')).toBeTruthy();
-    expect(screen.queryByText('Galle Fort')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Galle Fort')).toBeNull());
 
     await fireEvent.changeText(screen.getByLabelText('Search tags'), 'zzz');
-    expect(screen.getByText('No tags match.')).toBeTruthy();
+    expect(await screen.findByText('No tags match.')).toBeTruthy();
   });
 
-  it('explains the empty state when there are no tags at all', async () => {
-    await render(<TagBrowser categories={categories} tags={[]} {...handlers} />);
+  it('clears the search with the X button', async () => {
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText('Search tags'), 'zzz');
+    await fireEvent.press(screen.getByLabelText('Clear search'));
+
+    expect(screen.getByLabelText('Search tags').props.value).toBe('');
+    expect(await screen.findByText('Ravi')).toBeTruthy();
+  });
+
+  it('explains the empty state and offers a New tag button', async () => {
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={[]} counts={noCounts} {...handlers} />,
+    );
     expect(screen.getByText(/No tags yet/)).toBeTruthy();
+
+    await fireEvent.press(within(screen.getByTestId('tags-empty')).getByText('New tag'));
+    expect(handlers.onNewTag).toHaveBeenCalled();
   });
 
   it('opens a tag and reaches the other screens', async () => {
-    await render(<TagBrowser categories={categories} tags={tags} {...handlers} />);
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
 
     await fireEvent.press(screen.getByLabelText('Galle Fort, Places'));
     expect(handlers.onOpenTag).toHaveBeenCalledWith('t2');
@@ -76,6 +123,38 @@ describe('TagBrowser', () => {
 
     await fireEvent.press(screen.getByText('Manage categories'));
     expect(handlers.onManageCategories).toHaveBeenCalled();
+  });
+
+  it('asks in the dialog before deleting a tag, and Cancel leaves it alone', async () => {
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
+
+    await fireEvent.press(screen.getByLabelText('Delete Ravi'));
+
+    expect(await screen.findByTestId('confirm-dialog')).toBeTruthy();
+    expect(dialog().getByText('Delete tag?')).toBeTruthy();
+    expect(
+      dialog().getByText('Ravi will be deleted. Mentions in your old entries stay as plain text.'),
+    ).toBeTruthy();
+    expect(handlers.onDeleteTag).not.toHaveBeenCalled();
+
+    await fireEvent.press(dialog().getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(handlers.onDeleteTag).not.toHaveBeenCalled();
+  });
+
+  it('deletes the tag once the dialog is confirmed', async () => {
+    await renderWithConfirm(
+      <TagBrowser categories={categories} tags={tags} counts={noCounts} {...handlers} />,
+    );
+
+    await fireEvent.press(screen.getByLabelText('Delete Ravi'));
+    await screen.findByTestId('confirm-dialog');
+    await fireEvent.press(dialog().getByRole('button', { name: 'Delete tag' }));
+
+    await waitFor(() => expect(handlers.onDeleteTag).toHaveBeenCalledWith('t1'));
   });
 });
 

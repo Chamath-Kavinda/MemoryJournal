@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { BackButton } from '@/components/BackButton';
@@ -77,9 +78,11 @@ export function Chip({ label, selected, onPress }: ChipProps) {
 interface HeaderProps {
   title: string;
   onBack: () => void;
+  /** Icon buttons drawn at the right end of the header, for example Delete. */
+  trailing?: ReactNode;
 }
 
-export function ScreenHeader({ title, onBack }: HeaderProps) {
+export function ScreenHeader({ title, onBack, trailing }: HeaderProps) {
   const palette = usePalette();
   return (
     <View
@@ -97,10 +100,11 @@ export function ScreenHeader({ title, onBack }: HeaderProps) {
       <BackButton onBack={onBack} />
       <Text
         accessibilityRole="header"
-        style={{ color: palette.text, fontSize: 22, fontWeight: '700' }}
+        style={{ flex: 1, flexShrink: 1, color: palette.text, fontSize: 22, fontWeight: '700' }}
       >
         {title}
       </Text>
+      {trailing}
     </View>
   );
 }

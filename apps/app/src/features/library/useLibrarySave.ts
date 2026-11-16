@@ -28,8 +28,8 @@ export function lastSaveOf(history: LibraryHistory): EpochMs | null {
 }
 
 export interface LibrarySave {
-  /** Saves the text on screen as a revision. Does nothing if it did not change. */
-  save: () => Promise<void>;
+  /** Saves the text on screen as a revision. Resolves to true when the save went through. */
+  save: () => Promise<boolean>;
   /** True while a save has been sent and has not been confirmed yet. */
   saving: boolean;
   /** True when the last save was refused or failed. Cleared by the next save. */
@@ -48,6 +48,11 @@ interface Options {
   text: string;
   discardDraft: (saved: DayContent) => void;
   storage: KeyValueStorage;
+  /**
+   * True once the item is deleted: closing the screen then writes nothing, so a deleted item
+   * is never brought back by the save at the end of the screen's life.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -66,7 +71,7 @@ export function useLibrarySave(options: Options): LibrarySave {
 
   const save = useCallback(async () => {
     const { repository, history, text, discardDraft } = live.current;
-    if (!repository || !history || history.item === null) return;
+    if (!repository || !history || history.item === null) return false;
     setPending((count) => count + 1);
     setFailed(false);
     try {
@@ -77,8 +82,10 @@ export function useLibrarySave(options: Options): LibrarySave {
         Date.now(),
       );
       discardDraft(libraryContent(text));
+      return true;
     } catch {
       setFailed(true);
+      return false;
     } finally {
       setPending((count) => count - 1);
     }
@@ -87,9 +94,9 @@ export function useLibrarySave(options: Options): LibrarySave {
   const { repository, owner, itemId } = options;
   useEffect(() => {
     return () => {
-      const { history, text, storage } = live.current;
+      const { history, text, storage, disabled } = live.current;
       const item = history?.item ?? null;
-      if (!repository || !history || item === null) return;
+      if (disabled || !repository || !history || item === null) return;
       void (async () => {
         try {
           const now = Date.now();

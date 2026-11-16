@@ -6,12 +6,23 @@ import {
   type LibraryItem,
   type LibraryItemType,
 } from '@memory-journal/core';
+import { BookOpen, Calendar, Film, Plus } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Button } from '@/components/Button';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorCard } from '@/components/ErrorCard';
+import { FadeUp } from '@/components/FadeUp';
+import { Icon } from '@/components/Icon';
+import { PressableCard } from '@/components/PressableCard';
+import { Removable } from '@/components/Removable';
+import { SegmentedControl, type Segment } from '@/components/SegmentedControl';
+import { Skeleton } from '@/components/Skeleton';
+import { SPACING } from '@/theme/layout';
+import { CONTENT_MAX_WIDTH } from '@/theme/palette';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
-
-import { ActionButton, Chip, usePalette } from '@/features/tags/ui';
 
 import { LibraryItemForm } from './LibraryItemForm';
 import type { LoadStatus } from './useLibrary';
@@ -23,13 +34,21 @@ interface Props {
   onCreate: (draft: { type: LibraryItemType; title: string; date: DayId | null }) => void;
 }
 
+const TYPE_ICON = { movie: Film, book: BookOpen } as const;
+
+const SEGMENTS: readonly Segment<LibraryItemType>[] = LIBRARY_TYPES.map((type) => ({
+  value: type,
+  label: libraryTypeLabel(type, true),
+  icon: TYPE_ICON[type],
+}));
+
 function wordsLabel(count: number): string {
   return `${count} ${count === 1 ? 'word' : 'words'}`;
 }
 
-/** The Movies and Books tabs: a list of items and a form to add one. */
+/** The Movies and Books switch: a list of item cards and a form to add one. */
 export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
-  const palette = usePalette();
+  const { palette } = useTheme();
   const [type, setType] = useState<LibraryItemType>('movie');
   const [adding, setAdding] = useState(false);
   const shown = libraryItemsOfType(items, type);
@@ -37,22 +56,25 @@ export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
 
   return (
     <View
-      style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}
+      style={{
+        width: '100%',
+        maxWidth: CONTENT_MAX_WIDTH,
+        alignSelf: 'center',
+        padding: SPACING.lg,
+        gap: SPACING.md,
+      }}
       accessibilityLabel="Library"
     >
-      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
-        {LIBRARY_TYPES.map((tab) => (
-          <Chip
-            key={tab}
-            label={libraryTypeLabel(tab, true)}
-            selected={tab === type}
-            onPress={() => {
-              setType(tab);
-              setAdding(false);
-            }}
-          />
-        ))}
-      </View>
+      <SegmentedControl
+        testID="library-switch"
+        accessibilityLabel="Library type"
+        segments={SEGMENTS}
+        value={type}
+        onChange={(next) => {
+          setType(next);
+          setAdding(false);
+        }}
+      />
 
       {adding ? (
         <LibraryItemForm
@@ -68,50 +90,80 @@ export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
         />
       ) : (
         <View style={{ flexDirection: 'row' }}>
-          <ActionButton label={`Add ${noun}`} tone="primary" onPress={() => setAdding(true)} />
+          <Button label={`Add ${noun}`} icon={Plus} onPress={() => setAdding(true)} />
         </View>
       )}
 
-      {status === 'loading' ? <ActivityIndicator accessibilityLabel="Loading library" /> : null}
-      {status === 'error' ? (
-        <Text accessibilityRole="alert" style={{ color: palette.danger, fontSize: 14 }}>
-          Could not load your library.
-        </Text>
+      {status === 'loading' ? (
+        <View
+          testID="library-loading"
+          accessibilityLabel="Loading library"
+          style={{ gap: SPACING.sm }}
+        >
+          <Skeleton height={64} radius={16} />
+          <Skeleton height={64} radius={16} />
+          <Skeleton height={64} radius={16} />
+        </View>
       ) : null}
+      {status === 'error' ? <ErrorCard message="Could not load your library." /> : null}
       {status === 'ready' && shown.length === 0 ? (
-        <Text style={{ color: palette.muted, fontSize: 15 }}>
-          {`No ${libraryTypeLabel(type, true).toLowerCase()} yet. Add one to start its page.`}
-        </Text>
+        <EmptyState
+          icon={TYPE_ICON[type]}
+          message={`No ${libraryTypeLabel(type, true).toLowerCase()} yet. Add one to start its page.`}
+          testID="library-empty"
+        />
       ) : null}
 
-      {shown.map((item) => {
-        const detail = [item.date, item.latestRevision > 0 ? wordsLabel(item.wordCount) : null]
-          .filter((part): part is string => part !== null)
-          .join(' · ');
-        return (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            accessibilityLabel={detail === '' ? item.title : `${item.title}, ${detail}`}
-            onPress={() => onOpen(item.id)}
-            style={{
-              minHeight: 48,
-              justifyContent: 'center',
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: palette.border,
-              backgroundColor: palette.surface,
-            }}
-          >
-            <Text style={{ color: palette.text, fontSize: 16 }}>{item.title}</Text>
-            {detail !== '' ? (
-              <Text style={{ color: palette.muted, fontSize: 13 }}>{detail}</Text>
-            ) : null}
-          </Pressable>
-        );
-      })}
+      <View style={{ gap: SPACING.sm }}>
+        {shown.map((item, index) => {
+          const words = item.latestRevision > 0 ? wordsLabel(item.wordCount) : null;
+          const detail = [item.date, words]
+            .filter((part): part is string => part !== null)
+            .join(' · ');
+          return (
+            <Removable key={item.id}>
+              <FadeUp key={`${item.id}-${type}`} index={index}>
+                <PressableCard
+                  testID={`library-item-${item.id}`}
+                  accessibilityLabel={detail === '' ? item.title : `${item.title}, ${detail}`}
+                  onPress={() => onOpen(item.id)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
+                    <Icon icon={TYPE_ICON[item.type]} size="control" color={palette.neonViolet} />
+                    <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+                      <Text style={{ color: palette.text, fontSize: 17, fontWeight: '600' }}>
+                        {item.title}
+                      </Text>
+                      {item.date !== null || words !== null ? (
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: SPACING.sm,
+                          }}
+                        >
+                          {item.date !== null ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Icon icon={Calendar} size={14} color={palette.muted} />
+                              <Text style={{ color: palette.muted, fontSize: 13 }}>
+                                {item.date}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {words !== null ? (
+                            <Text style={{ color: palette.muted, fontSize: 13 }}>{words}</Text>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                </PressableCard>
+              </FadeUp>
+            </Removable>
+          );
+        })}
+      </View>
     </View>
   );
 }

@@ -1,60 +1,93 @@
 import { filterTags, type Tag, type TagCategory } from '@memory-journal/core';
+import { LayoutGrid, Plus, Settings2, Tag as TagGlyph } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { Text, TextInput } from '@/theme/themed';
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { EmptyState } from '@/components/EmptyState';
+import { FadeUp } from '@/components/FadeUp';
+import { Removable } from '@/components/Removable';
+import { SearchField } from '@/components/SearchField';
+import { SPACING } from '@/theme/layout';
+import { CONTENT_MAX_WIDTH } from '@/theme/palette';
+import { useTheme } from '@/theme/ThemeProvider';
+import { Text } from '@/theme/themed';
 
-import { ActionButton, Chip, usePalette } from './ui';
+import { categoryIcon } from './categoryIcon';
+import { TagCard } from './TagCard';
 
 interface Props {
   categories: readonly TagCategory[];
   tags: readonly Tag[];
+  /** Mentions per tag id; empty while the counts load. */
+  counts: ReadonlyMap<string, number>;
   onOpenTag: (tagId: string) => void;
   onNewTag: () => void;
   onManageCategories: () => void;
+  /** Called after the person confirms the delete dialog of a card. */
+  onDeleteTag: (tagId: string) => void;
 }
 
-/** The Tags list: search, filter by category, and a row per tag (section 5.4). */
-export function TagBrowser({ categories, tags, onOpenTag, onNewTag, onManageCategories }: Props) {
-  const palette = usePalette();
+/** The Tags list: search, filter by category, and a card per tag (sections 5.4 and 15.11). */
+export function TagBrowser({
+  categories,
+  tags,
+  counts,
+  onOpenTag,
+  onNewTag,
+  onManageCategories,
+  onDeleteTag,
+}: Props) {
+  const { palette } = useTheme();
   const [query, setQuery] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
 
   const visible = useMemo(() => filterTags(tags, { query, categoryId }), [tags, query, categoryId]);
-  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? 'No category';
+  const categoryOf = (id: string) => categories.find((c) => c.id === id);
+  // Changing the filter restarts the entrance stagger for the cards that appear.
+  const filterKey = `${categoryId ?? 'all'}`;
 
   return (
-    <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        <ActionButton label="New tag" tone="primary" onPress={onNewTag} />
-        <ActionButton label="Manage categories" onPress={onManageCategories} />
+    <View
+      style={{
+        width: '100%',
+        maxWidth: CONTENT_MAX_WIDTH,
+        alignSelf: 'center',
+        padding: SPACING.lg,
+        gap: SPACING.md,
+      }}
+    >
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
+        <Button label="New tag" icon={Plus} onPress={onNewTag} testID="new-tag" />
+        <Button
+          label="Manage categories"
+          icon={Settings2}
+          variant="secondary"
+          onPress={onManageCategories}
+        />
       </View>
 
-      <TextInput
-        accessibilityLabel="Search tags"
-        placeholder="Search by name or alias"
-        placeholderTextColor={palette.muted}
+      <SearchField
         value={query}
         onChangeText={setQuery}
-        autoCorrect={false}
-        style={{
-          minHeight: 44,
-          paddingHorizontal: 12,
-          borderRadius: 10,
-          borderWidth: 1,
-          borderColor: palette.border,
-          color: palette.text,
-          fontSize: 16,
-        }}
+        placeholder="Search by name or alias"
+        accessibilityLabel="Search tags"
       />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Chip label="All" selected={categoryId === null} onPress={() => setCategoryId(null)} />
+        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+          <Chip
+            label="All"
+            icon={LayoutGrid}
+            selected={categoryId === null}
+            onPress={() => setCategoryId(null)}
+          />
           {categories.map((category) => (
             <Chip
               key={category.id}
               label={category.name}
+              icon={categoryIcon(category)}
               selected={categoryId === category.id}
               onPress={() => setCategoryId(category.id)}
             />
@@ -63,37 +96,30 @@ export function TagBrowser({ categories, tags, onOpenTag, onNewTag, onManageCate
       </ScrollView>
 
       {tags.length === 0 ? (
-        <Text style={{ color: palette.muted, fontSize: 15 }}>
-          No tags yet. Save the people, places and numbers you want to remember, then pick them
-          while you write.
-        </Text>
+        <EmptyState
+          icon={TagGlyph}
+          message="No tags yet. Save the people, places and numbers you want to remember, then pick them while you write."
+          actionLabel="New tag"
+          actionIcon={Plus}
+          onAction={onNewTag}
+          testID="tags-empty"
+        />
       ) : visible.length === 0 ? (
         <Text style={{ color: palette.muted, fontSize: 15 }}>No tags match.</Text>
       ) : (
-        <View accessibilityRole="list">
-          {visible.map((tag) => (
-            <Pressable
-              key={tag.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${tag.name}, ${categoryName(tag.categoryId)}`}
-              onPress={() => onOpenTag(tag.id)}
-              style={{
-                paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: palette.border,
-                gap: 2,
-              }}
-            >
-              <Text style={{ color: palette.text, fontSize: 17 }}>{tag.name}</Text>
-              <Text numberOfLines={1} style={{ color: palette.muted, fontSize: 14 }}>
-                {[categoryName(tag.categoryId), tag.note].filter(Boolean).join(' · ')}
-              </Text>
-              {tag.aliases.length > 0 ? (
-                <Text numberOfLines={1} style={{ color: palette.muted, fontSize: 13 }}>
-                  Also: {tag.aliases.join(', ')}
-                </Text>
-              ) : null}
-            </Pressable>
+        <View accessibilityRole="list" style={{ gap: SPACING.sm }}>
+          {visible.map((tag, index) => (
+            <Removable key={tag.id}>
+              <FadeUp key={`${tag.id}-${filterKey}`} index={index}>
+                <TagCard
+                  tag={tag}
+                  category={categoryOf(tag.categoryId)}
+                  mentions={counts.get(tag.id) ?? (counts.size > 0 ? 0 : undefined)}
+                  onOpen={() => onOpenTag(tag.id)}
+                  onDelete={() => onDeleteTag(tag.id)}
+                />
+              </FadeUp>
+            </Removable>
           ))}
         </View>
       )}

@@ -8,23 +8,28 @@ import {
   type TagDraft,
 } from '@memory-journal/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Pencil, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 
 import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/Button';
+import { IconButton } from '@/components/IconButton';
+import { Snackbar } from '@/components/Snackbar';
+import { useConfirm } from '@/components/useConfirm';
 import { useAuthStore } from '@/features/auth/authStore';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
 import { draftOwner } from '@/features/day/draftStore';
 import { MentionInput } from '@/features/day/MentionInput';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
-import { SaveBar } from '@/features/day/SaveBar';
+import { SAVE_BAR_CLEARANCE, SaveBar } from '@/features/day/SaveBar';
 import type { Tagging } from '@/features/day/tagging';
 import { useDayDraft } from '@/features/day/useDayDraft';
 import { LibraryItemForm } from '@/features/library/LibraryItemForm';
-import { updateLibraryItemInfo } from '@/features/library/libraryService';
+import { deleteLibraryItem, updateLibraryItemInfo } from '@/features/library/libraryService';
 import { useLibraryHistory } from '@/features/library/useLibrary';
 import {
   isLibraryDraftId,
@@ -33,10 +38,11 @@ import {
 } from '@/features/library/useLibrarySave';
 import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { createTag } from '@/features/tags/tagService';
-import { ActionButton, ErrorBanner, ScreenHeader, usePalette } from '@/features/tags/ui';
+import { ErrorBanner, ScreenHeader, usePalette } from '@/features/tags/ui';
 import { useTagData } from '@/features/tags/useTagData';
 import { useJournalRepository } from '@/lib/journal';
 import { useLeaveGuard } from '@/navigation/useLeaveGuard';
+import { SPACING } from '@/theme/layout';
 
 const noop = () => {};
 
@@ -45,6 +51,7 @@ export default function LibraryItemRoute() {
   const itemId = Array.isArray(rawItemId) ? (rawItemId[0] ?? '') : (rawItemId ?? '');
   const router = useRouter();
   const palette = usePalette();
+  const confirm = useConfirm();
   const uid = useAuthStore((s) => s.user?.uid);
   const repository = useJournalRepository();
   const owner = draftOwner(uid);
@@ -95,9 +102,11 @@ export default function LibraryItemRoute() {
 
   const [selection, setSelection] = useState<RevisionSelection>('latest');
   const [editingInfo, setEditingInfo] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   useEffect(() => {
     setSelection('latest');
     setEditingInfo(false);
+    setDeleted(false);
   }, [itemId]);
 
   const text = draft.content.freeNotes;
@@ -109,19 +118,32 @@ export default function LibraryItemRoute() {
     text,
     discardDraft: draft.discard,
     storage: draftStorage,
+    disabled: deleted,
   });
+
+  // A short confirmation after a save. The id changes with every save so the timer restarts.
+  const [snack, setSnack] = useState<{ message: string | null; id: number }>({
+    message: null,
+    id: 0,
+  });
+  const dismissSnack = useCallback(() => setSnack((s) => ({ ...s, message: null })), []);
+  const saveAndNotify = async () => {
+    const saved = await save.save();
+    if (saved) setSnack((s) => ({ message: 'Saved', id: s.id + 1 }));
+  };
 
   const options = revisionOptions(days.length);
   const viewed = selection === 'latest' ? null : pickRevision(days, selection);
   const canSave = text !== latestText && (latest !== null || text.trim() !== '');
   const showPage = draft.ready && item !== null && seededItem === itemId;
+  const showSaveBar = showPage && viewed === null && !editingInfo && !deleted;
   const detail = item
     ? [libraryTypeLabel(item.type), item.date].filter((part) => part !== null).join(' · ')
     : '';
 
   // Leaving with unsaved writing asks first. Confirming drops the text and its stored draft.
   const back = useLeaveGuard({
-    dirty: showPage && canSave,
+    dirty: showPage && canSave && !deleted,
     leave,
     message: `Your unsaved changes to ${item?.title ?? 'this page'} will be lost.`,
     onDiscard: () => {
@@ -130,89 +152,142 @@ export default function LibraryItemRoute() {
     },
   });
 
+  const askDelete = async () => {
+    if (repository === null || item === null) return;
+    const noun = libraryTypeLabel(item.type).toLowerCase();
+    const confirmed = await confirm({
+      title: `Delete ${noun}?`,
+      message: `${item.title} and all of its saved passes will be deleted. This cannot be undone.`,
+      confirmLabel: `Delete ${noun}`,
+      icon: Trash2,
+    });
+    if (!confirmed) return;
+    // Mark it deleted first, so closing the screen does not save the page again.
+    setDeleted(true);
+    draft.discard(libraryContent(''));
+    watchWrite(deleteLibraryItem(repository, itemId), 'The item could not be deleted.');
+    leave();
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <ScreenHeader title={item?.title ?? 'Library'} onBack={back} />
-        {historyFailed ? (
-          <Text
-            accessibilityRole="alert"
-            style={{ padding: 16, fontSize: 14, color: palette.danger, textAlign: 'center' }}
-          >
-            This page could not be loaded. Check your connection and open it again.
-          </Text>
-        ) : null}
-        {history !== null && item === null ? (
-          <Text style={{ padding: 16, textAlign: 'center', color: palette.text }}>
-            This item no longer exists.
-          </Text>
-        ) : null}
-        {repository === null ||
-        (!historyFailed && !showPage && item === null && history === null) ? (
-          <ActivityIndicator style={{ marginTop: 24 }} />
-        ) : null}
-        {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
-
-        {showPage && item !== null ? (
-          <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}>
-            {editingInfo ? (
-              <LibraryItemForm
-                type={item.type}
-                initial={{ title: item.title, date: item.date }}
-                submitLabel="Save details"
-                onCancel={() => setEditingInfo(false)}
-                onSubmit={(info) => {
-                  if (repository !== null) {
-                    watchWrite(
-                      updateLibraryItemInfo(repository, itemId, info),
-                      'The details could not be saved.',
-                    );
-                  }
-                  setEditingInfo(false);
-                }}
-              />
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Text style={{ color: palette.muted, fontSize: 14 }}>{detail}</Text>
-                <ActionButton label="Edit details" onPress={() => setEditingInfo(true)} />
-              </View>
-            )}
-
-            <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
-
-            {viewed === null ? (
-              <>
-                <DraftStatus state={draft.saveState} />
-                <SaveBar
-                  canSave={canSave}
-
-                  saving={save.saving}
-                  failed={save.failed}
-                  pendingSync={history?.hasPendingWrites ?? false}
-                  onSave={() => void save.save()}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={{ paddingBottom: showSaveBar ? SAVE_BAR_CLEARANCE : SPACING.xl }}
+        >
+          <ScreenHeader
+            title={item?.title ?? 'Library'}
+            onBack={back}
+            trailing={
+              item !== null ? (
+                <IconButton
+                  testID="library-item-delete"
+                  icon={Trash2}
+                  accessibilityLabel={`Delete ${item.title}`}
+                  color={palette.danger}
+                  onPress={() => void askDelete()}
                 />
+              ) : null
+            }
+          />
+          {historyFailed ? (
+            <Text
+              accessibilityRole="alert"
+              style={{ padding: 16, fontSize: 14, color: palette.danger, textAlign: 'center' }}
+            >
+              This page could not be loaded. Check your connection and open it again.
+            </Text>
+          ) : null}
+          {history !== null && item === null && !deleted ? (
+            <Text style={{ padding: 16, textAlign: 'center', color: palette.text }}>
+              This item no longer exists.
+            </Text>
+          ) : null}
+          {repository === null ||
+          (!historyFailed && !showPage && item === null && history === null) ? (
+            <ActivityIndicator style={{ marginTop: 24 }} />
+          ) : null}
+          {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
+
+          {showPage && item !== null ? (
+            <View
+              style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}
+            >
+              {editingInfo ? (
+                <LibraryItemForm
+                  type={item.type}
+                  initial={{ title: item.title, date: item.date }}
+                  submitLabel="Save details"
+                  onCancel={() => setEditingInfo(false)}
+                  onSubmit={(info) => {
+                    if (repository !== null) {
+                      watchWrite(
+                        updateLibraryItemInfo(repository, itemId, info),
+                        'The details could not be saved.',
+                      );
+                    }
+                    setEditingInfo(false);
+                  }}
+                />
+              ) : (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: SPACING.sm,
+                  }}
+                >
+                  <Text style={{ color: palette.muted, fontSize: 14 }}>{detail}</Text>
+                  <Button
+                    label="Edit details"
+                    icon={Pencil}
+                    variant="ghost"
+                    onPress={() => setEditingInfo(true)}
+                  />
+                </View>
+              )}
+
+              <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
+
+              {viewed === null ? (
+                <>
+                  <DraftStatus state={draft.saveState} />
+                  <MentionInput
+                    label={`Page of ${item.title}`}
+                    value={text}
+                    onChangeValue={(next) => draft.setContent(libraryContent(next))}
+                    editable
+                    tagging={tagging}
+                    style={pageStyle(palette.text, palette.border)}
+                  />
+                </>
+              ) : (
                 <MentionInput
-                  label={`Page of ${item.title}`}
-                  value={text}
-                  onChangeValue={(next) => draft.setContent(libraryContent(next))}
-                  editable
+                  label={`Page of ${item.title}, ${viewed.n} pass`}
+                  value={viewed.freeNotes}
+                  onChangeValue={noop}
+                  editable={false}
                   tagging={tagging}
                   style={pageStyle(palette.text, palette.border)}
                 />
-              </>
-            ) : (
-              <MentionInput
-                label={`Page of ${item.title}, ${viewed.n} pass`}
-                value={viewed.freeNotes}
-                onChangeValue={noop}
-                editable={false}
-                tagging={tagging}
-                style={pageStyle(palette.text, palette.border)}
-              />
-            )}
-          </View>
+              )}
+            </View>
+          ) : null}
+        </ScrollView>
+        {showSaveBar ? (
+          <SaveBar
+            canSave={canSave}
+            saving={save.saving}
+            failed={save.failed}
+            pendingSync={history?.hasPendingWrites ?? false}
+            onSave={() => void saveAndNotify()}
+          />
         ) : null}
-      </ScrollView>
+        <Snackbar message={snack.message} id={snack.id} onDismiss={dismissSnack} />
+      </View>
     </SafeAreaView>
   );
 }
