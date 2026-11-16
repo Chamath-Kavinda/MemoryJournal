@@ -12,6 +12,12 @@ import type {
   UserStats,
 } from './types';
 
+/** An inclusive range of days, for reading one month without reading the whole journal. */
+export interface DayRange {
+  first: DayId;
+  last: DayId;
+}
+
 /** One save of a day: the revision, the day's metadata and, when a sitting ran out, the revision to close. */
 export interface DaySave {
   dayId: DayId;
@@ -33,7 +39,14 @@ export interface JournalRepository {
    */
   subscribe(listener: () => void): () => void;
 
-  listDays(): Promise<DayMeta[]>;
+  /**
+   * True while a write made here has not been confirmed yet, for example a save made offline.
+   * A guest journal is written at once, so it is never pending.
+   */
+  hasPendingWrites(): boolean;
+
+  /** Every day with writing, or only the days inside the range. */
+  listDays(range?: DayRange): Promise<DayMeta[]>;
   getDay(dayId: DayId): Promise<DayMeta | null>;
   putDay(meta: DayMeta): Promise<void>;
   listRevisions(dayId: DayId): Promise<DayRevision[]>;

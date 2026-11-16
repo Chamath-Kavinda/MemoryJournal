@@ -20,6 +20,8 @@ jest.mock('firebase/firestore', () => ({
     return { path: full, id: full.split('/').pop() };
   },
   query: (source: { path: string }, ...constraints: unknown[]) => ({ ...source, constraints }),
+  documentId: () => '__name__',
+  where: (...args: unknown[]) => ({ where: args }),
   orderBy: (...args: unknown[]) => {
     mockOrderBy(...args);
     return { orderBy: args };
@@ -85,6 +87,20 @@ describe('FirestoreRepository reads', () => {
 
     expect(await repo.listDays()).toEqual([meta]);
     expect(mockGetDocs.mock.calls[0]?.[0]).toMatchObject({ path: 'users/u1/days' });
+  });
+
+  it('lists only the days inside a range by their document ids', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [{ id: 'a', data: () => meta }] });
+    const repo = new FirestoreRepository('u1', db);
+
+    expect(await repo.listDays({ first: '2026-11-01', last: '2026-11-30' })).toEqual([meta]);
+    expect(mockGetDocs.mock.calls[0]?.[0]).toMatchObject({
+      path: 'users/u1/days',
+      constraints: [
+        { where: ['__name__', '>=', '2026-11-01'] },
+        { where: ['__name__', '<=', '2026-11-30'] },
+      ],
+    });
   });
 
   it('lists revisions ordered by their number field', async () => {
@@ -254,6 +270,23 @@ describe('FirestoreRepository writes', () => {
     await repo.deleteTag('t1');
 
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports pending writes until the server confirms them, even when a write fails', async () => {
+    let confirm: () => void = () => undefined;
+    mockDeleteDoc.mockReturnValueOnce(new Promise<void>((resolve) => (confirm = resolve)));
+    const repo = new FirestoreRepository('u1', db);
+    expect(repo.hasPendingWrites()).toBe(false);
+
+    const saving = repo.deleteTag('t1');
+    expect(repo.hasPendingWrites()).toBe(true);
+    confirm();
+    await saving;
+    expect(repo.hasPendingWrites()).toBe(false);
+
+    mockDeleteDoc.mockRejectedValueOnce(new Error('offline'));
+    await expect(repo.deleteTag('t2')).rejects.toThrow('offline');
+    expect(repo.hasPendingWrites()).toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { DaySave, JournalRepository } from './journalRepository';
+import type { DayRange, DaySave, JournalRepository } from './journalRepository';
 import type {
   DayId,
   DayMeta,
@@ -88,8 +88,14 @@ export class LocalRepository implements JournalRepository {
     return String(n).padStart(6, '0');
   }
 
-  listDays(): Promise<DayMeta[]> {
-    return this.readAll<DayMeta>(DAY);
+  hasPendingWrites(): boolean {
+    return false;
+  }
+
+  async listDays(range?: DayRange): Promise<DayMeta[]> {
+    const days = await this.readAll<DayMeta>(DAY);
+    if (!range) return days;
+    return days.filter((day) => day.date >= range.first && day.date <= range.last);
   }
 
   getDay(dayId: DayId): Promise<DayMeta | null> {

@@ -3,6 +3,7 @@ import {
   readSettings,
   type DayId,
   type DayMeta,
+  type DayRange,
   type DayRevision,
   type DaySave,
   type EpochMs,
@@ -19,6 +20,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   onSnapshot,
@@ -26,6 +28,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
   type CollectionReference,
   type Firestore,
@@ -144,13 +147,21 @@ export class FirestoreRepository implements JournalRepository {
     for (const listener of [...this.listeners]) listener();
   }
 
+  private pendingWrites = 0;
+
+  hasPendingWrites(): boolean {
+    return this.pendingWrites > 0;
+  }
+
   /** Runs a write, telling listeners when it is queued and again when it settles. */
   private async write(action: () => Promise<void>): Promise<void> {
+    this.pendingWrites += 1;
     const pending = action();
     this.notify();
     try {
       await pending;
     } finally {
+      this.pendingWrites -= 1;
       this.notify();
     }
   }
@@ -203,8 +214,16 @@ export class FirestoreRepository implements JournalRepository {
     this.stopListening = [];
   }
 
-  async listDays(): Promise<DayMeta[]> {
-    const snapshot = await getDocs(this.col('days'));
+  async listDays(range?: DayRange): Promise<DayMeta[]> {
+    // Day ids are dates written as year-month-day, so their text order is date order.
+    const source = range
+      ? query(
+          this.col('days'),
+          where(documentId(), '>=', range.first),
+          where(documentId(), '<=', range.last),
+        )
+      : this.col('days');
+    const snapshot = await getDocs(source);
     return snapshot.docs.flatMap((document) => {
       const parsed = dayMetaSchema.safeParse(document.data());
       return parsed.success ? [storedDay(parsed.data)] : [];

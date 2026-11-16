@@ -74,6 +74,18 @@ describe('LocalRepository', () => {
     expect((await repo.listRevisions('2026-11-14')).map((r) => r.n)).toEqual([2, 10]);
   });
 
+  it('lists only the days inside a range and is never pending', async () => {
+    const repo = new LocalRepository(memoryStore());
+    for (const date of ['2026-10-31', '2026-11-01', '2026-11-15', '2026-11-30', '2026-12-01']) {
+      await repo.putDay(meta(date));
+    }
+
+    const november = await repo.listDays({ first: '2026-11-01', last: '2026-11-30' });
+    expect(november.map((d) => d.date)).toEqual(['2026-11-01', '2026-11-15', '2026-11-30']);
+    expect(await repo.listDays()).toHaveLength(5);
+    expect(repo.hasPendingWrites()).toBe(false);
+  });
+
   it('stores tags and categories and deletes them', async () => {
     const repo = new LocalRepository(memoryStore());
     const tag: Tag = {
