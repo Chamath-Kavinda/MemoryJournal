@@ -2,11 +2,18 @@ import { existsSync, statSync } from 'node:fs';
 import { join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { BrowserWindow, Menu, app, ipcMain, net, protocol, shell } from 'electron';
+import { BrowserWindow, Menu, app, ipcMain, net, protocol, screen, shell } from 'electron';
 
 import { setupDesktopReminder } from './desktopReminder';
 import { googleSignIn } from './googleSignIn';
 import { createTray } from './tray';
+import {
+  MIN_HEIGHT,
+  MIN_WIDTH,
+  WINDOW_BACKGROUND,
+  loadWindowState,
+  saveWindowState,
+} from './windowState';
 
 // In development, read the Google desktop client settings from apps/desktop/.env.
 // Variables already set in the shell win over the file.
@@ -49,13 +56,25 @@ let mainWindow: BrowserWindow | null = null;
 let quitting = false;
 
 function createWindow(): BrowserWindow {
+  // The last size and position are remembered between runs (section 15.9).
+  const stateFile = join(app.getPath('userData'), 'window-state.json');
+  const saved = loadWindowState(
+    stateFile,
+    screen.getAllDisplays().map((d) => d.workArea),
+  );
+
   const win = new BrowserWindow({
-    width: 1100,
-    height: 760,
-    minWidth: 420,
-    minHeight: 600,
+    width: saved.width,
+    height: saved.height,
+    ...(saved.x !== undefined && saved.y !== undefined ? { x: saved.x, y: saved.y } : {}),
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     title: APP_NAME,
     icon: join(__dirname, '..', 'assets', 'icon.png'),
+    // Same near-black as the brand splash, and the window stays hidden until the first paint,
+    // so there is no white flash (section 15.5).
+    backgroundColor: WINDOW_BACKGROUND,
+    show: false,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -63,6 +82,32 @@ function createWindow(): BrowserWindow {
       sandbox: true,
     },
   });
+
+  win.once('ready-to-show', () => {
+    if (saved.maximized) win.maximize();
+    win.show();
+  });
+
+  // Keep the normal (not maximized or minimized) bounds up to date and write them on close.
+  let bounds = win.getNormalBounds();
+  const rememberBounds = (): void => {
+    if (!win.isMaximized() && !win.isMinimized() && !win.isFullScreen()) {
+      bounds = win.getNormalBounds();
+    }
+  };
+  win.on('resize', rememberBounds);
+  win.on('move', rememberBounds);
+  const persist = (): void => {
+    if (win.isDestroyed()) return;
+    saveWindowState(stateFile, {
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
+      maximized: win.isMaximized(),
+    });
+  };
+  win.on('close', persist);
 
   // The window keeps the app name; the page must not rename it.
   win.on('page-title-updated', (event) => event.preventDefault());
