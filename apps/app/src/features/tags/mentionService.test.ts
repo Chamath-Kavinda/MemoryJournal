@@ -1,88 +1,90 @@
-const mockOnSnapshot = jest.fn();
-
-jest.mock('@/lib/firebase', () => ({ getFirebase: () => ({ db: {} }) }));
-jest.mock('firebase/firestore', () => ({
-  collection: (_db: unknown, ...path: string[]) => ({ path: path.join('/') }),
-  where: (field: string, op: string, value: unknown) => ({ where: [field, op, value] }),
-  query: (ref: unknown, ...filters: unknown[]) => ({ ref, filters }),
-  onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
-}));
+import {
+  LocalRepository,
+  type DayMeta,
+  type JournalRepository,
+  type KeyValueStore,
+} from '@memory-journal/core';
 
 import { subscribeMentionedDays } from './mentionService';
 
-const stop = jest.fn();
+const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 
-function start(tagId = 't1') {
-  mockOnSnapshot.mockReturnValueOnce(stop);
-  const onChange = jest.fn();
-  const onError = jest.fn();
-  const unsubscribe = subscribeMentionedDays('u1', tagId, onChange, onError);
-  const [daysQuery, onSnap, onSnapError] = mockOnSnapshot.mock.calls[0] as [
-    { ref: { path: string }; filters: unknown[] },
-    (snapshot: unknown) => void,
-    (error: Error) => void,
-  ];
-  return { onChange, onError, unsubscribe, daysQuery, onSnap, onSnapError };
+function memoryStore(): KeyValueStore {
+  const data = new Map<string, string>();
+  return {
+    getItem: (key) => Promise.resolve(data.get(key) ?? null),
+    setItem: (key, value) => {
+      data.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key) => {
+      data.delete(key);
+      return Promise.resolve();
+    },
+    getAllKeys: () => Promise.resolve([...data.keys()]),
+  };
 }
 
-const snapshot = (rows: unknown[]) => ({ docs: rows.map((row) => ({ data: () => row })) });
+const day = (date: string, wordCount: number, mentions: string[]): DayMeta =>
+  ({ date, wordCount, mentions, latestRevision: 1 }) as unknown as DayMeta;
 
-beforeEach(() => jest.clearAllMocks());
+async function seeded(...metas: DayMeta[]): Promise<JournalRepository> {
+  const repository = new LocalRepository(memoryStore());
+  for (const meta of metas) await repository.putDay(meta);
+  return repository;
+}
 
 describe('subscribeMentionedDays', () => {
-  it('asks for the days of the user that mention the tag', () => {
-    const { daysQuery } = start('t9');
-
-    expect(daysQuery.ref.path).toBe('users/u1/days');
-    expect(daysQuery.filters).toEqual([{ where: ['mentions', 'array-contains', 't9'] }]);
-  });
-
-  it('reports the days newest first', () => {
-    const { onChange, onSnap } = start();
-
-    onSnap(
-      snapshot([
-        { date: '2026-11-03', wordCount: 20, mentions: ['t1'] },
-        { date: '2026-11-13', wordCount: 55, mentions: ['t1', 't2'] },
-      ]),
+  it('reports the days that mention the tag, newest first', async () => {
+    const repository = await seeded(
+      day('2026-11-03', 20, ['t1']),
+      day('2026-11-13', 55, ['t1', 't2']),
+      day('2026-11-08', 9, ['t2']),
     );
+    const onChange = jest.fn();
+
+    const stop = subscribeMentionedDays(repository, 't1', onChange, jest.fn());
+    await settle();
 
     expect(onChange).toHaveBeenCalledWith([
       { dayId: '2026-11-13', wordCount: 55 },
       { dayId: '2026-11-03', wordCount: 20 },
     ]);
+    stop();
   });
 
-  it('reports an empty list when no day mentions the tag', () => {
-    const { onChange, onSnap } = start();
+  it('reports an empty list when no day mentions the tag', async () => {
+    const repository = await seeded(day('2026-11-03', 20, ['t2']));
+    const onChange = jest.fn();
 
-    onSnap(snapshot([]));
+    subscribeMentionedDays(repository, 't1', onChange, jest.fn());
+    await settle();
 
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it('leaves out documents that do not match the expected shape', () => {
-    const { onChange, onSnap } = start();
+  it('updates when a day is saved later', async () => {
+    const repository = await seeded();
+    const onChange = jest.fn();
+    subscribeMentionedDays(repository, 't1', onChange, jest.fn());
+    await settle();
 
-    onSnap(
-      snapshot([
-        { date: '2026-11-10', wordCount: 8, mentions: ['t1'] },
-        { date: '2026-11-11', mentions: ['t1'] },
-        { date: '2026-11-12', wordCount: 'many', mentions: ['t1'] },
-      ]),
-    );
+    await repository.putDay(day('2026-11-10', 8, ['t1']));
+    await settle();
 
-    expect(onChange).toHaveBeenCalledWith([{ dayId: '2026-11-10', wordCount: 8 }]);
+    expect(onChange).toHaveBeenLastCalledWith([{ dayId: '2026-11-10', wordCount: 8 }]);
   });
 
-  it('passes errors on and stops listening', () => {
-    const { onError, onSnapError, unsubscribe } = start();
-    const failure = new Error('permission-denied');
+  it('passes errors on and stops listening', async () => {
+    const repository = await seeded();
+    const failure = new Error('denied');
+    repository.listDays = () => Promise.reject(failure);
+    const onError = jest.fn();
 
-    onSnapError(failure);
-    unsubscribe();
+    const stop = subscribeMentionedDays(repository, 't1', jest.fn(), onError);
+    await settle();
+    stop();
 
     expect(onError).toHaveBeenCalledWith(failure);
-    expect(stop).toHaveBeenCalledTimes(1);
   });
 });

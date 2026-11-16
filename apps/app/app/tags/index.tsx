@@ -8,11 +8,13 @@ import { TagBrowser } from '@/features/tags/TagBrowser';
 import { useTagErrorStore } from '@/features/tags/tagErrors';
 import { useTagData } from '@/features/tags/useTagData';
 import { ErrorBanner } from '@/features/tags/ui';
+import { useJournalRepository } from '@/lib/journal';
 import { TabHeader } from '@/navigation/TabHeader';
 
 export default function TagsRoute() {
   const router = useRouter();
-  const { categories, tags, status } = useTagData();
+  const repository = useJournalRepository();
+  const { categories, tags, status } = useTagData(repository);
   const message = useTagErrorStore((s) => s.message);
   const clearMessage = useTagErrorStore((s) => s.clear);
 

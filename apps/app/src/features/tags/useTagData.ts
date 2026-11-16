@@ -1,55 +1,51 @@
-import { sortCategories, type Tag, type TagCategory } from '@memory-journal/core';
+import {
+  sortCategories,
+  type JournalRepository,
+  type Tag,
+  type TagCategory,
+} from '@memory-journal/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { useAuthStore } from '@/features/auth/authStore';
-
-import { seedDefaultCategories, subscribeCategories, subscribeTags } from './tagService';
+import { seedDefaultCategories, subscribeTagData, type TagData } from './tagService';
 
 export type TagDataStatus = 'loading' | 'ready' | 'error';
 
 /**
- * Live categories (defaults first) and tags of the signed-in user. The first time the
- * categories load, People, Places and Numbers are stored if they are missing.
+ * Live categories (defaults first) and tags of whoever is using the app: the guest journal on
+ * the device or the signed-in account. The repository is null while the app is still working
+ * out who that is, so nothing is read yet. The first time the categories load, People, Places
+ * and Numbers are stored if they are missing.
  */
-export function useTagData(): {
-  uid: string | undefined;
+export function useTagData(repository: JournalRepository | null): {
   categories: TagCategory[];
   tags: Tag[];
   status: TagDataStatus;
 } {
-  const uid = useAuthStore((s) => s.user?.uid);
-  const [categories, setCategories] = useState<TagCategory[] | null>(null);
-  const [tags, setTags] = useState<Tag[] | null>(null);
+  const [data, setData] = useState<TagData | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (!uid) return;
-    setCategories(null);
-    setTags(null);
+    setData(null);
     setFailed(false);
-    const onError = () => setFailed(true);
-    const stopCategories = subscribeCategories(uid, setCategories, onError);
-    const stopTags = subscribeTags(uid, setTags, onError);
-    return () => {
-      stopCategories();
-      stopTags();
-    };
-  }, [uid]);
+    if (!repository) return;
+    return subscribeTagData(repository, setData, () => setFailed(true));
+  }, [repository]);
 
-  // Seeding is safe to repeat (fixed ids), so a first snapshot from an empty cache is fine.
-  const seededFor = useRef<string | null>(null);
+  // Seeding is safe to repeat (fixed ids), so a first read from an empty cache is fine.
+  const seededFor = useRef<JournalRepository | null>(null);
   useEffect(() => {
-    if (!uid || categories === null || seededFor.current === uid) return;
-    seededFor.current = uid;
-    seedDefaultCategories(uid, categories).catch(() => {
+    if (!repository || data === null || seededFor.current === repository) return;
+    seededFor.current = repository;
+    seedDefaultCategories(repository, data.categories).catch(() => {
       seededFor.current = null;
     });
-  }, [uid, categories]);
+  }, [repository, data]);
 
+  const categories = data?.categories;
   const sorted = useMemo(() => sortCategories(categories ?? []), [categories]);
   let status: TagDataStatus = 'ready';
   if (failed) status = 'error';
-  else if (categories === null || tags === null) status = 'loading';
+  else if (data === null) status = 'loading';
 
-  return { uid, categories: sorted, tags: tags ?? [], status };
+  return { categories: sorted, tags: data?.tags ?? [], status };
 }

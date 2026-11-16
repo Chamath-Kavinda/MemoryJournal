@@ -55,25 +55,25 @@ export default function DayRoute() {
   const { history, failed: historyFailed } = useDayHistory(repository, dayId);
 
   // Tags for the `@` picker. The writer works without them while they load.
-  const tagData = useTagData();
+  const tagData = useTagData(repository);
   const tagError = useTagErrorStore((s) => s.message);
   const clearTagError = useTagErrorStore((s) => s.clear);
   const createTagNow = useCallback(
     (tagDraft: TagDraft) => {
-      if (uid === undefined) return '';
+      if (repository === null) return '';
       // The mention is inserted at once; a refused write is reported in the banner below.
-      const { id, saved } = createTag(uid, tagDraft);
+      const { id, saved } = createTag(repository, tagDraft);
       watchWrite(saved, 'The new tag could not be saved.');
       return id;
     },
-    [uid],
+    [repository],
   );
   const tagging = useMemo<Tagging | undefined>(
     () =>
-      tagData.status === 'ready' && uid !== undefined
+      tagData.status === 'ready' && repository !== null
         ? { tags: tagData.tags, categories: tagData.categories, createTag: createTagNow }
         : undefined,
-    [tagData.status, tagData.tags, tagData.categories, uid, createTagNow],
+    [tagData.status, tagData.tags, tagData.categories, repository, createTagNow],
   );
   const tagNames = useMemo(
     () => new Map(tagData.tags.map((tag) => [tag.id, tag.name] as const)),

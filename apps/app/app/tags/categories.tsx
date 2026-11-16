@@ -8,10 +8,12 @@ import { createCategory, deleteCategory, renameCategory } from '@/features/tags/
 import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { useTagData } from '@/features/tags/useTagData';
 import { ErrorBanner, ScreenHeader } from '@/features/tags/ui';
+import { useJournalRepository } from '@/lib/journal';
 
 export default function CategoriesRoute() {
   const router = useRouter();
-  const { uid, categories, tags, status } = useTagData();
+  const repository = useJournalRepository();
+  const { categories, tags, status } = useTagData(repository);
   const message = useTagErrorStore((s) => s.message);
   const clearMessage = useTagErrorStore((s) => s.clear);
 
@@ -23,21 +25,21 @@ export default function CategoriesRoute() {
           onBack={() => (router.canGoBack() ? router.back() : router.replace('/tags'))}
         />
         {message !== null ? <ErrorBanner message={message} onDismiss={clearMessage} /> : null}
-        {status === 'ready' && uid !== undefined ? (
+        {status === 'ready' && repository !== null ? (
           <CategoryManager
             categories={categories}
             tags={tags}
             onCreate={(name) =>
               watchWrite(
-                createCategory(uid, name, nextCategoryOrder(categories)),
+                createCategory(repository, name, nextCategoryOrder(categories)),
                 'The category could not be saved.',
               )
             }
             onRename={(id, name) =>
-              watchWrite(renameCategory(uid, id, name), 'The category could not be renamed.')
+              watchWrite(renameCategory(repository, id, name), 'The category could not be renamed.')
             }
             onDelete={(id) =>
-              watchWrite(deleteCategory(uid, id), 'The category could not be deleted.')
+              watchWrite(deleteCategory(repository, id), 'The category could not be deleted.')
             }
           />
         ) : (

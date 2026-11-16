@@ -21,9 +21,10 @@ export default function TagRoute() {
   const { tagId: rawTagId } = useLocalSearchParams<{ tagId: string }>();
   const tagId = Array.isArray(rawTagId) ? (rawTagId[0] ?? '') : (rawTagId ?? '');
   const router = useRouter();
-  const { uid, categories, tags, status } = useTagData();
   const repository = useJournalRepository();
-  const { days: mentionedDays, status: mentionStatus } = useMentionedDays(uid, tagId);
+  const { categories, tags, status } = useTagData(repository);
+  const { days: mentionedDays, status: mentionStatus } = useMentionedDays(repository, tagId);
+
   const { items: mentionedItems, status: libraryStatus } = useMentionedLibraryItems(
     repository,
     tagId,
@@ -42,7 +43,7 @@ export default function TagRoute() {
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <ScreenHeader title={tag?.name ?? 'Tag'} onBack={back} />
-        {status === 'loading' || uid === undefined ? (
+        {status === 'loading' || repository === null ? (
           <ActivityIndicator style={{ marginTop: 24 }} />
         ) : tag === undefined ? (
           <Text style={{ padding: 16, textAlign: 'center' }}>This tag no longer exists.</Text>
@@ -67,11 +68,15 @@ export default function TagRoute() {
               onCancel={leave}
               onDirtyChange={setDirty}
               onSubmit={(draft) => {
-                watchWrite(updateTag(uid, tag.id, draft), 'The tag changes could not be saved.');
+                watchWrite(
+                  updateTag(repository, tag.id, draft),
+                  'The tag changes could not be saved.',
+                );
                 leave();
               }}
               onDelete={() => {
-                watchWrite(deleteTag(uid, tag.id), 'The tag could not be deleted.');
+                watchWrite(deleteTag(repository, tag.id), 'The tag could not be deleted.');
+
                 leave();
               }}
             />

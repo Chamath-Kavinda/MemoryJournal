@@ -1,138 +1,107 @@
 import {
   missingDefaultCategories,
+  newId,
   type EpochMs,
+  type JournalRepository,
   type Tag,
   type TagCategory,
   type TagDraft,
 } from '@memory-journal/core';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  setDoc,
-  updateDoc,
-  writeBatch,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { z } from 'zod';
 
-import { getFirebase } from '@/lib/firebase';
+import { watchJournal } from '@/lib/watchJournal';
 
-const categorySchema = z.object({
-  name: z.string(),
-  isDefault: z.boolean(),
-  order: z.number(),
-});
-
-const tagSchema = z.object({
-  name: z.string(),
-  categoryId: z.string(),
-  note: z.string().nullable(),
-  aliases: z.array(z.string()),
-  createdAt: z.number(),
-});
-
-function categoriesPath(uid: string) {
-  return collection(getFirebase().db, 'users', uid, 'tagCategories');
-}
-
-function tagsPath(uid: string) {
-  return collection(getFirebase().db, 'users', uid, 'tags');
+/** Every category and tag of the journal in use. */
+export interface TagData {
+  categories: TagCategory[];
+  tags: Tag[];
 }
 
 /**
- * Listens to the user's categories. Works offline: Firestore serves the local cache and
- * calls back again on sync. Documents with an unexpected shape are left out.
+ * Reports the categories and tags now and whenever the journal changes, for a guest or a
+ * signed-in user. Both are read together, so a screen never shows a tag whose category is
+ * not known yet.
  */
-export function subscribeCategories(
-  uid: string,
-  onChange: (categories: TagCategory[]) => void,
+export function subscribeTagData(
+  repository: JournalRepository,
+  onChange: (data: TagData) => void,
   onError: (error: Error) => void,
-): Unsubscribe {
-  return onSnapshot(
-    categoriesPath(uid),
-    (snapshot) => {
-      onChange(
-        snapshot.docs.flatMap((document) => {
-          const parsed = categorySchema.safeParse(document.data());
-          return parsed.success ? [{ id: document.id, ...parsed.data }] : [];
-        }),
-      );
+): () => void {
+  return watchJournal(
+    repository,
+    async () => {
+      const [categories, tags] = await Promise.all([
+        repository.listCategories(),
+        repository.listTags(),
+      ]);
+      return { categories, tags };
     },
-    onError,
-  );
-}
-
-/** Listens to the user's tags, in the same way as {@link subscribeCategories}. */
-export function subscribeTags(
-  uid: string,
-  onChange: (tags: Tag[]) => void,
-  onError: (error: Error) => void,
-): Unsubscribe {
-  return onSnapshot(
-    tagsPath(uid),
-    (snapshot) => {
-      onChange(
-        snapshot.docs.flatMap((document) => {
-          const parsed = tagSchema.safeParse(document.data());
-          return parsed.success ? [{ id: document.id, ...parsed.data }] : [];
-        }),
-      );
-    },
+    onChange,
     onError,
   );
 }
 
 /**
  * Stores People, Places and Numbers when they are missing. The ids are fixed, so seeding
- * on two devices at once writes the same documents and is harmless.
+ * twice, or on two devices at once, writes the same records and is harmless.
  */
 export async function seedDefaultCategories(
-  uid: string,
+  repository: JournalRepository,
   existing: readonly TagCategory[],
 ): Promise<void> {
-  const missing = missingDefaultCategories(existing);
-  if (missing.length === 0) return;
-  const batch = writeBatch(getFirebase().db);
-  for (const { id, ...data } of missing) {
-    batch.set(doc(categoriesPath(uid), id), data);
-  }
-  await batch.commit();
+  await Promise.all(
+    missingDefaultCategories(existing).map((category) => repository.putCategory(category)),
+  );
 }
 
 /** Adds a custom category. The name and order are checked by the caller. */
-export async function createCategory(uid: string, name: string, order: number): Promise<void> {
-  await setDoc(doc(categoriesPath(uid)), { name, isDefault: false, order });
+export async function createCategory(
+  repository: JournalRepository,
+  name: string,
+  order: number,
+): Promise<void> {
+  await repository.putCategory({ id: newId(), name, isDefault: false, order });
 }
 
-export async function renameCategory(uid: string, categoryId: string, name: string): Promise<void> {
-  await updateDoc(doc(categoriesPath(uid), categoryId), { name });
+export async function renameCategory(
+  repository: JournalRepository,
+  categoryId: string,
+  name: string,
+): Promise<void> {
+  // Read the category again, so only the name changes.
+  const current = (await repository.listCategories()).find((c) => c.id === categoryId);
+  if (current === undefined) throw new Error('This category no longer exists.');
+  await repository.putCategory({ ...current, name });
 }
 
-export async function deleteCategory(uid: string, categoryId: string): Promise<void> {
-  await deleteDoc(doc(categoriesPath(uid), categoryId));
+export function deleteCategory(repository: JournalRepository, categoryId: string): Promise<void> {
+  return repository.deleteCategory(categoryId);
 }
 
-/** Adds a tag and returns its new id at once, before the server has confirmed the write. */
+/** Adds a tag and returns its new id at once, before the write has been confirmed. */
 export function createTag(
-  uid: string,
+  repository: JournalRepository,
   draft: TagDraft,
   nowMs: EpochMs = Date.now(),
 ): { id: string; saved: Promise<void> } {
-  const ref = doc(tagsPath(uid));
-  return { id: ref.id, saved: setDoc(ref, { ...draft, createdAt: nowMs }) };
+  const id = newId();
+  return { id, saved: repository.putTag({ id, ...draft, createdAt: nowMs }) };
 }
 
 /** Changes a tag. `createdAt` is never touched. */
-export async function updateTag(uid: string, tagId: string, draft: TagDraft): Promise<void> {
-  await updateDoc(doc(tagsPath(uid), tagId), { ...draft });
+export async function updateTag(
+  repository: JournalRepository,
+  tagId: string,
+  draft: TagDraft,
+): Promise<void> {
+  const current = (await repository.listTags()).find((t) => t.id === tagId);
+  if (current === undefined) throw new Error('This tag no longer exists.');
+  await repository.putTag({ ...current, ...draft });
 }
 
 /**
- * Deletes the tag document. Entries that mention it are not changed (revisions are
- * immutable), they just stop resolving to a tag.
+ * Deletes the tag. Entries that mention it are not changed (revisions are immutable), they
+ * just stop resolving to a tag.
  */
-export async function deleteTag(uid: string, tagId: string): Promise<void> {
-  await deleteDoc(doc(tagsPath(uid), tagId));
+export function deleteTag(repository: JournalRepository, tagId: string): Promise<void> {
+  return repository.deleteTag(tagId);
 }

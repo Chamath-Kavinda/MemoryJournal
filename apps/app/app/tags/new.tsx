@@ -8,11 +8,13 @@ import { createTag } from '@/features/tags/tagService';
 import { watchWrite } from '@/features/tags/tagErrors';
 import { useTagData } from '@/features/tags/useTagData';
 import { ScreenHeader } from '@/features/tags/ui';
+import { useJournalRepository } from '@/lib/journal';
 import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 
 export default function NewTagRoute() {
   const router = useRouter();
-  const { uid, categories, tags, status } = useTagData();
+  const repository = useJournalRepository();
+  const { categories, tags, status } = useTagData(repository);
   const leave = () => (router.canGoBack() ? router.back() : router.replace('/tags'));
   // The form asks for itself when its own Cancel is pressed; Back, Esc and Alt+Left ask here.
   const [dirty, setDirty] = useState(false);
@@ -22,7 +24,7 @@ export default function NewTagRoute() {
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <ScreenHeader title="New tag" onBack={back} />
-        {status === 'ready' && uid !== undefined ? (
+        {status === 'ready' && repository !== null ? (
           <TagForm
             categories={categories}
             tags={tags}
@@ -30,7 +32,7 @@ export default function NewTagRoute() {
             onDirtyChange={setDirty}
             onSubmit={(draft) => {
               // The list shows the tag at once; a refused write is reported on the Tags screen.
-              watchWrite(createTag(uid, draft).saved, 'The new tag could not be saved.');
+              watchWrite(createTag(repository, draft).saved, 'The new tag could not be saved.');
               leave();
             }}
           />

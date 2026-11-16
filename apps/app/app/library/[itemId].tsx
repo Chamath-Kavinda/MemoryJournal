@@ -60,24 +60,24 @@ export default function LibraryItemRoute() {
   const item = history?.item ?? null;
 
   // Tags for the `@` picker. The writer works without them while they load.
-  const tagData = useTagData();
+  const tagData = useTagData(repository);
   const tagError = useTagErrorStore((s) => s.message);
   const clearTagError = useTagErrorStore((s) => s.clear);
   const createTagNow = useCallback(
     (tagDraft: TagDraft) => {
-      if (uid === undefined) return '';
-      const { id, saved } = createTag(uid, tagDraft);
+      if (repository === null) return '';
+      const { id, saved } = createTag(repository, tagDraft);
       watchWrite(saved, 'The new tag could not be saved.');
       return id;
     },
-    [uid],
+    [repository],
   );
   const tagging = useMemo<Tagging | undefined>(
     () =>
-      tagData.status === 'ready' && uid !== undefined
+      tagData.status === 'ready' && repository !== null
         ? { tags: tagData.tags, categories: tagData.categories, createTag: createTagNow }
         : undefined,
-    [tagData.status, tagData.tags, tagData.categories, uid, createTagNow],
+    [tagData.status, tagData.tags, tagData.categories, repository, createTagNow],
   );
 
   const days = useMemo(() => history?.revisions.map(toDayRevision) ?? [], [history]);
