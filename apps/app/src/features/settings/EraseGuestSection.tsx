@@ -3,11 +3,17 @@ import {
   isDeleteConfirmed,
   type JournalRepository,
 } from '@memory-journal/core';
-import { TriangleAlert } from 'lucide-react-native';
+import { Trash2, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
+import { Shake } from '@/components/Shake';
 import { useConfirm } from '@/components/useConfirm';
+import { SPACING } from '@/theme/layout';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
 import { eraseGuestData } from './eraseGuestService';
@@ -16,15 +22,19 @@ import { eraseGuestData } from './eraseGuestService';
  * "Erase guest data" with two confirmations (docs section 15.6, point 11), each one a dialog
  * (section 15.10): first a plain warning, then the person types the word DELETE. A guest has no
  * account, so there is no Google sign-in step and nothing is deleted from the cloud. When it
- * works the journal on this device is empty, so a short note says so.
+ * works the journal on this device is empty, so a short note says so. It is drawn as the danger
+ * card of Settings (section 15.11).
  */
 export function EraseGuestSection({ repository }: { repository: JournalRepository }) {
+  const { palette } = useTheme();
   const confirm = useConfirm();
   const [erasing, setErasing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   const start = async () => {
     setMessage(null);
+    setFailed(false);
 
     const understood = await confirm({
       title: 'Erase guest data?',
@@ -46,6 +56,7 @@ export function EraseGuestSection({ repository }: { repository: JournalRepositor
     setErasing(true);
     const result = await eraseGuestData(repository);
     setErasing(false);
+    setFailed(result.status !== 'erased');
     setMessage(
       result.status === 'erased'
         ? 'Guest data was erased from this device.'
@@ -54,23 +65,43 @@ export function EraseGuestSection({ repository }: { repository: JournalRepositor
   };
 
   return (
-    <View accessibilityRole="summary" style={{ gap: 8 }}>
-      <Text accessibilityRole="header" style={{ fontWeight: '600' }}>
-        Erase guest data
-      </Text>
+    <Card testID="danger-card" style={{ gap: SPACING.md, borderColor: palette.danger }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+        <Icon icon={Trash2} size="inline" color={palette.danger} />
+        <Text accessibilityRole="header" style={{ color: palette.danger, fontWeight: '600' }}>
+          Guest data
+        </Text>
+      </View>
 
       {erasing ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: SPACING.sm }}>
           <ActivityIndicator />
-          <Text>Erasing your data. Keep the app open until this finishes.</Text>
+          <Text style={{ color: palette.text }}>
+            Erasing your data. Keep the app open until this finishes.
+          </Text>
         </View>
       ) : (
-        <Pressable accessibilityRole="button" onPress={() => void start()}>
-          <Text>Erase guest data</Text>
-        </Pressable>
+        <Button
+          label="Erase guest data"
+          icon={Trash2}
+          variant="danger"
+          onPress={() => void start()}
+        />
       )}
 
-      {message ? <Text accessibilityRole="alert">{message}</Text> : null}
-    </View>
+      {message ? (
+        failed ? (
+          <Shake key={message} trigger={0} playOnMount>
+            <Text accessibilityRole="alert" style={{ color: palette.danger }}>
+              {message}
+            </Text>
+          </Shake>
+        ) : (
+          <Text accessibilityRole="alert" style={{ color: palette.text }}>
+            {message}
+          </Text>
+        )
+      ) : null}
+    </Card>
   );
 }

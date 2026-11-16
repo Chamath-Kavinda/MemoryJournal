@@ -101,12 +101,13 @@ describe('InsightsView', () => {
     await render(<InsightsView insights={insightsFor([TODAY])} message={MESSAGE} />);
     expect(screen.queryByText(/not a medical measure/)).toBeNull();
 
-    await fireEvent.press(screen.getByText('About the score'));
+    await fireEvent.press(screen.getByLabelText('About the score'));
+
     expect(screen.getByText(/motivation tool, not a medical measure/)).toBeTruthy();
 
-    await fireEvent.press(screen.getByText('Hide score info'));
+    await fireEvent.press(screen.getByLabelText('Hide score info'));
     expect(screen.queryByText(/not a medical measure/)).toBeNull();
-    expect(screen.getByText('About the score')).toBeTruthy();
+    expect(screen.getByLabelText('About the score')).toBeTruthy();
   });
 
   it('says so when every milestone has been reached', async () => {
@@ -121,5 +122,51 @@ describe('InsightsView', () => {
     await render(<InsightsView insights={insightsFor([TODAY])} message={MESSAGE} />);
 
     expect(screen.getByLabelText('Current: 1 day')).toBeTruthy();
+  });
+
+  it('states the privacy promise in a chip', async () => {
+    await render(<InsightsView insights={insightsFor([TODAY])} message={MESSAGE} />);
+
+    expect(screen.getByTestId('privacy-chip')).toBeTruthy();
+    expect(screen.getByText(/never sent to an AI service/)).toBeTruthy();
+  });
+
+  it('shows the message in its own card', async () => {
+    await render(<InsightsView insights={insightsFor([TODAY])} message={MESSAGE} />);
+
+    expect(screen.getByText(MESSAGE)).toBeTruthy();
+    expect(screen.getByTestId('message-card')).toBeTruthy();
+  });
+
+  it('draws the score ring for a journal with a score, and no ring without one', async () => {
+    const view = await render(<InsightsView insights={insightsFor([TODAY])} message={MESSAGE} />);
+    expect(screen.getByTestId('score-ring')).toBeTruthy();
+
+    await view.rerender(<InsightsView insights={insightsFor([])} message={MESSAGE} />);
+    expect(screen.queryByTestId('score-ring')).toBeNull();
+  });
+
+  it('fills the streak bar toward the next milestone', async () => {
+    const insights = withStreak(insightsFor([TODAY]), 5);
+    await render(<InsightsView insights={insights} message={MESSAGE} />);
+
+    // 5 days is halfway between the 3 and 7 day milestones.
+    expect(
+      screen.getByLabelText('Progress to the next milestone').props.accessibilityValue,
+    ).toMatchObject({
+      now: 50,
+    });
+  });
+
+  it('shows the burst on a milestone day and not on another day', async () => {
+    const view = await render(
+      <InsightsView insights={withStreak(insightsFor([TODAY]), 7)} message={MESSAGE} />,
+    );
+    expect(screen.getByTestId('milestone-burst', { includeHiddenElements: true })).toBeTruthy();
+
+    await view.rerender(
+      <InsightsView insights={withStreak(insightsFor([TODAY]), 8)} message={MESSAGE} />,
+    );
+    expect(screen.queryByTestId('milestone-burst', { includeHiddenElements: true })).toBeNull();
   });
 });

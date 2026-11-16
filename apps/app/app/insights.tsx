@@ -1,18 +1,18 @@
 import { daysBetween, pickMessage } from '@memory-journal/core';
 import { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-
-import { Text } from '@/theme/themed';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ErrorCard } from '@/components/ErrorCard';
+import { Skeleton } from '@/components/Skeleton';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { InsightsView } from '@/features/insights/InsightsView';
 import { useInsights } from '@/features/insights/useInsights';
-import { ActionButton, usePalette } from '@/features/tags/ui';
 import { TabHeader } from '@/navigation/TabHeader';
+import { SPACING } from '@/theme/layout';
+import { CONTENT_MAX_WIDTH } from '@/theme/palette';
 
 export default function InsightsRoute() {
-  const palette = usePalette();
   const todayId = useTodayId();
   const { insights, status, reload } = useInsights(todayId);
 
@@ -28,24 +28,46 @@ export default function InsightsRoute() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: SPACING.xl }}>
         <TabHeader title="Insights" />
         {insights !== null && message !== null ? (
           <InsightsView insights={insights} message={message} />
         ) : null}
         {status === 'loading' && insights === null ? (
-          <View style={{ padding: 32 }}>
-            <ActivityIndicator accessibilityLabel="Loading your insights" />
+          <View
+            testID="insights-loading"
+            accessibilityLabel="Loading your insights"
+            style={{
+              width: '100%',
+              maxWidth: CONTENT_MAX_WIDTH,
+              alignSelf: 'center',
+              padding: SPACING.lg,
+              gap: SPACING.md,
+            }}
+          >
+            <Skeleton height={48} radius={16} />
+            <Skeleton height={240} radius={16} />
+            <Skeleton height={140} radius={16} />
+            <Skeleton height={160} radius={16} />
           </View>
         ) : null}
         {status === 'error' ? (
-          <View style={{ alignItems: 'center', gap: 8, padding: 16 }}>
-            <Text style={{ color: palette.text, fontSize: 15 }}>
-              {insights === null
-                ? 'Your insights could not be loaded.'
-                : 'Your insights could not be refreshed. These numbers may be out of date.'}
-            </Text>
-            <ActionButton label="Try again" tone="primary" onPress={reload} />
+          <View
+            style={{
+              width: '100%',
+              maxWidth: CONTENT_MAX_WIDTH,
+              alignSelf: 'center',
+              padding: SPACING.lg,
+            }}
+          >
+            <ErrorCard
+              message={
+                insights === null
+                  ? 'Your insights could not be loaded.'
+                  : 'Your insights could not be refreshed. These numbers may be out of date.'
+              }
+              onRetry={reload}
+            />
           </View>
         ) : null}
       </ScrollView>

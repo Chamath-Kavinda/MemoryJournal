@@ -1,9 +1,22 @@
 import { learnProgress, nextLesson, type Lesson } from '@memory-journal/core';
-import { Pressable, View } from 'react-native';
+import { Clock, CircleCheck, GraduationCap } from 'lucide-react-native';
+import { View } from 'react-native';
 
+import { Card } from '@/components/Card';
+import { FadeUp } from '@/components/FadeUp';
+import { Icon } from '@/components/Icon';
+import { Pop } from '@/components/Pop';
+import { PressableCard } from '@/components/PressableCard';
+import { ProgressBar } from '@/components/ProgressBar';
+import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
+import { CONTENT_MAX_WIDTH } from '@/theme/palette';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
-import { usePalette } from '@/features/tags/ui';
+import { lessonIcon } from './lessonIcon';
+
+/** Width and height of the round badge that holds the lesson number. */
+const BADGE = 44;
 
 interface Props {
   lessons: readonly Lesson[];
@@ -11,50 +24,123 @@ interface Props {
   onOpen: (lessonId: string) => void;
 }
 
-/** The lesson list: how far along the person is, and one row per lesson in teaching order. */
+interface LessonCardProps {
+  lesson: Lesson;
+  number: number;
+  finished: boolean;
+  onOpen: () => void;
+}
+
+/** One lesson: numbered badge, lesson icon, title, summary, reading time and a check when done. */
+function LessonCard({ lesson, number, finished, onOpen }: LessonCardProps) {
+  const { palette } = useTheme();
+  return (
+    <PressableCard
+      testID={`lesson-card-${lesson.id}`}
+      accessibilityLabel={`${lesson.title}, ${lesson.minutes} minute read${finished ? ', done' : ''}`}
+      onPress={onOpen}
+      active={finished}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md }}>
+        <View
+          style={{
+            width: BADGE,
+            height: BADGE,
+            borderRadius: RADIUS.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: BORDER_WIDTH,
+            borderColor: palette.border,
+            backgroundColor: palette.surfaceRaised,
+          }}
+        >
+          <Text style={{ color: palette.neonViolet, fontSize: 17, fontWeight: '700' }}>
+            {number}
+          </Text>
+        </View>
+        <View style={{ flex: 1, flexShrink: 1, gap: SPACING.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+            <Icon icon={lessonIcon(lesson.id)} size="inline" color={palette.neonViolet} />
+            <Text
+              style={{
+                flex: 1,
+                flexShrink: 1,
+                color: palette.text,
+                fontSize: 17,
+                fontWeight: '600',
+              }}
+            >
+              {lesson.title}
+            </Text>
+            {finished ? (
+              <Pop trigger={finished} testID={`lesson-done-${lesson.id}`}>
+                <Icon
+                  icon={CircleCheck}
+                  size="inline"
+                  color={palette.success}
+                  accessibilityLabel="Done"
+                />
+              </Pop>
+            ) : null}
+          </View>
+          <Text style={{ color: palette.muted, fontSize: 14, lineHeight: 20 }}>
+            {lesson.summary}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.xs }}>
+            <Icon icon={Clock} size={14} color={palette.muted} />
+            <Text style={{ color: palette.muted, fontSize: 13 }}>{lesson.minutes} min read</Text>
+          </View>
+        </View>
+      </View>
+    </PressableCard>
+  );
+}
+
+/** The lesson list: how far along the person is, and one card per lesson in teaching order. */
 export function LessonList({ lessons, completed, onOpen }: Props) {
-  const palette = usePalette();
+  const { palette } = useTheme();
   const { done, total } = learnProgress(completed);
   const next = nextLesson(completed);
 
   return (
-    <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}>
-      <Text style={{ color: palette.text, fontSize: 16 }}>
-        {done === total
-          ? `All ${total} lessons done.`
-          : `${done} of ${total} lessons done${next ? `. Up next: ${next.title}.` : '.'}`}
-      </Text>
-      {lessons.map((lesson) => {
-        const finished = completed.includes(lesson.id);
-        return (
-          <Pressable
-            key={lesson.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${lesson.title}, ${lesson.minutes} minute read${finished ? ', done' : ''}`}
-            onPress={() => onOpen(lesson.id)}
-            style={{
-              minHeight: 44,
-              padding: 14,
-              gap: 4,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: palette.border,
-              backgroundColor: palette.surface,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-              <Text style={{ flex: 1, color: palette.text, fontSize: 17, fontWeight: '600' }}>
-                {lesson.title}
-              </Text>
-              {finished ? (
-                <Text style={{ color: palette.accent, fontSize: 14, fontWeight: '600' }}>Done</Text>
-              ) : null}
-            </View>
-            <Text style={{ color: palette.muted, fontSize: 14 }}>{lesson.summary}</Text>
-            <Text style={{ color: palette.muted, fontSize: 13 }}>{lesson.minutes} min read</Text>
-          </Pressable>
-        );
-      })}
+    <View
+      style={{
+        width: '100%',
+        maxWidth: CONTENT_MAX_WIDTH,
+        alignSelf: 'center',
+        padding: SPACING.lg,
+        gap: SPACING.md,
+      }}
+    >
+      <FadeUp index={0}>
+        <Card testID="learn-progress" style={{ gap: SPACING.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+            <Icon icon={GraduationCap} size="inline" color={palette.neonViolet} />
+            <Text style={{ flex: 1, flexShrink: 1, color: palette.text, fontSize: 16 }}>
+              {done === total
+                ? `All ${total} lessons done.`
+                : `${done} of ${total} lessons done${next ? `. Up next: ${next.title}.` : '.'}`}
+            </Text>
+          </View>
+          <ProgressBar
+            testID="learn-progress-bar"
+            progress={total === 0 ? 0 : done / total}
+            accessibilityLabel="Lessons done"
+          />
+        </Card>
+      </FadeUp>
+      <View accessibilityRole="list" style={{ gap: SPACING.sm }}>
+        {lessons.map((lesson, index) => (
+          <FadeUp key={lesson.id} index={index + 1}>
+            <LessonCard
+              lesson={lesson}
+              number={index + 1}
+              finished={completed.includes(lesson.id)}
+              onOpen={() => onOpen(lesson.id)}
+            />
+          </FadeUp>
+        ))}
+      </View>
     </View>
   );
 }

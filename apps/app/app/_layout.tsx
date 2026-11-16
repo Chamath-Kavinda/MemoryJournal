@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
 
+import { ThemeFade } from '@/components/ThemeFade';
 import { ConfirmProvider } from '@/components/useConfirm';
 import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
 import { useRecordLastSeen } from '@/features/day/useRecordLastSeen';
@@ -44,6 +45,8 @@ function Shell({ showNav }: { showNav: boolean }) {
         </View>
         {bottomBar ? <BottomTabBar /> : null}
       </View>
+      {/* Melts the old background into the new one when the theme changes (section 15.16). */}
+      <ThemeFade />
     </View>
   );
 }

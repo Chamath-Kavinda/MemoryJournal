@@ -54,6 +54,10 @@ jest.mock('./exportService', () => ({
 }));
 jest.mock('./deleteService', () => ({ deleteAccount: jest.fn() }));
 jest.mock('./eraseGuestService', () => ({ eraseGuestData: jest.fn() }));
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { version: '0.2.0' } },
+}));
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 

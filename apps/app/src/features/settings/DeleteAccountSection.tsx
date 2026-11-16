@@ -1,9 +1,15 @@
 import { DELETE_CONFIRM_WORD, isDeleteConfirmed } from '@memory-journal/core';
-import { TriangleAlert } from 'lucide-react-native';
+import { Trash2, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
+import { Shake } from '@/components/Shake';
 import { useConfirm } from '@/components/useConfirm';
+import { SPACING } from '@/theme/layout';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
 import { deleteAccount } from './deleteService';
@@ -12,9 +18,11 @@ import { deleteAccount } from './deleteService';
  * "Delete account and all data" with two confirmations (section 5.9), each one a dialog (section
  * 15.10): first a plain warning, then the person has to type the word DELETE. Only then does the
  * app ask for a Google sign-in and start deleting. When it works the account is gone and the app
- * returns to the sign-in screen by itself, so nothing needs to be shown for success.
+ * returns to the sign-in screen by itself, so nothing needs to be shown for success. It is drawn
+ * as the danger card of Settings (section 15.11).
  */
 export function DeleteAccountSection({ uid }: { uid: string }) {
+  const { palette } = useTheme();
   const confirm = useConfirm();
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -48,23 +56,37 @@ export function DeleteAccountSection({ uid }: { uid: string }) {
   };
 
   return (
-    <View accessibilityRole="summary" style={{ gap: 8 }}>
-      <Text accessibilityRole="header" style={{ fontWeight: '600' }}>
-        Delete account
-      </Text>
+    <Card testID="danger-card" style={{ gap: SPACING.md, borderColor: palette.danger }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+        <Icon icon={Trash2} size="inline" color={palette.danger} />
+        <Text accessibilityRole="header" style={{ color: palette.danger, fontWeight: '600' }}>
+          Delete account
+        </Text>
+      </View>
 
       {deleting ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: SPACING.sm }}>
           <ActivityIndicator />
-          <Text>Deleting your data. Keep the app open until this finishes.</Text>
+          <Text style={{ color: palette.text }}>
+            Deleting your data. Keep the app open until this finishes.
+          </Text>
         </View>
       ) : (
-        <Pressable accessibilityRole="button" onPress={() => void start()}>
-          <Text>Delete account and all data</Text>
-        </Pressable>
+        <Button
+          label="Delete account and all data"
+          icon={Trash2}
+          variant="danger"
+          onPress={() => void start()}
+        />
       )}
 
-      {message ? <Text accessibilityRole="alert">{message}</Text> : null}
-    </View>
+      {message ? (
+        <Shake key={message} trigger={0} playOnMount>
+          <Text accessibilityRole="alert" style={{ color: palette.danger }}>
+            {message}
+          </Text>
+        </Shake>
+      ) : null}
+    </Card>
   );
 }

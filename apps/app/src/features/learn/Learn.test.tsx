@@ -26,14 +26,33 @@ describe('LessonList', () => {
     ).toBeTruthy();
   });
 
-  it('marks finished lessons as done', async () => {
+  it('marks finished lessons with a check', async () => {
     await render(<LessonList lessons={LESSONS} completed={[FIRST.id]} onOpen={jest.fn()} />);
 
-    expect(screen.getAllByText('Done')).toHaveLength(1);
+    expect(screen.getAllByLabelText('Done')).toHaveLength(1);
     expect(
       screen.getByLabelText(`${FIRST.title}, ${FIRST.minutes} minute read, done`),
     ).toBeTruthy();
     expect(screen.getByLabelText(`${SECOND.title}, ${SECOND.minutes} minute read`)).toBeTruthy();
+  });
+
+  it('numbers the lessons in teaching order', async () => {
+    await render(<LessonList lessons={LESSONS} completed={[]} onOpen={jest.fn()} />);
+
+    for (let number = 1; number <= LESSONS.length; number += 1) {
+      expect(screen.getByText(String(number))).toBeTruthy();
+    }
+  });
+
+  it('fills the progress bar to the share of lessons done', async () => {
+    await render(<LessonList lessons={LESSONS} completed={[FIRST.id]} onOpen={jest.fn()} />);
+
+    const bar = screen.getByTestId('learn-progress-bar');
+    expect(bar.props.accessibilityValue).toEqual({
+      min: 0,
+      max: 100,
+      now: Math.round(100 / LESSONS.length),
+    });
   });
 
   it('says so when every lesson is done', async () => {
