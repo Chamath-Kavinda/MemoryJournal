@@ -1,7 +1,7 @@
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { create } from 'zustand';
 
-import { getFirebase } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 
 export type AuthStatus = 'loading' | 'signed-out' | 'signed-in';
 
@@ -17,9 +17,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user, status: user ? 'signed-in' : 'signed-out' }),
 }));
 
-/** Starts the Firebase listener once. Returns the unsubscribe function. */
+/**
+ * Starts the Firebase Auth listener once. Returns the unsubscribe function. It uses Auth only,
+ * so a guest's launch never starts Firestore (docs section 15.6, point 2).
+ */
 export function startAuthListener(): () => void {
-  return onAuthStateChanged(getFirebase().auth, (user) => {
+  return onAuthStateChanged(getFirebaseAuth(), (user) => {
     useAuthStore.getState().setUser(user);
   });
 }

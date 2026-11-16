@@ -1,13 +1,22 @@
 import type { User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 
-jest.mock('@/lib/firebase', () => ({ getFirebase: jest.fn() }));
+jest.mock('@/lib/firebase', () => ({
+  getFirebase: jest.fn(() => {
+    throw new Error('startup must not open Firestore');
+  }),
+  getFirebaseAuth: jest.fn(() => ({ name: 'auth' })),
+}));
 jest.mock('firebase/auth', () => ({ onAuthStateChanged: jest.fn() }));
 
-import { useAuthStore } from './authStore';
+import { getFirebase, getFirebaseAuth } from '@/lib/firebase';
+
+import { startAuthListener, useAuthStore } from './authStore';
 
 describe('auth store', () => {
   beforeEach(() => {
     useAuthStore.setState({ status: 'loading', user: null });
+    jest.clearAllMocks();
   });
 
   it('starts in the loading state', () => {
@@ -26,5 +35,28 @@ describe('auth store', () => {
     useAuthStore.getState().setUser(null);
     expect(useAuthStore.getState().status).toBe('signed-out');
     expect(useAuthStore.getState().user).toBeNull();
+  });
+
+  it('listens with Firebase Auth only, so a guest launch never starts Firestore', () => {
+    const stop = jest.fn();
+    (onAuthStateChanged as jest.Mock).mockReturnValue(stop);
+
+    expect(startAuthListener()).toBe(stop);
+
+    expect(getFirebaseAuth).toHaveBeenCalledTimes(1);
+    expect(getFirebase).not.toHaveBeenCalled();
+  });
+
+  it('turns the first auth answer into signed-out for a guest', () => {
+    (onAuthStateChanged as jest.Mock).mockImplementation(
+      (_auth: unknown, callback: (user: User | null) => void) => {
+        callback(null);
+        return jest.fn();
+      },
+    );
+
+    startAuthListener();
+
+    expect(useAuthStore.getState().status).toBe('signed-out');
   });
 });
