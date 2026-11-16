@@ -16,12 +16,14 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useConfirm } from '@/components/useConfirm';
 import { useAuthStore } from '@/features/auth/authStore';
 import { DayScreenView } from '@/features/day/DayScreenView';
 import { DayWriter } from '@/features/day/DayWriter';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
 import { draftOwner } from '@/features/day/draftStore';
+import { showFirstSaveNoticeOnce } from '@/features/day/firstSaveNotice';
 import { HighlightedDay } from '@/features/day/HighlightedDay';
 import { HighlightSwitch } from '@/features/day/HighlightSwitch';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
@@ -108,6 +110,13 @@ export default function DayRoute() {
     storage: draftStorage,
   });
 
+  // A guest is told once, after their first revision is really saved, where the journal lives.
+  const confirm = useConfirm();
+  const saveAndNotify = async () => {
+    const saved = await daySave.save();
+    if (saved && uid === undefined) await showFirstSaveNoticeOnce(draftStorage, confirm);
+  };
+
   const options = revisionOptions(history?.revisions.length ?? 0);
   // The saved pass on screen (for Latest too) and the pass before it, for the highlights.
   const target = history === null ? null : pickRevision(history.revisions, selection);
@@ -177,7 +186,7 @@ export default function DayRoute() {
                     saving={daySave.saving}
                     failed={daySave.failed}
                     pendingSync={history?.hasPendingWrites ?? false}
-                    onSave={() => void daySave.save()}
+                    onSave={() => void saveAndNotify()}
                   />
                 ) : null}
                 <DayWriter

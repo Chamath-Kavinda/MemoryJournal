@@ -12,8 +12,11 @@ import { recordSeen } from './guestClock';
 import { closeSitting, saveDayContent, type DayHistory } from './revisionService';
 
 export interface DaySave {
-  /** Saves the text on screen as a revision. Does nothing if it did not change. */
-  save: () => Promise<void>;
+  /**
+   * Saves the text on screen as a revision. Does nothing if it did not change. Resolves to true
+   * only when a new revision was written, so callers can react to a real save.
+   */
+  save: () => Promise<boolean>;
   /** True while a save has been sent and has not been confirmed yet. */
   saving: boolean;
   /** True when the last save was refused or failed. Cleared by the next save. */
@@ -51,19 +54,21 @@ export function useDaySave(options: Options): DaySave {
     live.current = options;
   });
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (): Promise<boolean> => {
     const { repository, dayId, history, content, discardDraft, editable } = live.current;
-    if (!repository || !history || !editable) return;
+    if (!repository || !history || !editable) return false;
     setPending((count) => count + 1);
     setFailed(false);
     try {
       const now = Date.now();
-      await saveDayContent(repository, dayId, history, content, now);
+      const outcome = await saveDayContent(repository, dayId, history, content, now);
       discardDraft(content);
       // The latest time seen moves forward with every save (section 15.6).
       void recordSeen(repository, now);
+      return outcome.saved;
     } catch {
       setFailed(true);
+      return false;
     } finally {
       setPending((count) => count - 1);
     }
