@@ -1,7 +1,7 @@
 import { Slot, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { ThemeFade } from '@/components/ThemeFade';
 import { ConfirmProvider } from '@/components/useConfirm';
@@ -16,18 +16,19 @@ import { BottomTabBar, NAV_ITEMS, SideNav, isTabScreen } from '@/navigation/AppN
 import { useNavShortcuts } from '@/navigation/shortcuts';
 import { useFocusRing } from '@/theme/focusRing';
 import { useAppFonts } from '@/theme/fonts';
-import { isWide } from '@/theme/palette';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
+import { useLayout } from '@/theme/useLayout';
 
 /** The page background, the status bar and, on wide windows, the side navigation. */
 function Shell({ showNav }: { showNav: boolean }) {
   const { palette, scheme } = useTheme();
-  const { width } = useWindowDimensions();
+  const { sizeClass } = useLayout();
   const router = useRouter();
   const pathname = usePathname();
-  const sideNav = showNav && isWide(width);
+  const wide = sizeClass === 'expanded';
+  const sideNav = showNav && wide;
   // The bottom bar shows on the five tab screens only; Day, Settings and the other screens hide it.
-  const bottomBar = showNav && !isWide(width) && isTabScreen(pathname);
+  const bottomBar = showNav && !wide && isTabScreen(pathname);
   useFocusRing(palette.accent);
   // Alt+1 to Alt+6 jump between the main sections, on the web build and in the desktop app.
   useNavShortcuts(

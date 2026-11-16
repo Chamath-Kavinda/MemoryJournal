@@ -8,11 +8,12 @@ import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { FadeUp } from '@/components/FadeUp';
 import { Removable } from '@/components/Removable';
+import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 import { SearchField } from '@/components/SearchField';
 import { SPACING } from '@/theme/layout';
-import { CONTENT_MAX_WIDTH } from '@/theme/palette';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
+import { useLayout } from '@/theme/useLayout';
 
 import { categoryIcon } from './categoryIcon';
 import { TagCard } from './TagCard';
@@ -40,6 +41,7 @@ export function TagBrowser({
   onDeleteTag,
 }: Props) {
   const { palette } = useTheme();
+  const layout = useLayout();
   const [query, setQuery] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export function TagBrowser({
     <View
       style={{
         width: '100%',
-        maxWidth: CONTENT_MAX_WIDTH,
+        maxWidth: layout.contentMaxWidth,
         alignSelf: 'center',
         padding: SPACING.lg,
         gap: SPACING.md,
@@ -107,7 +109,7 @@ export function TagBrowser({
       ) : visible.length === 0 ? (
         <Text style={{ color: palette.muted, fontSize: 15 }}>No tags match.</Text>
       ) : (
-        <View accessibilityRole="list" style={{ gap: SPACING.sm }}>
+        <ResponsiveGrid columns={layout.columns}>
           {visible.map((tag, index) => (
             <Removable key={tag.id}>
               <FadeUp key={`${tag.id}-${filterKey}`} index={index}>
@@ -121,7 +123,7 @@ export function TagBrowser({
               </FadeUp>
             </Removable>
           ))}
-        </View>
+        </ResponsiveGrid>
       )}
     </View>
   );

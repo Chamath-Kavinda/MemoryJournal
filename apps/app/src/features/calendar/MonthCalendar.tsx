@@ -19,12 +19,19 @@ import { Ripple } from '@/components/Ripple';
 import { SlideSwap } from '@/components/SlideSwap';
 import { glowStyle } from '@/theme/glow';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
+import { CALENDAR_CELL_MAX } from '@/theme/sizeClass';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 import { GRADIENT_END, GRADIENT_START } from '@/theme/tokens';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const CELL_WIDTH = `${100 / 7}%` as const;
+
+/** The grid never grows past seven cells of the largest size (section 15.9). */
+const CALENDAR_GRID_MAX_WIDTH = CALENDAR_CELL_MAX * 7;
+
+/** The card around the grid: the grid plus the card padding. */
+const CALENDAR_CARD_MAX_WIDTH = CALENDAR_GRID_MAX_WIDTH + SPACING.lg * 2;
 
 /** Thickness of the gradient ring around today. */
 const RING_WIDTH = 2;
@@ -223,7 +230,7 @@ export function MonthCalendar({
   if (moved !== 0) setShown({ month, direction: moved > 0 ? 1 : -1 });
 
   return (
-    <Card style={{ width: '100%', maxWidth: 480, alignSelf: 'center' }}>
+    <Card style={{ width: '100%', maxWidth: CALENDAR_CARD_MAX_WIDTH, alignSelf: 'center' }}>
       <View
         style={{
           flexDirection: 'row',
@@ -250,37 +257,44 @@ export function MonthCalendar({
         />
       </View>
 
-      <View style={{ flexDirection: 'row' }}>
-        {WEEKDAYS.map((name) => (
-          <Text
-            key={name}
-            variant="caption"
-            style={{ width: CELL_WIDTH, textAlign: 'center', color: palette.muted }}
-          >
-            {name}
-          </Text>
-        ))}
-      </View>
+      {/* The seven columns share the width, so a date cell is the width divided by seven. The
+          grid stops at 7 * 56 so cells never grow past 56 on a large window. */}
+      <View style={{ width: '100%', maxWidth: CALENDAR_GRID_MAX_WIDTH, alignSelf: 'center' }}>
+        <View style={{ flexDirection: 'row' }}>
+          {WEEKDAYS.map((name) => (
+            <Text
+              key={name}
+              variant="caption"
+              style={{ width: CELL_WIDTH, textAlign: 'center', color: palette.muted }}
+            >
+              {name}
+            </Text>
+          ))}
+        </View>
 
-      <SlideSwap swapKey={`${month.year}-${month.month}`} direction={shown.direction}>
-        {weeks.map((week, rowIndex) => (
-          <View key={rowIndex} style={{ flexDirection: 'row' }}>
-            {week.map((cell, columnIndex) =>
-              cell ? (
-                <DayCell
-                  key={cell.dayId}
-                  cell={cell}
-                  month={month}
-                  onSelect={onSelectDay}
-                  paused={paused}
-                />
-              ) : (
-                <View key={`blank-${columnIndex}`} style={{ width: CELL_WIDTH, aspectRatio: 1 }} />
-              ),
-            )}
-          </View>
-        ))}
-      </SlideSwap>
+        <SlideSwap swapKey={`${month.year}-${month.month}`} direction={shown.direction}>
+          {weeks.map((week, rowIndex) => (
+            <View key={rowIndex} style={{ flexDirection: 'row' }}>
+              {week.map((cell, columnIndex) =>
+                cell ? (
+                  <DayCell
+                    key={cell.dayId}
+                    cell={cell}
+                    month={month}
+                    onSelect={onSelectDay}
+                    paused={paused}
+                  />
+                ) : (
+                  <View
+                    key={`blank-${columnIndex}`}
+                    style={{ width: CELL_WIDTH, aspectRatio: 1 }}
+                  />
+                ),
+              )}
+            </View>
+          ))}
+        </SlideSwap>
+      </View>
 
       <Legend />
     </Card>

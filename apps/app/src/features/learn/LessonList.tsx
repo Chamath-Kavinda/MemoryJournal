@@ -8,10 +8,11 @@ import { Icon } from '@/components/Icon';
 import { Pop } from '@/components/Pop';
 import { PressableCard } from '@/components/PressableCard';
 import { ProgressBar } from '@/components/ProgressBar';
+import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
-import { CONTENT_MAX_WIDTH } from '@/theme/palette';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
+import { useLayout } from '@/theme/useLayout';
 
 import { lessonIcon } from './lessonIcon';
 
@@ -99,6 +100,7 @@ function LessonCard({ lesson, number, finished, onOpen }: LessonCardProps) {
 /** The lesson list: how far along the person is, and one card per lesson in teaching order. */
 export function LessonList({ lessons, completed, onOpen }: Props) {
   const { palette } = useTheme();
+  const layout = useLayout();
   const { done, total } = learnProgress(completed);
   const next = nextLesson(completed);
 
@@ -106,7 +108,7 @@ export function LessonList({ lessons, completed, onOpen }: Props) {
     <View
       style={{
         width: '100%',
-        maxWidth: CONTENT_MAX_WIDTH,
+        maxWidth: layout.contentMaxWidth,
         alignSelf: 'center',
         padding: SPACING.lg,
         gap: SPACING.md,
@@ -129,7 +131,7 @@ export function LessonList({ lessons, completed, onOpen }: Props) {
           />
         </Card>
       </FadeUp>
-      <View accessibilityRole="list" style={{ gap: SPACING.sm }}>
+      <ResponsiveGrid columns={layout.columns}>
         {lessons.map((lesson, index) => (
           <FadeUp key={lesson.id} index={index + 1}>
             <LessonCard
@@ -140,7 +142,7 @@ export function LessonList({ lessons, completed, onOpen }: Props) {
             />
           </FadeUp>
         ))}
-      </View>
+      </ResponsiveGrid>
     </View>
   );
 }

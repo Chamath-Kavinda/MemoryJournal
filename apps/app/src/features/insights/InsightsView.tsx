@@ -27,15 +27,17 @@ import { FadeUp } from '@/components/FadeUp';
 import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { ProgressBar } from '@/components/ProgressBar';
+import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendLine } from '@/components/TrendLine';
 import { easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
 import { DURATION } from '@/theme/motion';
-import { CONTENT_MAX_WIDTH } from '@/theme/palette';
+import { columnsFor } from '@/theme/sizeClass';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
+import { useLayout } from '@/theme/useLayout';
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
@@ -265,11 +267,12 @@ interface Props {
 /** The Insights screen: privacy chip, recall score, streak, 30-day trend and one message. */
 export function InsightsView({ insights, message }: Props) {
   const { palette } = useTheme();
+  const layout = useLayout();
   return (
     <View
       style={{
         width: '100%',
-        maxWidth: CONTENT_MAX_WIDTH,
+        maxWidth: layout.contentMaxWidth,
         alignSelf: 'center',
         gap: SPACING.md,
         padding: SPACING.lg,
@@ -278,27 +281,35 @@ export function InsightsView({ insights, message }: Props) {
       <FadeUp index={0}>
         <PrivacyChip />
       </FadeUp>
-      <FadeUp index={1}>
-        <ScoreCard score={insights.score} delta={insights.scoreDelta} />
-      </FadeUp>
-      <FadeUp index={2}>
-        <StreakCard streak={insights.streak} />
-      </FadeUp>
-      <FadeUp index={3}>
-        <TrendCard trend={insights.trend} />
-      </FadeUp>
-      <FadeUp index={4}>
-        <Card active testID="message-card">
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
-            <Icon icon={Sparkles} size="control" color={palette.neonViolet} />
-            <Text
-              style={{ flex: 1, flexShrink: 1, color: palette.text, fontSize: 17, lineHeight: 25 }}
-            >
-              {message}
-            </Text>
-          </View>
-        </Card>
-      </FadeUp>
+      <ResponsiveGrid columns={columnsFor(layout, 2)}>
+        <FadeUp index={1}>
+          <ScoreCard score={insights.score} delta={insights.scoreDelta} />
+        </FadeUp>
+        <FadeUp index={2}>
+          <StreakCard streak={insights.streak} />
+        </FadeUp>
+        <FadeUp index={3}>
+          <TrendCard trend={insights.trend} />
+        </FadeUp>
+        <FadeUp index={4}>
+          <Card active testID="message-card">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
+              <Icon icon={Sparkles} size="control" color={palette.neonViolet} />
+              <Text
+                style={{
+                  flex: 1,
+                  flexShrink: 1,
+                  color: palette.text,
+                  fontSize: 17,
+                  lineHeight: 25,
+                }}
+              >
+                {message}
+              </Text>
+            </View>
+          </Card>
+        </FadeUp>
+      </ResponsiveGrid>
     </View>
   );
 }

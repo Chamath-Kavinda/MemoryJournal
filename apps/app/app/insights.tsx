@@ -10,9 +10,10 @@ import { InsightsView } from '@/features/insights/InsightsView';
 import { useInsights } from '@/features/insights/useInsights';
 import { TabHeader } from '@/navigation/TabHeader';
 import { SPACING } from '@/theme/layout';
-import { CONTENT_MAX_WIDTH } from '@/theme/palette';
+import { useLayout } from '@/theme/useLayout';
 
 export default function InsightsRoute() {
+  const { contentMaxWidth } = useLayout();
   const todayId = useTodayId();
   const { insights, status, reload } = useInsights(todayId);
 
@@ -39,7 +40,7 @@ export default function InsightsRoute() {
             accessibilityLabel="Loading your insights"
             style={{
               width: '100%',
-              maxWidth: CONTENT_MAX_WIDTH,
+              maxWidth: contentMaxWidth,
               alignSelf: 'center',
               padding: SPACING.lg,
               gap: SPACING.md,
@@ -55,7 +56,7 @@ export default function InsightsRoute() {
           <View
             style={{
               width: '100%',
-              maxWidth: CONTENT_MAX_WIDTH,
+              maxWidth: contentMaxWidth,
               alignSelf: 'center',
               padding: SPACING.lg,
             }}

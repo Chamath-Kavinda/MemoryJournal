@@ -27,7 +27,8 @@ const config: ExpoConfig = {
   slug: 'memory-journal',
   scheme: 'memoryjournal',
   version: '0.1.0',
-  orientation: 'portrait',
+  // Layouts follow the window size (section 15.9), so rotation is allowed.
+  orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   android: {

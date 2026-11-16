@@ -17,12 +17,13 @@ import { FadeUp } from '@/components/FadeUp';
 import { Icon } from '@/components/Icon';
 import { PressableCard } from '@/components/PressableCard';
 import { Removable } from '@/components/Removable';
+import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 import { SegmentedControl, type Segment } from '@/components/SegmentedControl';
 import { Skeleton } from '@/components/Skeleton';
 import { SPACING } from '@/theme/layout';
-import { CONTENT_MAX_WIDTH } from '@/theme/palette';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
+import { useLayout } from '@/theme/useLayout';
 
 import { LibraryItemForm } from './LibraryItemForm';
 import type { LoadStatus } from './useLibrary';
@@ -49,6 +50,7 @@ function wordsLabel(count: number): string {
 /** The Movies and Books switch: a list of item cards and a form to add one. */
 export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
   const { palette } = useTheme();
+  const layout = useLayout();
   const [type, setType] = useState<LibraryItemType>('movie');
   const [adding, setAdding] = useState(false);
   const shown = libraryItemsOfType(items, type);
@@ -58,7 +60,7 @@ export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
     <View
       style={{
         width: '100%',
-        maxWidth: CONTENT_MAX_WIDTH,
+        maxWidth: layout.contentMaxWidth,
         alignSelf: 'center',
         padding: SPACING.lg,
         gap: SPACING.md,
@@ -114,7 +116,7 @@ export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
         />
       ) : null}
 
-      <View style={{ gap: SPACING.sm }}>
+      <ResponsiveGrid columns={layout.columns}>
         {shown.map((item, index) => {
           const words = item.latestRevision > 0 ? wordsLabel(item.wordCount) : null;
           const detail = [item.date, words]
@@ -163,7 +165,7 @@ export function LibraryBrowser({ items, status, onOpen, onCreate }: Props) {
             </Removable>
           );
         })}
-      </View>
+      </ResponsiveGrid>
     </View>
   );
 }

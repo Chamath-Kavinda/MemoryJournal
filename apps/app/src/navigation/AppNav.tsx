@@ -19,6 +19,7 @@ import { MIN_TARGET, RADIUS } from '@/theme/layout';
 import { GRADIENT_END, GRADIENT_START } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
+import { useLayout } from '@/theme/useLayout';
 
 import { HAS_KEYBOARD_SHORTCUTS, shortcutLabel } from './shortcuts';
 
@@ -45,6 +46,9 @@ export const NAV_ITEMS: readonly NavItem[] = [...TAB_ITEMS, SETTINGS_ITEM];
 
 /** Height of the bottom bar without the bottom safe area. */
 export const TAB_BAR_HEIGHT = 56;
+
+/** Height of the bottom bar on a phone held sideways (window height under 500), section 15.9. */
+export const SHORT_TAB_BAR_HEIGHT = 48;
 
 /** Width of the sidebar. */
 export const SIDEBAR_WIDTH = 72;
@@ -121,10 +125,12 @@ interface NavButtonProps {
   placement: 'above' | 'right';
   role: 'tab' | 'link';
   onPress: () => void;
+  /** A phone held sideways: the target shrinks to the minimum so the bar can be shorter. */
+  short?: boolean;
 }
 
 /** One icon-only navigation item, at least 48 by 48 on Android and 44 by 44 elsewhere. */
-function NavButton({ item, index, current, placement, role, onPress }: NavButtonProps) {
+function NavButton({ item, index, current, placement, role, onPress, short }: NavButtonProps) {
   const { palette, scheme } = useTheme();
   const tooltip = useTooltip();
   const shortcut = HAS_KEYBOARD_SHORTCUTS ? shortcutLabel(index) : '';
@@ -156,8 +162,8 @@ function NavButton({ item, index, current, placement, role, onPress }: NavButton
         onBlur={tooltip.hide}
         innerStyle={[
           {
-            width: MIN_TARGET + 4,
-            height: MIN_TARGET + 4,
+            width: short ? MIN_TARGET : MIN_TARGET + 4,
+            height: short ? MIN_TARGET : MIN_TARGET + 4,
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: RADIUS.pill,
@@ -247,21 +253,23 @@ export function SideNav() {
 }
 
 /**
- * The bottom bar of phones and tablets: five icon-only tabs, 56 tall plus the bottom safe area.
- * The active tab has a gradient pill, a neon icon and a thicker stroke, so the state is clear
- * without any text. Screen readers read each label and announce the active tab as selected.
+ * The bottom bar of phones and tablets: five icon-only tabs, 56 tall plus the bottom safe area
+ * (48 on a phone held sideways). The active tab has a gradient pill, a neon icon and a thicker
+ * stroke, so the state is clear without any text. Screen readers read each label and announce
+ * the active tab as selected.
  */
 export function BottomTabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
+  const { shortScreen } = useLayout();
   return (
     <View
       accessibilityRole="tablist"
       accessibilityLabel="Main"
       style={{
-        height: TAB_BAR_HEIGHT + insets.bottom,
+        height: (shortScreen ? SHORT_TAB_BAR_HEIGHT : TAB_BAR_HEIGHT) + insets.bottom,
         paddingBottom: insets.bottom,
         flexDirection: 'row',
         alignItems: 'center',
@@ -280,6 +288,7 @@ export function BottomTabBar() {
           current={isCurrent(pathname, item.href)}
           placement="above"
           role="tab"
+          short={shortScreen}
           onPress={() => router.replace(item.href)}
         />
       ))}
