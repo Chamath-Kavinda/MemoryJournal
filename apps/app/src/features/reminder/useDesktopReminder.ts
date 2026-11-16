@@ -18,15 +18,15 @@ function getBridge(): ReminderBridge | undefined {
  * The Windows (Electron) side of the daily reminder (section 5.8). The reminder itself is scheduled
  * and shown by the Electron main process, which lives on in the system tray; this hook only tells
  * it whether a reminder is wanted and opens today's page when the person taps the notification.
- * `enabled` is the Settings toggle; until that screen exists it stays on. The main process is told
- * "off" while nobody is signed in, so a signed-out app never reminds. On phones and in a plain
- * browser there is no bridge and this does nothing.
+ * `enabled` is the Settings toggle. A guest gets the reminder like a signed-in user (section 15.6,
+ * point 13); the main process is told "off" only while the app is still working out which of the
+ * two it is. On phones and in a plain browser there is no bridge and this does nothing.
  */
 export function useDesktopReminder(enabled = true): void {
   const router = useRouter();
-  const signedIn = useAuthStore((s) => s.status === 'signed-in');
+  const ready = useAuthStore((s) => s.status !== 'loading');
   const todayId = useTodayId();
-  const wanted = signedIn && enabled;
+  const wanted = ready && enabled;
 
   useEffect(() => {
     const bridge = getBridge();
@@ -37,7 +37,7 @@ export function useDesktopReminder(enabled = true): void {
 
   useEffect(() => {
     const bridge = getBridge();
-    if (!bridge?.onOpenToday || !signedIn) return;
+    if (!bridge?.onOpenToday || !ready) return;
     return bridge.onOpenToday(() => router.push(`/day/${todayId}`));
-  }, [signedIn, todayId, router]);
+  }, [ready, todayId, router]);
 }

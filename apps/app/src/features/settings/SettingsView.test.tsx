@@ -8,6 +8,7 @@ jest.mock('@/features/auth/authStore', () => ({
     select({ user: { uid: 'u1', displayName: 'Ana', email: 'ana@example.com' } }),
 }));
 jest.mock('@/features/calendar/useTodayId', () => ({ useTodayId: () => '2026-11-15' }));
+jest.mock('@/lib/journal', () => ({ useJournalRepository: () => ({}) }));
 jest.mock('./useSettings', () => ({
   useSettings: () => ({
     status: 'ready',

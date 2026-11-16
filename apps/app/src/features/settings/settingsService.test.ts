@@ -1,88 +1,110 @@
-const mockUpdateDoc = jest.fn();
-const mockOnSnapshot = jest.fn();
-
-jest.mock('@/lib/firebase', () => ({ getFirebase: () => ({ db: {} }) }));
-jest.mock('firebase/firestore', () => ({
-  doc: (_db: unknown, ...path: string[]) => ({ path: path.join('/') }),
-  updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
-  onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
-}));
+import { LocalRepository, type JournalRepository, type KeyValueStore } from '@memory-journal/core';
 
 import { setReminderEnabled, setTheme, subscribeSettings } from './settingsService';
 
+const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+function memoryStore(): KeyValueStore {
+  const data = new Map<string, string>();
+  return {
+    getItem: (key) => Promise.resolve(data.get(key) ?? null),
+    setItem: (key, value) => {
+      data.set(key, value);
+      return Promise.resolve();
+    },
+    removeItem: (key) => {
+      data.delete(key);
+      return Promise.resolve();
+    },
+    getAllKeys: () => Promise.resolve([...data.keys()]),
+  };
+}
+
 describe('subscribeSettings', () => {
-  beforeEach(() => jest.clearAllMocks());
+  let repository: JournalRepository;
 
-  it('listens to the user document', () => {
-    const stop = jest.fn();
-    mockOnSnapshot.mockReturnValue(stop);
-
-    const result = subscribeSettings('u1', jest.fn(), jest.fn());
-
-    const [ref] = mockOnSnapshot.mock.calls[0] as [{ path: string }];
-    expect(ref.path).toBe('users/u1');
-    expect(result).toBe(stop);
+  beforeEach(() => {
+    repository = new LocalRepository(memoryStore());
   });
 
-  it('reads the stored settings', () => {
+  it('reads the defaults while nothing is stored yet', async () => {
     const onChange = jest.fn();
-    mockOnSnapshot.mockImplementation((_ref, next: (snapshot: unknown) => void) =>
-      next({ data: () => ({ settings: { reminderEnabled: false, theme: 'dark' } }) }),
-    );
 
-    subscribeSettings('u1', onChange, jest.fn());
-
-    expect(onChange).toHaveBeenCalledWith({ reminderEnabled: false, theme: 'dark' });
-  });
-
-  it('reads the defaults while the user document does not exist yet', () => {
-    const onChange = jest.fn();
-    mockOnSnapshot.mockImplementation((_ref, next: (snapshot: unknown) => void) =>
-      next({ data: () => undefined }),
-    );
-
-    subscribeSettings('u1', onChange, jest.fn());
+    const stop = subscribeSettings(repository, onChange, jest.fn());
+    await settle();
+    stop();
 
     expect(onChange).toHaveBeenCalledWith({ reminderEnabled: true, theme: 'dark' });
   });
 
-  it('passes errors on', () => {
-    const onError = jest.fn();
-    const failure = new Error('denied');
-    mockOnSnapshot.mockImplementation((_ref, _next: unknown, error: (reason: Error) => void) =>
-      error(failure),
-    );
+  it('reads the stored settings', async () => {
+    await repository.putSettings({ reminderEnabled: false, theme: 'light' });
+    const onChange = jest.fn();
 
-    subscribeSettings('u1', jest.fn(), onError);
+    const stop = subscribeSettings(repository, onChange, jest.fn());
+    await settle();
+    stop();
+
+    expect(onChange).toHaveBeenLastCalledWith({ reminderEnabled: false, theme: 'light' });
+  });
+
+  it('reports a change made later', async () => {
+    const onChange = jest.fn();
+    const stop = subscribeSettings(repository, onChange, jest.fn());
+    await settle();
+
+    await setTheme(repository, 'system');
+    await settle();
+    stop();
+
+    expect(onChange).toHaveBeenLastCalledWith({ reminderEnabled: true, theme: 'system' });
+  });
+
+  it('passes errors on', async () => {
+    const failure = new Error('unreadable');
+    jest.spyOn(repository, 'getSettings').mockRejectedValue(failure);
+    const onError = jest.fn();
+
+    const stop = subscribeSettings(repository, jest.fn(), onError);
+    await settle();
+    stop();
 
     expect(onError).toHaveBeenCalledWith(failure);
   });
 });
 
 describe('setters', () => {
+  let repository: JournalRepository;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockUpdateDoc.mockResolvedValue(undefined);
+    repository = new LocalRepository(memoryStore());
   });
 
-  it('changes only the reminder field', async () => {
-    await setReminderEnabled('u1', false);
+  it('changes only the reminder setting', async () => {
+    await repository.putSettings({ reminderEnabled: true, theme: 'light' });
 
-    const [ref, data] = mockUpdateDoc.mock.calls[0] as [{ path: string }, unknown];
-    expect(ref.path).toBe('users/u1');
-    expect(data).toEqual({ 'settings.reminderEnabled': false });
+    await setReminderEnabled(repository, false);
+
+    expect(await repository.getSettings()).toEqual({ reminderEnabled: false, theme: 'light' });
   });
 
-  it('changes only the theme field', async () => {
-    await setTheme('u1', 'light');
+  it('changes only the theme', async () => {
+    await repository.putSettings({ reminderEnabled: false, theme: 'dark' });
 
-    const [, data] = mockUpdateDoc.mock.calls[0] as [unknown, unknown];
-    expect(data).toEqual({ 'settings.theme': 'light' });
+    await setTheme(repository, 'light');
+
+    expect(await repository.getSettings()).toEqual({ reminderEnabled: false, theme: 'light' });
+  });
+
+  it('starts from the defaults when nothing is stored yet', async () => {
+    await setReminderEnabled(repository, false);
+
+    expect(await repository.getSettings()).toEqual({ reminderEnabled: false, theme: 'dark' });
   });
 
   it('passes a refused write on to the caller', async () => {
-    mockUpdateDoc.mockRejectedValue(new Error('permission-denied'));
+    jest.spyOn(repository, 'putSettings').mockRejectedValue(new Error('permission-denied'));
 
-    await expect(setReminderEnabled('u1', true)).rejects.toThrow('permission-denied');
+    await expect(setReminderEnabled(repository, true)).rejects.toThrow('permission-denied');
   });
 });

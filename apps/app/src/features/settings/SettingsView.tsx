@@ -8,6 +8,7 @@ import { Text } from '@/theme/themed';
 
 import { useAuthStore } from '@/features/auth/authStore';
 import { useTodayId } from '@/features/calendar/useTodayId';
+import { useJournalRepository } from '@/lib/journal';
 import { signOut } from '@/platform/auth/google';
 
 import { DeleteAccountSection } from './DeleteAccountSection';
@@ -30,10 +31,11 @@ export function SettingsView() {
   const todayId = useTodayId();
   const confirm = useConfirm();
   const { status, settings } = useSettings();
+  const repository = useJournalRepository();
   const [notice, setNotice] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  if (!user) return null;
+  if (!user || !repository) return null;
   const uid = user.uid;
 
   const save = (work: Promise<void>) => {
@@ -86,7 +88,7 @@ export function SettingsView() {
             <Switch
               accessibilityLabel="Daily 9 PM reminder"
               value={settings.reminderEnabled}
-              onValueChange={(value) => save(setReminderEnabled(uid, value))}
+              onValueChange={(value) => save(setReminderEnabled(repository, value))}
             />
           )}
         </View>
@@ -105,7 +107,7 @@ export function SettingsView() {
                 key={option.value}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
-                onPress={() => save(setTheme(uid, option.value))}
+                onPress={() => save(setTheme(repository, option.value))}
               >
                 <Text style={{ fontWeight: selected ? '700' : '400' }}>{option.label}</Text>
               </Pressable>

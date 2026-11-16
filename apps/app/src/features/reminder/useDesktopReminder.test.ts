@@ -36,15 +36,23 @@ describe('useDesktopReminder', () => {
     delete globals.memoryJournal;
   });
 
-  it('asks the main process for the reminder once the person is signed in', async () => {
+  it('asks the main process for the reminder once a signed-in person is known', async () => {
     await renderHook(() => useDesktopReminder());
 
     expect(setReminderEnabled).toHaveBeenCalledTimes(1);
     expect(setReminderEnabled).toHaveBeenCalledWith(true);
   });
 
-  it('tells the main process the reminder is off before sign-in', async () => {
+  it('asks the main process for the reminder for a guest too', async () => {
     mockStatus = 'signed-out';
+
+    await renderHook(() => useDesktopReminder());
+
+    expect(setReminderEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it('tells the main process the reminder is off while it is still working out who is using the app', async () => {
+    mockStatus = 'loading';
 
     await renderHook(() => useDesktopReminder());
 
@@ -57,14 +65,15 @@ describe('useDesktopReminder', () => {
     expect(setReminderEnabled).toHaveBeenCalledWith(false);
   });
 
-  it('sends the new state when the person signs out', async () => {
+  it('keeps the reminder on when a signed-in person signs out and becomes a guest', async () => {
     const view = await renderHook(() => useDesktopReminder());
     expect(setReminderEnabled).toHaveBeenLastCalledWith(true);
 
     mockStatus = 'signed-out';
     await view.rerender({});
 
-    expect(setReminderEnabled).toHaveBeenLastCalledWith(false);
+    expect(setReminderEnabled).toHaveBeenCalledTimes(1);
+    expect(setReminderEnabled).toHaveBeenLastCalledWith(true);
   });
 
   it("opens today's page when the notification is tapped", async () => {
@@ -77,8 +86,16 @@ describe('useDesktopReminder', () => {
     expect(mockPush).toHaveBeenCalledWith('/day/2026-11-14');
   });
 
-  it('does not listen for taps before sign-in', async () => {
+  it("opens today's page for a guest too", async () => {
     mockStatus = 'signed-out';
+
+    await renderHook(() => useDesktopReminder());
+
+    expect(onOpenToday).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not listen for taps while it is still working out who is using the app', async () => {
+    mockStatus = 'loading';
 
     await renderHook(() => useDesktopReminder());
 

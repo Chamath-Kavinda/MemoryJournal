@@ -57,12 +57,21 @@ describe('useReminder', () => {
     expect(mockSync).toHaveBeenCalledWith(true);
   });
 
-  it('does nothing before sign-in', async () => {
-    mockStatus = 'signed-out';
+  it('does nothing while it is still working out who is using the app', async () => {
+    mockStatus = 'loading';
 
     await renderHook(() => useReminder());
 
     expect(mockSync).not.toHaveBeenCalled();
+  });
+
+  it('schedules the reminder for a guest too', async () => {
+    mockStatus = 'signed-out';
+
+    await renderHook(() => useReminder());
+
+    expect(mockSync).toHaveBeenCalledTimes(1);
+    expect(mockSync).toHaveBeenCalledWith(true);
   });
 
   it('passes the Settings toggle on', async () => {
@@ -121,12 +130,21 @@ describe('useReminder', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('waits for sign-in before opening the page', async () => {
-    mockStatus = 'signed-out';
+  it('waits until it knows who is using the app before opening the page', async () => {
+    mockStatus = 'loading';
     mockResponse = tap('today');
 
     await renderHook(() => useReminder());
 
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('opens the page for a guest too', async () => {
+    mockStatus = 'signed-out';
+    mockResponse = tap('today');
+
+    await renderHook(() => useReminder());
+
+    expect(mockPush).toHaveBeenCalledWith('/day/2026-11-14');
   });
 });

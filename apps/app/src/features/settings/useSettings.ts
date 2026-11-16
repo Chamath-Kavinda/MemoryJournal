@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS, type UserSettings } from '@memory-journal/core';
 import { useEffect, useState } from 'react';
 
-import { useAuthStore } from '@/features/auth/authStore';
+import { useJournalRepository } from '@/lib/journal';
 
 import { subscribeSettings } from './settingsService';
 
@@ -25,20 +25,24 @@ export function reminderWanted(state: SettingsState): boolean {
   return state.settings.reminderEnabled;
 }
 
-/** The signed-in user's settings, kept up to date. Signed out, it stays on the defaults. */
+/**
+ * The settings of whoever is using the app, kept up to date: the guest's settings on this device,
+ * or the signed-in account's. It stays on the defaults, still loading, while the app is working out
+ * who that is.
+ */
 export function useSettings(): SettingsState {
-  const uid = useAuthStore((s) => (s.status === 'signed-in' ? (s.user?.uid ?? null) : null));
+  const repository = useJournalRepository();
   const [state, setState] = useState<SettingsState>(LOADING);
 
   useEffect(() => {
     setState(LOADING);
-    if (!uid) return;
+    if (!repository) return;
     return subscribeSettings(
-      uid,
+      repository,
       (settings) => setState({ status: 'ready', settings }),
       () => setState({ status: 'error', settings: DEFAULT_SETTINGS }),
     );
-  }, [uid]);
+  }, [repository]);
 
   return state;
 }

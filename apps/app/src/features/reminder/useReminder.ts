@@ -24,15 +24,16 @@ const useLastResponse: () => Notifications.NotificationResponse | null | undefin
 const currentOffset = () => deviceZone(Date.now()).utcOffsetMinutes;
 
 /**
- * Keeps the daily 21:00 reminder in step with the device (section 5.8). Once the person is signed
- * in it asks for permission if that has not been decided yet and schedules the reminder. It does
- * so again whenever the device's offset from UTC changes (a new time zone or a daylight saving
- * change), noticed when the app comes back to the foreground. A tap on the notification opens
- * today's page. `enabled` is the Settings toggle; until that screen exists it stays on.
+ * Keeps the daily 21:00 reminder in step with the device (section 5.8). For a guest and for a
+ * signed-in user alike (section 15.6, point 13), once the app knows which of the two it is, it asks
+ * for permission if that has not been decided yet and schedules the reminder. It does so again
+ * whenever the device's offset from UTC changes (a new time zone or a daylight saving change),
+ * noticed when the app comes back to the foreground. A tap on the notification opens today's page.
+ * `enabled` is the Settings toggle.
  */
 export function useReminder(enabled = true): void {
   const router = useRouter();
-  const signedIn = useAuthStore((s) => s.status === 'signed-in');
+  const ready = useAuthStore((s) => s.status !== 'loading');
   const todayId = useTodayId();
   const [offset, setOffset] = useState(currentOffset);
 
@@ -45,15 +46,15 @@ export function useReminder(enabled = true): void {
   }, []);
 
   useEffect(() => {
-    if (!remindersSupported || !signedIn) return;
+    if (!remindersSupported || !ready) return;
     // A refused permission or a failed schedule must not break the app; the next start tries again.
     syncReminder(enabled).catch(() => undefined);
-  }, [signedIn, enabled, offset]);
+  }, [ready, enabled, offset]);
 
   const response = useLastResponse();
   const handled = useRef<string | null>(null);
   useEffect(() => {
-    if (!remindersSupported || !signedIn || !response) return;
+    if (!remindersSupported || !ready || !response) return;
     const request = response.notification.request;
     if (request.content.data?.open !== REMINDER_DATA.open) return;
     // The same tap is reported again on a rerender; open the page once per tap.
@@ -61,5 +62,5 @@ export function useReminder(enabled = true): void {
     if (handled.current === tap) return;
     handled.current = tap;
     router.push(`/day/${todayId}`);
-  }, [response, signedIn, todayId, router]);
+  }, [response, ready, todayId, router]);
 }

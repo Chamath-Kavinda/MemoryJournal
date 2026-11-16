@@ -1,9 +1,4 @@
-jest.mock('@/lib/firebase', () => ({ getFirebase: () => ({ db: {} }) }));
-jest.mock('firebase/firestore', () => ({
-  doc: jest.fn(),
-  onSnapshot: jest.fn(),
-  updateDoc: jest.fn(),
-}));
+jest.mock('@/lib/journal', () => ({ useJournalRepository: () => null }));
 
 import { DEFAULT_SETTINGS } from '@memory-journal/core';
 
