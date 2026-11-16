@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
@@ -8,6 +9,7 @@ import { signInWithGoogle } from '@/platform/auth/google';
 
 export default function SignInScreen() {
   const { palette } = useTheme();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,6 +19,12 @@ export default function SignInScreen() {
     const result = await signInWithGoogle();
     if (result.status === 'error') setError(result.message);
     setBusy(false);
+  }
+
+  // Signing in is optional, so this screen can always be left for Home.
+  function onNotNow() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/home');
   }
 
   return (
@@ -46,6 +54,19 @@ export default function SignInScreen() {
         }}
       >
         {busy ? <ActivityIndicator color={palette.accent} /> : <Text>Continue with Google</Text>}
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Not now"
+        onPress={onNotNow}
+        style={{
+          minHeight: 48,
+          paddingHorizontal: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: palette.accent }}>Not now</Text>
       </Pressable>
       {error ? (
         <Text accessibilityRole="alert" style={{ color: palette.danger, textAlign: 'center' }}>

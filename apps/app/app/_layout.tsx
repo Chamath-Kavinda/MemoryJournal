@@ -65,9 +65,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (status === 'loading') return;
-    const onSignIn = segments[0] === 'sign-in';
-    if (status === 'signed-out' && !onSignIn) router.replace('/sign-in');
-    if (status === 'signed-in' && onSignIn) router.replace('/home');
+    // A guest is never sent to sign-in. Someone who signs in from that screen goes back to Home.
+    if (status === 'signed-in' && segments[0] === 'sign-in') router.replace('/home');
   }, [status, segments, router]);
 
   return (
@@ -77,7 +76,7 @@ export default function RootLayout() {
         {status === 'loading' || !fontsReady ? (
           <LoadingShell />
         ) : (
-          <Shell showNav={status === 'signed-in' && segments[0] !== 'sign-in'} />
+          <Shell showNav={segments[0] !== 'sign-in'} />
         )}
       </ConfirmProvider>
     </ThemeProvider>

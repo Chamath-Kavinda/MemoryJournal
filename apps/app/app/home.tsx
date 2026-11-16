@@ -4,7 +4,9 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GuestSignInBanner } from '@/features/auth/GuestSignInBanner';
 import { MonthCalendar } from '@/features/calendar/MonthCalendar';
+
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { StatsBar } from '@/features/insights/StatsBar';
@@ -40,6 +42,8 @@ export default function HomeScreen() {
         <View style={{ width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' }}>
           {/* The sections are the tabs of the bottom bar (or the sidebar), so Home has no link list. */}
           <TabHeader title="Memory Journal" />
+          <GuestSignInBanner onSignIn={() => router.push('/sign-in')} />
+
           <StatsBar
             insights={insights}
             status={insightsStatus}

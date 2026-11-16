@@ -1,8 +1,9 @@
 import { Redirect } from 'expo-router';
 
-import { useAuthStore } from '@/features/auth/authStore';
-
+/**
+ * The app always opens on Home, signed in or not (section 15.6). Signing in is offered from
+ * Home and Settings; it is never required to start.
+ */
 export default function Index() {
-  const status = useAuthStore((s) => s.status);
-  return <Redirect href={status === 'signed-in' ? '/home' : '/sign-in'} />;
+  return <Redirect href="/home" />;
 }
