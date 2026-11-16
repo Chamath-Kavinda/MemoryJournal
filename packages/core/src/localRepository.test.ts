@@ -172,6 +172,42 @@ describe('LocalRepository', () => {
     expect((await repo.getDay('2026-11-14'))?.latestRevision).toBe(2);
   });
 
+  it('saves a library revision with its item, and closes the earlier sitting in the same save', async () => {
+    const repo = new LocalRepository(memoryStore());
+    await repo.saveLibraryPage({
+      itemId: 'a',
+      revision: { ...libraryRevision(1), closedAt: null },
+      item: { ...libraryItem('a'), latestRevision: 1 },
+    });
+    await repo.saveLibraryPage({
+      itemId: 'a',
+      revision: libraryRevision(2),
+      item: { ...libraryItem('a'), latestRevision: 2 },
+      close: { n: 1, closedAt: 50 },
+    });
+
+    const revisions = await repo.listLibraryRevisions('a');
+    expect(revisions.map((r) => [r.n, r.closedAt])).toEqual([
+      [1, 50],
+      [2, 2],
+    ]);
+    expect((await repo.listLibrary())[0]?.latestRevision).toBe(2);
+  });
+
+  it('tells listeners once when a library page is saved', async () => {
+    const repo = new LocalRepository(memoryStore());
+    const listener = jest.fn();
+    repo.subscribe(listener);
+
+    await repo.saveLibraryPage({
+      itemId: 'a',
+      revision: libraryRevision(1),
+      item: libraryItem('a'),
+    });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('tells listeners once per change and stops after unsubscribe', async () => {
     const repo = new LocalRepository(memoryStore());
     const listener = jest.fn();

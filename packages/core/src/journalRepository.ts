@@ -27,6 +27,16 @@ export interface DaySave {
   close?: { n: number; closedAt: EpochMs };
 }
 
+/** One save of a library page: the revision, the item's summary and, when a sitting ran out, the revision to close. */
+export interface LibrarySave {
+  itemId: string;
+  revision: LibraryRevision;
+  /** The item as it should be after the save, with the new text and summary fields. */
+  item: LibraryItem;
+  /** The earlier revision whose sitting ended without being closed, with the time it ended. */
+  close?: { n: number; closedAt: EpochMs };
+}
+
 /**
  * The one door every screen uses to read and write a journal. `LocalRepository` keeps a guest
  * journal on the device; a Firestore implementation serves a signed-in account. Both use the same
@@ -71,6 +81,11 @@ export interface JournalRepository {
   deleteLibraryItem(itemId: string): Promise<void>;
   listLibraryRevisions(itemId: string): Promise<LibraryRevision[]>;
   putLibraryRevision(itemId: string, revision: LibraryRevision): Promise<void>;
+  /**
+   * Writes the revision and the item's summary together (and closes the earlier sitting when
+   * asked), so an item never shows text that has no revision.
+   */
+  saveLibraryPage(save: LibrarySave): Promise<void>;
 
   getTutorialProgress(): Promise<TutorialProgress>;
   putTutorialProgress(progress: TutorialProgress): Promise<void>;

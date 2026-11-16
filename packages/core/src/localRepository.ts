@@ -1,4 +1,4 @@
-import type { DayRange, DaySave, JournalRepository } from './journalRepository';
+import type { DayRange, DaySave, JournalRepository, LibrarySave } from './journalRepository';
 import type {
   DayId,
   DayMeta,
@@ -168,6 +168,17 @@ export class LocalRepository implements JournalRepository {
 
   putLibraryRevision(itemId: string, revision: LibraryRevision): Promise<void> {
     return this.write(`${LIB_REV}${itemId}:${LocalRepository.pad(revision.n)}`, revision);
+  }
+
+  async saveLibraryPage({ itemId, revision, item, close }: LibrarySave): Promise<void> {
+    if (close !== undefined) {
+      const key = `${LIB_REV}${itemId}:${LocalRepository.pad(close.n)}`;
+      const earlier = await this.read<LibraryRevision>(key);
+      if (earlier !== null) await this.write(key, { ...earlier, closedAt: close.closedAt }, true);
+    }
+    await this.write(`${LIB_REV}${itemId}:${LocalRepository.pad(revision.n)}`, revision, true);
+    await this.write(`${LIB}${item.id}`, item, true);
+    this.notify();
   }
 
   async getTutorialProgress(): Promise<TutorialProgress> {

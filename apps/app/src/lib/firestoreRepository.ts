@@ -9,6 +9,7 @@ import {
   type EpochMs,
   type JournalRepository,
   type LibraryItem,
+  type LibrarySave,
   type LibraryRevision,
   type Tag,
   type TagCategory,
@@ -338,6 +339,20 @@ export class FirestoreRepository implements JournalRepository {
     return this.write(() =>
       setDoc(doc(this.col('library', itemId, 'revisions'), String(revision.n)), revision),
     );
+  }
+
+  /** One batch, so an item never shows text that has no revision. */
+  saveLibraryPage({ itemId, revision, item, close }: LibrarySave): Promise<void> {
+    return this.write(() => {
+      const batch = writeBatch(this.db);
+      const revisions = this.col('library', itemId, 'revisions');
+      if (close !== undefined) {
+        batch.update(doc(revisions, String(close.n)), { closedAt: close.closedAt });
+      }
+      batch.set(doc(revisions, String(revision.n)), revision);
+      batch.set(doc(this.col('library'), item.id), withoutId(item));
+      return batch.commit();
+    });
   }
 
   async getTutorialProgress(): Promise<TutorialProgress> {

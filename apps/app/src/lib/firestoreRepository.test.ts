@@ -193,6 +193,54 @@ describe('FirestoreRepository writes', () => {
     expect(mockBatchCommit).toHaveBeenCalledTimes(1);
   });
 
+  it('saves a library page as one batch and closes the earlier sitting in it', async () => {
+    const repo = new FirestoreRepository('u1', db);
+    const libraryRevision = {
+      n: 2,
+      createdAt: 20,
+      closedAt: null,
+      kind: 'later' as const,
+      text: 'more words',
+      mentions: [],
+      wordCount: 2,
+      addedWordCount: 1,
+    };
+    const item: LibraryItem = {
+      id: 'i1',
+      type: 'book',
+      title: 'Dune',
+      date: null,
+      text: 'more words',
+      latestRevision: 2,
+      updatedAt: 20,
+      wordCount: 2,
+      mentions: [],
+    };
+
+    await repo.saveLibraryPage({
+      itemId: 'i1',
+      revision: libraryRevision,
+      item,
+      close: { n: 1, closedAt: 15 },
+    });
+
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/u1/library/i1/revisions/1' }),
+      { closedAt: 15 },
+    );
+    expect(mockBatchSet).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/u1/library/i1/revisions/2' }),
+      libraryRevision,
+    );
+    // The id lives in the document path, not inside the stored fields.
+    const { id: _id, ...stored } = item;
+    expect(mockBatchSet).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/u1/library/i1' }),
+      stored,
+    );
+    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
+  });
+
   it('stores tags and categories without the id inside the document', async () => {
     const repo = new FirestoreRepository('u1', db);
     await repo.putTag({
