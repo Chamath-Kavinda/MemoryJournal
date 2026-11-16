@@ -137,4 +137,55 @@ describe('LocalRepository', () => {
     expect(await repo.getLastSeenAt()).toBeNull();
     expect(store.data.get('other:key')).toBe('keep');
   });
+
+  it('saves a revision with its day, and closes the earlier sitting in the same save', async () => {
+    const repo = new LocalRepository(memoryStore());
+    await repo.saveDay({
+      dayId: '2026-11-14',
+      revision: { ...revision(1), closedAt: null },
+      meta: meta('2026-11-14'),
+    });
+    await repo.saveDay({
+      dayId: '2026-11-14',
+      revision: revision(2),
+      meta: { ...meta('2026-11-14'), latestRevision: 2 },
+      close: { n: 1, closedAt: 50 },
+    });
+
+    const revisions = await repo.listRevisions('2026-11-14');
+    expect(revisions.map((r) => [r.n, r.closedAt])).toEqual([
+      [1, 50],
+      [2, 2],
+    ]);
+    expect((await repo.getDay('2026-11-14'))?.latestRevision).toBe(2);
+  });
+
+  it('tells listeners once per change and stops after unsubscribe', async () => {
+    const repo = new LocalRepository(memoryStore());
+    const listener = jest.fn();
+    const stop = repo.subscribe(listener);
+
+    await repo.putTag({
+      id: 't1',
+      name: 'Sam',
+      categoryId: 'c1',
+      note: null,
+      aliases: [],
+      createdAt: 1,
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    await repo.saveDay({ dayId: '2026-11-14', revision: revision(1), meta: meta('2026-11-14') });
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    await repo.putLastSeenAt(5);
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    await repo.clearAll();
+    expect(listener).toHaveBeenCalledTimes(3);
+
+    stop();
+    await repo.putSettings({ reminderEnabled: false, theme: 'dark' });
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
 });

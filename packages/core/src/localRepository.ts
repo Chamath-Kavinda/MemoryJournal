@@ -1,4 +1,4 @@
-import type { JournalRepository } from './journalRepository';
+import type { DaySave, JournalRepository } from './journalRepository';
 import type {
   DayId,
   DayMeta,
@@ -38,7 +38,20 @@ const LAST_SEEN = `${ROOT}lastSeenAt`;
  * grows large. Revision keys end in a zero-padded number so they sort in order.
  */
 export class LocalRepository implements JournalRepository {
+  private readonly listeners = new Set<() => void>();
+
   constructor(private readonly store: KeyValueStore) {}
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(): void {
+    for (const listener of [...this.listeners]) listener();
+  }
 
   private async readAll<T>(prefix: string): Promise<T[]> {
     const keys = (await this.store.getAllKeys()).filter((key) => key.startsWith(prefix)).sort();
@@ -55,8 +68,15 @@ export class LocalRepository implements JournalRepository {
     return raw === null ? null : (JSON.parse(raw) as T);
   }
 
-  private write(key: string, value: unknown): Promise<void> {
-    return this.store.setItem(key, JSON.stringify(value));
+  /** Stores one value and tells listeners, unless the caller reports the change itself. */
+  private async write(key: string, value: unknown, quiet = false): Promise<void> {
+    await this.store.setItem(key, JSON.stringify(value));
+    if (!quiet) this.notify();
+  }
+
+  private async remove(key: string): Promise<void> {
+    await this.store.removeItem(key);
+    this.notify();
   }
 
   private async removeAll(prefix: string): Promise<void> {
@@ -88,6 +108,17 @@ export class LocalRepository implements JournalRepository {
     return this.write(`${DAY_REV}${dayId}:${LocalRepository.pad(revision.n)}`, revision);
   }
 
+  async saveDay({ dayId, revision, meta, close }: DaySave): Promise<void> {
+    if (close !== undefined) {
+      const key = `${DAY_REV}${dayId}:${LocalRepository.pad(close.n)}`;
+      const earlier = await this.read<DayRevision>(key);
+      if (earlier !== null) await this.write(key, { ...earlier, closedAt: close.closedAt }, true);
+    }
+    await this.write(`${DAY_REV}${dayId}:${LocalRepository.pad(revision.n)}`, revision, true);
+    await this.write(`${DAY}${meta.date}`, meta, true);
+    this.notify();
+  }
+
   listCategories(): Promise<TagCategory[]> {
     return this.readAll<TagCategory>(CATEGORY);
   }
@@ -97,7 +128,7 @@ export class LocalRepository implements JournalRepository {
   }
 
   deleteCategory(categoryId: string): Promise<void> {
-    return this.store.removeItem(`${CATEGORY}${categoryId}`);
+    return this.remove(`${CATEGORY}${categoryId}`);
   }
 
   listTags(): Promise<Tag[]> {
@@ -109,7 +140,7 @@ export class LocalRepository implements JournalRepository {
   }
 
   deleteTag(tagId: string): Promise<void> {
-    return this.store.removeItem(`${TAG}${tagId}`);
+    return this.remove(`${TAG}${tagId}`);
   }
 
   listLibrary(): Promise<LibraryItem[]> {
@@ -122,7 +153,7 @@ export class LocalRepository implements JournalRepository {
 
   async deleteLibraryItem(itemId: string): Promise<void> {
     await this.removeAll(`${LIB_REV}${itemId}:`);
-    await this.store.removeItem(`${LIB}${itemId}`);
+    await this.remove(`${LIB}${itemId}`);
   }
 
   listLibraryRevisions(itemId: string): Promise<LibraryRevision[]> {
@@ -161,11 +192,13 @@ export class LocalRepository implements JournalRepository {
     return this.read<EpochMs>(LAST_SEEN);
   }
 
+  /** The clock guard reads this itself, so no screen needs a refresh when it changes. */
   putLastSeenAt(at: EpochMs): Promise<void> {
-    return this.write(LAST_SEEN, at);
+    return this.write(LAST_SEEN, at, true);
   }
 
-  clearAll(): Promise<void> {
-    return this.removeAll(ROOT);
+  async clearAll(): Promise<void> {
+    await this.removeAll(ROOT);
+    this.notify();
   }
 }
