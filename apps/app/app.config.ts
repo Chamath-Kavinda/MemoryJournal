@@ -33,6 +33,8 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   android: {
     package: 'com.memoryjournal.app',
+    // Off so a reinstall starts clean and a guest journal is never restored from a backup (D-040).
+    allowBackup: false,
   },
   ios: {
     bundleIdentifier: 'com.memoryjournal.app',
