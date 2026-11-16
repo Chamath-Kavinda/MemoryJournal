@@ -1,5 +1,9 @@
 const mockSignOut = jest.fn();
 const mockPush = jest.fn();
+const mockShutDown = jest.fn(() => Promise.resolve());
+const mockClearDrafts = jest.fn((uid: string) => Promise.resolve(uid));
+const mockForgetRepository = jest.fn();
+const mockStartAuthListener = jest.fn();
 const mockExportAll = jest.fn();
 const mockExportGuest = jest.fn();
 const mockRepository = { name: 'repository' };
@@ -16,10 +20,23 @@ jest.mock('@/platform/auth/google', () => ({
 }));
 jest.mock('@/features/auth/authStore', () => ({
   useAuthStore: (select: (state: unknown) => unknown) => select({ user: mockUser }),
+  startAuthListener: (...args: unknown[]) => mockStartAuthListener(...args),
 }));
 jest.mock('@/features/calendar/useTodayId', () => ({ useTodayId: () => '2026-11-15' }));
 jest.mock('@/lib/journal', () => ({
   useJournalRepository: () => (mockRepositoryReady ? mockRepository : null),
+  getJournalRepository: () => mockRepository,
+  forgetAccountRepository: (...args: unknown[]) => mockForgetRepository(...args),
+}));
+jest.mock('@/lib/firebase', () => ({
+  shutDownFirebase: () => mockShutDown(),
+}));
+jest.mock('@/features/day/draftStorage', () => ({
+  clearUserDrafts: (uid: string) => mockClearDrafts(uid),
+}));
+jest.mock('@/features/reminder/reminderService', () => ({
+  remindersSupported: false,
+  syncReminder: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('./useSettings', () => ({
   useSettings: () => ({
@@ -71,14 +88,31 @@ describe('SettingsView sign out', () => {
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 
-  it('signs out once the dialog is confirmed', async () => {
+  it('signs out and wipes the device once the dialog is confirmed', async () => {
     await render(<SettingsView />, { wrapper: ConfirmProvider });
 
     await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     await screen.findByTestId('confirm-dialog');
+    expect(dialog().getByText(/removes the journal from this device/)).toBeTruthy();
     await fireEvent.press(dialog().getByRole('button', { name: 'Sign out' }));
 
     await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockStartAuthListener).toHaveBeenCalledTimes(1));
+    expect(mockShutDown).toHaveBeenCalledTimes(1);
+    expect(mockClearDrafts).toHaveBeenCalledWith('u1');
+    expect(mockForgetRepository).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not wipe anything when Cancel is pressed', async () => {
+    await render(<SettingsView />, { wrapper: ConfirmProvider });
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await screen.findByTestId('confirm-dialog');
+    await fireEvent.press(dialog().getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).toBeNull());
+    expect(mockShutDown).not.toHaveBeenCalled();
+    expect(mockClearDrafts).not.toHaveBeenCalled();
   });
 
   it('shows the account profile and Delete account, and no guest wording', async () => {

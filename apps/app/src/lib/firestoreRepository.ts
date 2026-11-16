@@ -154,6 +154,11 @@ export class FirestoreRepository implements JournalRepository {
     return this.pendingWrites > 0;
   }
 
+  /** How many writes have not been confirmed by the server yet (shown before signing out). */
+  pendingWriteCount(): number {
+    return this.pendingWrites;
+  }
+
   /** Runs a write, telling listeners when it is queued and again when it settles. */
   private async write(action: () => Promise<void>): Promise<void> {
     this.pendingWrites += 1;

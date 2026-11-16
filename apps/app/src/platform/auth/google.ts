@@ -14,7 +14,7 @@ import {
 import { readEnv } from '@/lib/env';
 import { getFirebase } from '@/lib/firebase';
 
-import type { SignInResult } from './types';
+import type { PickResult, SignInResult } from './types';
 
 let configured = false;
 
@@ -24,11 +24,8 @@ function configure(): void {
   configured = true;
 }
 
-type IdTokenResult =
-  { status: 'ok'; idToken: string } | Exclude<SignInResult, { status: 'signed-in' }>;
-
 /** Shows the native Google account picker and returns the ID token it produces. */
-async function getGoogleIdToken(): Promise<IdTokenResult> {
+async function getGoogleIdToken(): Promise<PickResult> {
   try {
     configure();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -50,17 +47,27 @@ async function getGoogleIdToken(): Promise<IdTokenResult> {
   }
 }
 
-/** Android and iOS: native Google sign-in, then hand the ID token to Firebase. */
-export async function signInWithGoogle(): Promise<SignInResult> {
-  const token = await getGoogleIdToken();
-  if (token.status !== 'ok') return token;
+/** Step one: the Google account picker. Changes nothing in Firebase. */
+export function pickGoogleAccount(): Promise<PickResult> {
+  return getGoogleIdToken();
+}
+
+/** Step two: hands the ID token to Firebase, which signs the person in. */
+export async function completeGoogleSignIn(idToken: string): Promise<SignInResult> {
   try {
-    const credential = GoogleAuthProvider.credential(token.idToken);
+    const credential = GoogleAuthProvider.credential(idToken);
     await signInWithCredential(getFirebase().auth, credential);
     return { status: 'signed-in' };
   } catch (error) {
     return { status: 'error', message: error instanceof Error ? error.message : 'Sign-in failed.' };
   }
+}
+
+/** Android and iOS: native Google sign-in, then hand the ID token to Firebase. */
+export async function signInWithGoogle(): Promise<SignInResult> {
+  const token = await pickGoogleAccount();
+  if (token.status !== 'ok') return token;
+  return completeGoogleSignIn(token.idToken);
 }
 
 /**

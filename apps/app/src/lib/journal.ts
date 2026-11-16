@@ -32,6 +32,11 @@ export function useJournalRepository(): JournalRepository | null {
   return status === 'loading' ? null : getJournalRepository(uid);
 }
 
+/** Drops the signed-in account's repository after sign-out, so the next sign-in starts clean. */
+export function forgetAccountRepository(): void {
+  accountRepository = null;
+}
+
 /** Forgets the cached repositories, for tests. */
 export function resetJournalRepositories(): void {
   guestRepository = null;

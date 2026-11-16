@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { deleteApp, getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
   connectAuthEmulator,
   getAuth,
@@ -8,10 +8,12 @@ import {
   type Auth,
 } from 'firebase/auth';
 import {
+  clearIndexedDbPersistence,
   connectFirestoreEmulator,
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
+  terminate,
   type Firestore,
 } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -90,4 +92,28 @@ export function getFirebaseDb(): Firestore {
 /** Both services, for code that only runs for a signed-in user. */
 export function getFirebase(): { auth: Auth; db: Firestore } {
   return { auth: getFirebaseAuth(), db: getFirebaseDb() };
+}
+
+/**
+ * Stops Firestore, clears its offline cache and deletes the Firebase app, so nothing of the
+ * signed-out account stays on the device (docs section 15.6, point 9). A terminated Firestore
+ * cannot be started again on the same app, so the next call to `getFirebaseAuth` or
+ * `getFirebaseDb` builds a fresh app. The caller restarts the auth listener afterwards.
+ */
+export async function shutDownFirebase(): Promise<void> {
+  const db = cachedDb;
+  const app = cachedApp?.app;
+  cachedDb = undefined;
+  cachedAuth = undefined;
+  cachedApp = undefined;
+  if (db) {
+    try {
+      await terminate(db);
+      // Only the web build has an on-disk cache to clear; elsewhere this fails harmlessly.
+      await clearIndexedDbPersistence(db);
+    } catch {
+      // Nothing more to clear.
+    }
+  }
+  if (app) await deleteApp(app).catch(() => undefined);
 }

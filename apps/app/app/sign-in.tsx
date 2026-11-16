@@ -1,78 +1,93 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { X } from 'lucide-react-native';
+import { useEffect } from 'react';
+import { ScrollView, View } from 'react-native';
 
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { IconButton } from '@/components/IconButton';
+import { SignInProgressCard } from '@/features/auth/SignInProgressCard';
+import { useGuestSignIn } from '@/features/auth/useGuestSignIn';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
-
-import { signInWithGoogle } from '@/platform/auth/google';
 
 export default function SignInScreen() {
   const { palette } = useTheme();
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function onPress() {
-    setBusy(true);
-    setError(null);
-    const result = await signInWithGoogle();
-    if (result.status === 'error') setError(result.message);
-    setBusy(false);
-  }
+  const { state, start, exportGuest } = useGuestSignIn();
 
   // Signing in is optional, so this screen can always be left for Home.
-  function onNotNow() {
+  const leave = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/home');
-  }
+  };
+
+  // When the sign-in (and any merge) has finished, Home shows the account's data.
+  useEffect(() => {
+    if (state.phase === 'finished') router.replace('/home');
+  }, [state.phase, router]);
+
+  const running = state.phase === 'running';
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
-      <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '600' }}>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, gap: 16 }}
+    >
+      <View style={{ position: 'absolute', top: 16, right: 16 }}>
+        <IconButton icon={X} accessibilityLabel="Close" onPress={leave} disabled={running} />
+      </View>
+      <Text
+        accessibilityRole="header"
+        style={{ fontSize: 28, fontWeight: '600', textAlign: 'center' }}
+      >
         Memory Journal
       </Text>
-      <Text style={{ textAlign: 'center', maxWidth: 360 }}>
-        Recall your day each night and train your memory.
+      <Text style={{ textAlign: 'center', color: palette.muted }}>
+        Back up your journal and use it on your other devices
       </Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Continue with Google"
-        accessibilityState={{ disabled: busy, busy }}
-        disabled={busy}
-        onPress={onPress}
-        style={{
-          minHeight: 48,
-          paddingHorizontal: 20,
-          borderRadius: 8,
-          borderWidth: 1,
-          // A visible edge in both themes; without a colour the border is black on a dark page.
-          borderColor: palette.accent,
-          minWidth: 220,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {busy ? <ActivityIndicator color={palette.accent} /> : <Text>Continue with Google</Text>}
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Not now"
-        onPress={onNotNow}
-        style={{
-          minHeight: 48,
-          paddingHorizontal: 20,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Text style={{ color: palette.accent }}>Not now</Text>
-      </Pressable>
-      {error ? (
-        <Text accessibilityRole="alert" style={{ color: palette.danger, textAlign: 'center' }}>
-          {error}
-        </Text>
+
+      {running ? <SignInProgressCard current={state.step} /> : null}
+
+      {state.phase === 'problem' ? (
+        <Card testID="sign-in-problem">
+          <View style={{ gap: 8 }}>
+            <Text accessibilityRole="alert" style={{ color: palette.danger }}>
+              {state.message}
+            </Text>
+            {state.notAdded.length > 0 ? (
+              <View style={{ gap: 4 }}>
+                <Text style={{ fontWeight: '600' }}>Not added:</Text>
+                {state.notAdded.map((line) => (
+                  <Text key={line} style={{ color: palette.muted }}>
+                    {line}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            <Button label="Retry" onPress={() => void start()} />
+            <Button
+              label="Export guest data (JSON)"
+              variant="secondary"
+              onPress={() => void exportGuest().catch(() => undefined)}
+            />
+          </View>
+        </Card>
       ) : null}
-    </View>
+
+      {running ? null : (
+        <>
+          <Button
+            label={
+              state.phase === 'problem' ? 'Continue with Google again' : 'Continue with Google'
+            }
+            accessibilityLabel="Continue with Google"
+            variant={state.phase === 'problem' ? 'secondary' : 'primary'}
+            onPress={() => void start()}
+            fullWidth
+          />
+          <Button label="Maybe later" variant="ghost" onPress={leave} />
+        </>
+      )}
+    </ScrollView>
   );
 }

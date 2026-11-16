@@ -7,9 +7,17 @@ import { ActivityIndicator, Pressable, ScrollView, Switch, View } from 'react-na
 import { useConfirm } from '@/components/useConfirm';
 import { Text } from '@/theme/themed';
 
-import { useAuthStore } from '@/features/auth/authStore';
+import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
+import {
+  signOutAndWipe,
+  signOutDialog,
+  waitForPendingWrites,
+} from '@/features/auth/signOutService';
 import { useTodayId } from '@/features/calendar/useTodayId';
-import { useJournalRepository } from '@/lib/journal';
+import { clearUserDrafts } from '@/features/day/draftStorage';
+import { remindersSupported, syncReminder } from '@/features/reminder/reminderService';
+import { shutDownFirebase } from '@/lib/firebase';
+import { forgetAccountRepository, getJournalRepository, useJournalRepository } from '@/lib/journal';
 import { signOut } from '@/platform/auth/google';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -71,13 +79,32 @@ export function SettingsView() {
   };
 
   const askSignOut = async () => {
-    const confirmed = await confirm({
-      title: 'Sign out?',
-      message: `Sign out of ${user?.email ?? 'this account'}? Your journal stays safe in your Google account, and signing in again brings it back.`,
-      confirmLabel: 'Sign out',
-      icon: TriangleAlert,
+    if (!user) return;
+    // Give pending writes up to 5 seconds to upload, then say how many are still waiting.
+    const current = getJournalRepository(user.uid);
+    const pending = await waitForPendingWrites({
+      pendingWriteCount: () =>
+        'pendingWriteCount' in current && typeof current.pendingWriteCount === 'function'
+          ? (current.pendingWriteCount as () => number)()
+          : 0,
     });
-    if (confirmed) void signOut();
+    const confirmed = await confirm({ ...signOutDialog(user.email, pending), icon: TriangleAlert });
+    if (!confirmed) return;
+
+    setNotice(null);
+    const result = await signOutAndWipe({
+      signOut,
+      shutDown: shutDownFirebase,
+      clearDrafts: () => clearUserDrafts(user.uid),
+      clearReminder: async () => {
+        if (remindersSupported) await syncReminder(false).catch(() => undefined);
+      },
+      forgetRepository: forgetAccountRepository,
+      restartAuthListener: () => {
+        startAuthListener();
+      },
+    });
+    if (result.status === 'error') setNotice(`Sign-out did not finish. ${result.message}`);
   };
 
   return (

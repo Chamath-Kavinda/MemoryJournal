@@ -42,11 +42,19 @@ export interface ConfirmOptions {
    * tint. For one-time information such as the guest warning on a first save.
    */
   notice?: boolean;
+  /**
+   * A third button between Cancel and the confirm button, such as Export guest data in the guest
+   * merge dialog. It closes the dialog with the `alternative` choice (see `useChoice`).
+   */
+  alternativeLabel?: string;
+  /** A calm question that is not destructive: an accent tint and a primary confirm button. */
+  neutral?: boolean;
   typed?: TypedConfirmation;
 }
 
 interface Props extends ConfirmOptions {
   onConfirm: () => void;
+  onAlternative?: () => void;
   onCancel: () => void;
 }
 
@@ -62,8 +70,11 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   icon,
   notice = false,
+  alternativeLabel,
+  neutral = false,
   typed,
   onConfirm,
+  onAlternative,
   onCancel,
 }: Props) {
   const { palette } = useTheme();
@@ -95,8 +106,9 @@ export function ConfirmDialog({
   }));
 
   const canConfirm = typed === undefined || typed.matches(typedText);
-  const shownIcon = icon ?? (notice ? Info : Trash2);
-  const tint = notice ? palette.accent : palette.danger;
+  const calm = notice || neutral;
+  const shownIcon = icon ?? (calm ? Info : Trash2);
+  const tint = calm ? palette.accent : palette.danger;
 
   return (
     <Modal
@@ -218,8 +230,16 @@ export function ConfirmDialog({
                     style={{ flexGrow: 1, flexBasis: 120 }}
                   />
                 )}
+                {alternativeLabel && onAlternative ? (
+                  <Button
+                    variant="secondary"
+                    label={alternativeLabel}
+                    onPress={onAlternative}
+                    style={{ flexGrow: 1, flexBasis: 120 }}
+                  />
+                ) : null}
                 <Button
-                  variant={notice ? 'primary' : 'danger'}
+                  variant={calm ? 'primary' : 'danger'}
                   label={confirmLabel}
                   onPress={onConfirm}
                   disabled={!canConfirm}
