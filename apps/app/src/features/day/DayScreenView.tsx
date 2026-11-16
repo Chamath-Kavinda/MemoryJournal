@@ -1,4 +1,4 @@
-import { formatCountdown, parseDayId, type DayAccess, type DayId } from '@memory-journal/core';
+import { formatCountdown, parseDayId, type DayId, type GuestDayAccess } from '@memory-journal/core';
 import { format } from 'date-fns';
 import { View } from 'react-native';
 
@@ -9,11 +9,11 @@ import { Text } from '@/theme/themed';
 interface Props {
   dayId: DayId;
   /** Null when the day id in the address is not a real date. */
-  access: DayAccess | null;
+  access: GuestDayAccess | null;
   onBack: () => void;
 }
 
-function bannerFor(access: DayAccess | null): { title: string; detail?: string } {
+function bannerFor(access: GuestDayAccess | null): { title: string; detail?: string } {
   if (!access) return { title: 'This is not a valid day.' };
   switch (access.state) {
     case 'future':
@@ -22,6 +22,11 @@ function bannerFor(access: DayAccess | null): { title: string; detail?: string }
       return {
         title: 'Read-only until 9:00 PM',
         detail: `Opens for writing in ${formatCountdown(access.msUntilUnlock)}`,
+      };
+    case 'clockWrong':
+      return {
+        title: 'Your device clock looks wrong.',
+        detail: 'Fix it to write today.',
       };
     case 'open':
       return { title: 'This day is open for writing.' };

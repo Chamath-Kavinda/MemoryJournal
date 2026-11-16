@@ -7,6 +7,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { clearDraft, type KeyValueStorage } from './draftStore';
+import { recordSeen } from './guestClock';
+
 import { closeSitting, saveDayContent, type DayHistory } from './revisionService';
 
 export interface DaySave {
@@ -55,8 +57,11 @@ export function useDaySave(options: Options): DaySave {
     setPending((count) => count + 1);
     setFailed(false);
     try {
-      await saveDayContent(repository, dayId, history, content, Date.now());
+      const now = Date.now();
+      await saveDayContent(repository, dayId, history, content, now);
       discardDraft(content);
+      // The latest time seen moves forward with every save (section 15.6).
+      void recordSeen(repository, now);
     } catch {
       setFailed(true);
     } finally {

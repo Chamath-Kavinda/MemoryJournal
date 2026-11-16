@@ -21,3 +21,4 @@ export * from './tags';
 export * from './time';
 export * from './tutorials';
 export * from './types';
+export * from './clockGuard';

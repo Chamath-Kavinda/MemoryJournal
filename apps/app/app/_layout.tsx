@@ -5,6 +5,8 @@ import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
 
 import { ConfirmProvider } from '@/components/useConfirm';
 import { startAuthListener, useAuthStore } from '@/features/auth/authStore';
+import { useRecordLastSeen } from '@/features/day/useRecordLastSeen';
+
 import { useProfileSync } from '@/features/profile/useProfileSync';
 import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
@@ -59,6 +61,7 @@ export default function RootLayout() {
   useProfileSync();
   useReminder(reminderOn);
   useDesktopReminder(reminderOn);
+  useRecordLastSeen();
 
   useEffect(() => {
     if (status === 'loading') return;

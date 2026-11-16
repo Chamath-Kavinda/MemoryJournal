@@ -119,7 +119,7 @@ export default function DayRoute() {
   const canSave = editable && !contentEquals(draft.content, savedContent);
 
   const showWriter =
-    (access?.state === 'open' || access?.state === 'locked') &&
+    (access?.state === 'open' || access?.state === 'locked' || access?.state === 'clockWrong') &&
     draft.ready &&
     history !== null &&
     seededDay === dayId;

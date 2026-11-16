@@ -38,6 +38,15 @@ describe('DayScreenView', () => {
     expect(screen.getByText('Future days cannot be opened.')).toBeTruthy();
   });
 
+  it('tells a guest to fix the device clock when it looks wrong', async () => {
+    const { element } = setup({ state: 'clockWrong' });
+    await render(element);
+
+    expect(screen.getByText('Your device clock looks wrong.')).toBeTruthy();
+    expect(screen.getByText('Fix it to write today.')).toBeTruthy();
+    expect(screen.queryByText('This day is open for writing.')).toBeNull();
+  });
+
   it('handles an invalid day id', async () => {
     const { element } = setup(null, 'nonsense');
     await render(element);
