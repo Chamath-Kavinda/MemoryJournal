@@ -1,6 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { layoutFor } from '@/theme/sizeClass';
+import { useLayout } from '@/theme/useLayout';
+
 import { MonthCalendar } from './MonthCalendar';
+
+// The calendar reads the window size through useLayout. Tests start on a phone-sized window and
+// switch to a wide one where they need to.
+jest.mock('@/theme/useLayout', () => ({ useLayout: jest.fn() }));
+const mockUseLayout = useLayout as jest.Mock;
+
+beforeEach(() => {
+  mockUseLayout.mockReturnValue(layoutFor(400, 800));
+});
 
 const NOV_2026 = { year: 2026, month: 11 };
 

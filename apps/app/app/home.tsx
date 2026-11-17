@@ -13,6 +13,7 @@ import { MonthCalendar } from '@/features/calendar/MonthCalendar';
 import { TodayCard } from '@/features/calendar/TodayCard';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
+import { useHolidays } from '@/features/holidays/useHolidays';
 import { StatsBar } from '@/features/insights/StatsBar';
 import { useInsights } from '@/features/insights/useInsights';
 import { TabHeader } from '@/navigation/TabHeader';
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   // Start on the current month, then follow the user's own navigation.
   const [month, setMonth] = useState<MonthRef>(() => monthOfDayId(todayId));
   const { writtenDays, status, reload: reloadMonth } = useWrittenDays(month);
+  // Public holidays are display only and never block the calendar (section 17.2).
+  const holidays = useHolidays(month.year);
   const { insights, status: insightsStatus, reload } = useInsights(todayId);
 
   // Home stays mounted under the Day screen, so read the numbers again when it regains focus, and
@@ -73,6 +76,7 @@ export default function HomeScreen() {
                 month={month}
                 todayId={todayId}
                 writtenDays={writtenDays}
+                holidays={holidays}
                 paused={!focused}
                 onChangeMonth={(delta) => setMonth((current) => addMonths(current, delta))}
                 onSelectDay={(dayId) => router.push(`/day/${dayId}`)}
