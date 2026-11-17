@@ -2,6 +2,7 @@ import {
   contentEquals,
   contentOf,
   emptyContent,
+  isContentEmpty,
   pickRevision,
   previousRevision,
   revisionOptions,
@@ -19,13 +20,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from '@/components/Snackbar';
 import { useConfirm } from '@/components/useConfirm';
 import { useAuthStore } from '@/features/auth/authStore';
+import { DayPageView } from '@/features/day/DayPageView';
 import { DayScreenView } from '@/features/day/DayScreenView';
 import { DayWriter } from '@/features/day/DayWriter';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
 import { draftOwner } from '@/features/day/draftStore';
+import { EmptyDay } from '@/features/day/EmptyDay';
 import { showFirstSaveNoticeOnce } from '@/features/day/firstSaveNotice';
-import { HighlightedDay } from '@/features/day/HighlightedDay';
 import { HighlightSwitch } from '@/features/day/HighlightSwitch';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
 import { SAVE_BAR_CLEARANCE, SaveBar } from '@/features/day/SaveBar';
@@ -42,11 +44,13 @@ import { useJournalRepository } from '@/lib/journal';
 import { useLeaveGuard } from '@/navigation/useLeaveGuard';
 import { SPACING } from '@/theme/layout';
 
-const noop = () => {};
-
 export default function DayRoute() {
-  const { dayId: rawDayId } = useLocalSearchParams<{ dayId: string }>();
+  const { dayId: rawDayId, mode: rawMode } = useLocalSearchParams<{
+    dayId: string;
+    mode?: string | string[];
+  }>();
   const dayId = Array.isArray(rawDayId) ? (rawDayId[0] ?? '') : (rawDayId ?? '');
+  const wantsEdit = (Array.isArray(rawMode) ? rawMode[0] : rawMode) === 'edit';
   const router = useRouter();
   const { palette } = useTheme();
   const uid = useAuthStore((s) => s.user?.uid);
@@ -58,7 +62,7 @@ export default function DayRoute() {
   const draft = useDayDraft({ uid: owner, dayId, storage: draftStorage });
   const { history, failed: historyFailed } = useDayHistory(repository, dayId);
 
-  // Tags for the `@` picker. The writer works without them while they load.
+  // Tags for the `@` picker and the tag chips. The screen works without them while they load.
   const tagData = useTagData(repository);
   const tagError = useTagErrorStore((s) => s.message);
   const clearTagError = useTagErrorStore((s) => s.clear);
@@ -94,12 +98,30 @@ export default function DayRoute() {
     setSeededDay(dayId);
   }, [draft.ready, history, latest, seededDay, dayId, seedDraft]);
 
+  // The page is on screen once the day is known, its draft is ready and its passes are loaded.
+  const ready =
+    (access?.state === 'open' || access?.state === 'locked' || access?.state === 'clockWrong') &&
+    draft.ready &&
+    history !== null &&
+    seededDay === dayId;
+
+  // A day opens in View mode. The pencil switches the same screen to editing (section 18.2).
+  const [editing, setEditing] = useState(false);
   const [selection, setSelection] = useState<RevisionSelection>('latest');
   const [highlight, setHighlight] = useState(false);
   useEffect(() => {
     setSelection('latest');
     setHighlight(false);
+    setEditing(false);
   }, [dayId]);
+
+  // Home's Write today opens the day already in edit mode, once the day is writable.
+  const [pendingEdit, setPendingEdit] = useState(wantsEdit);
+  useEffect(() => {
+    if (!pendingEdit || !ready) return;
+    if (editable) setEditing(true);
+    setPendingEdit(false);
+  }, [pendingEdit, ready, editable]);
 
   const daySave = useDaySave({
     repository,
@@ -120,10 +142,14 @@ export default function DayRoute() {
   const dismissSnack = useCallback(() => setSnack((s) => ({ ...s, message: null })), []);
 
   // A guest is told once, after their first revision is really saved, where the journal lives.
+  // A finished save returns to View mode on the latest pass.
   const confirm = useConfirm();
   const saveAndNotify = async () => {
     const saved = await daySave.save();
-    if (saved) setSnack((s) => ({ message: 'Saved', id: s.id + 1 }));
+    if (saved) {
+      setSnack((s) => ({ message: 'Saved', id: s.id + 1 }));
+      setEditing(false);
+    }
     if (saved && uid === undefined) await showFirstSaveNoticeOnce(draftStorage, confirm);
   };
 
@@ -133,22 +159,21 @@ export default function DayRoute() {
   const previous =
     history === null || target === null ? null : previousRevision(history.revisions, target.n);
   const highlighting = highlight && target !== null && previous !== null;
-  const viewed = selection === 'latest' ? null : target;
   const savedContent = latest ? contentOf(latest) : emptyContent();
   const canSave = editable && !contentEquals(draft.content, savedContent);
 
-  const showWriter =
-    (access?.state === 'open' || access?.state === 'locked' || access?.state === 'clockWrong') &&
-    draft.ready &&
-    history !== null &&
-    seededDay === dayId;
-
-  // The Save bar sticks to the bottom while the editable draft is on screen.
-  const showSaveBar = showWriter && editable && !highlighting && viewed === null;
+  const showEditor = ready && editing;
+  // The Save bar sticks to the bottom while the draft is being edited.
+  const showSaveBar = showEditor && editable;
+  // The pencil belongs to the Latest pass in View mode. Older passes are always read-only.
+  const showPencil = ready && !editing && selection === 'latest';
+  const startEdit = () => {
+    if (editable && selection === 'latest') setEditing(true);
+  };
 
   // Leaving with unsaved writing asks first. Confirming drops the text and its stored draft.
   const back = useLeaveGuard({
-    dirty: showWriter && canSave,
+    dirty: showEditor && canSave,
     leave: () => (router.canGoBack() ? router.back() : router.replace('/home')),
     message: 'Your unsaved changes to this day will be lost.',
     onDiscard: () => {
@@ -165,7 +190,13 @@ export default function DayRoute() {
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ paddingBottom: showSaveBar ? SAVE_BAR_CLEARANCE : SPACING.xl }}
         >
-          <DayScreenView dayId={dayId} access={access} onBack={back} />
+          <DayScreenView
+            dayId={dayId}
+            access={access}
+            onBack={back}
+            onEdit={showPencil ? startEdit : undefined}
+            editDisabled={!editable}
+          />
           {historyFailed ? (
             <Text
               accessibilityRole="alert"
@@ -176,7 +207,18 @@ export default function DayRoute() {
             </Text>
           ) : null}
           {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
-          {showWriter ? (
+          {ready && editing ? (
+            <>
+              <DraftStatus state={draft.saveState} />
+              <DayWriter
+                content={draft.content}
+                onChange={draft.setContent}
+                editable={editable}
+                tagging={tagging}
+              />
+            </>
+          ) : null}
+          {ready && !editing ? (
             <>
               <RevisionToggle options={options} selected={selection} onSelect={setSelection} />
               {options.length > 0 ? (
@@ -184,32 +226,18 @@ export default function DayRoute() {
                   value={highlight}
                   onChange={setHighlight}
                   disabled={previous === null}
-                  readOnlyNote={selection === 'latest' && editable}
+                  readOnlyNote={false}
                 />
               ) : null}
-              {highlighting && target !== null && previous !== null ? (
-                <HighlightedDay
-                  current={contentOf(target)}
-                  previous={contentOf(previous)}
-                  previousN={previous.n}
-                  names={tagNames}
-                />
-              ) : viewed === null ? (
-                <>
-                  <DraftStatus state={draft.saveState} />
-                  <DayWriter
-                    content={draft.content}
-                    onChange={draft.setContent}
-                    editable={editable}
-                    tagging={tagging}
-                  />
-                </>
+              {target === null || isContentEmpty(contentOf(target)) ? (
+                <EmptyDay onWrite={startEdit} disabled={!editable} />
               ) : (
-                <DayWriter
-                  content={contentOf(viewed)}
-                  onChange={noop}
-                  editable={false}
-                  tagging={tagging}
+                <DayPageView
+                  content={contentOf(target)}
+                  previous={highlighting && previous !== null ? contentOf(previous) : null}
+                  previousN={previous?.n}
+                  names={tagNames}
+                  onOpenTag={(tagId) => router.push(`/tags/${tagId}`)}
                 />
               )}
             </>

@@ -1,12 +1,13 @@
 import { parseDayId, type DayId, type GuestDayAccess } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { Lock, TriangleAlert, type LucideIcon } from 'lucide-react-native';
+import { Lock, Pencil, TriangleAlert, type LucideIcon } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/Card';
 import { FadeUp } from '@/components/FadeUp';
 import { Icon } from '@/components/Icon';
+import { IconButton } from '@/components/IconButton';
 import { SPACING } from '@/theme/layout';
 import type { Palette } from '@/theme/palette';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -19,6 +20,10 @@ interface Props {
   /** Null when the day id in the address is not a real date. */
   access: GuestDayAccess | null;
   onBack: () => void;
+  /** Starts editing. Without it the screen shows no pencil (an older pass, or nothing to edit). */
+  onEdit?: (() => void) | undefined;
+  /** True when the pencil is shown but writing is not possible now, for example before 21:00. */
+  editDisabled?: boolean;
 }
 
 interface Banner {
@@ -59,11 +64,11 @@ function bannerFor(access: GuestDayAccess | null): Banner | null {
 }
 
 /**
- * Header of the Day screen: the Back icon, a lock chip with the countdown, the date and, only
- * when writing is not possible for a reason the chip does not give, a status banner with an icon.
- * It fades up when the screen opens. The writer sits below it.
+ * Header of the Day screen: the Back icon, a lock chip with the countdown, a Pencil that starts
+ * editing, the date and, only when writing is not possible for a reason the chip does not give,
+ * a status banner with an icon. It fades up when the screen opens. The page sits below it.
  */
-export function DayScreenView({ dayId, access, onBack }: Props) {
+export function DayScreenView({ dayId, access, onBack, onEdit, editDisabled = false }: Props) {
   const { palette } = useTheme();
   const parts = parseDayId(dayId);
   const heading = parts
@@ -84,7 +89,18 @@ export function DayScreenView({ dayId, access, onBack }: Props) {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <BackButton onBack={onBack} />
-        <LockChip access={access} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <LockChip access={access} />
+          {onEdit ? (
+            <IconButton
+              testID="edit-day"
+              icon={Pencil}
+              accessibilityLabel="Edit day"
+              onPress={onEdit}
+              disabled={editDisabled}
+            />
+          ) : null}
+        </View>
       </View>
 
       <Text accessibilityRole="header" variant="title">

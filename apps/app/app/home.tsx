@@ -100,7 +100,10 @@ export default function HomeScreen() {
               />
             ) : null}
             <FadeUp index={3}>
-              <TodayCard todayId={todayId} onWrite={() => router.push(`/day/${todayId}`)} />
+              <TodayCard
+                todayId={todayId}
+                onWrite={() => router.push(`/day/${todayId}?mode=edit`)}
+              />
             </FadeUp>
           </View>
         </View>
