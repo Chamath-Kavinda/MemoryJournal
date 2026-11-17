@@ -815,7 +815,7 @@ Rules:
 6. Privacy (section 7.4): the request is a plain download of a public file with the year in the address. It carries no journal text, no account id and no tag. Guest mode still never calls Firebase.
 7. Holidays are display only. They do not change the 21:00 lock, the streak, the score or the Day screen.
 8. A holiday shows as a small `warning` colored dot on the date, next to the written dot when both apply. The accessibility label of the date adds `holiday: <name>`.
-9. A list "Holidays" under the calendar legend shows the holidays of the shown month (weekday and day number, then the name) on every window size. On medium and expanded windows the holiday name is also printed inside the date cell, cut to one line.
+9. A list "Holidays" under the calendar legend shows the holidays of the shown month (weekday and day number, then the name) on every window size. A date cell never prints the holiday name, on any window size: it shows only the dot, so the names are read in this list.
 10. The legend gets a Holiday item with the same dot.
 11. The Windows app and the web build use the same code. The data files allow requests from any website, so no extra setup is needed.
 
@@ -867,3 +867,11 @@ The license follows the WorkTracker project: an End User License Agreement in `L
 6. `LICENSE.txt` exists, the Windows installer shows it, the README has the Holiday Data and License sections, and `THIRD_PARTY_NOTICES.md` credits the holiday project.
 7. The Settings footer shows v0.2.3 and the version is 0.2.3 in all five `package.json` files, the app config and `LICENSE.txt`. There is no version-only commit and the tag is on the final commit.
 8. Core tests, app tests, rules tests and CI pass.
+
+### 17.8 Home greeting (added during v0.2.3)
+
+- The top of Home shows a line under the title: `Good morning`, `Good afternoon`, `Good evening` or `Good night`, from the local clock. Morning is 05:00 to 11:59, afternoon 12:00 to 16:59, evening 17:00 to 20:59, night 21:00 to 04:59.
+- A signed-in person with a display name sees the first word of the name after a comma, for example `Good morning, Sam`. A guest, or an account with no display name, sees the greeting alone, with no name.
+- The hour is read again every minute, so the line changes while the app stays open. The greeting is display only and does not change the 21:00 lock, the streak or the score.
+- It is committed before the scrollbar commit as `feat(app): greet the person on Home by time of day`.
+- Acceptance: at 09:00 a guest sees `Good morning`; at 20:00 a signed-in person named Sam Perera sees `Good evening, Sam`; at 23:00 `Good night`.
