@@ -5,14 +5,18 @@ import {
   type DayId,
   type LibraryItemType,
 } from '@memory-journal/core';
-import { TriangleAlert } from 'lucide-react-native';
+import { Calendar, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { useTodayId } from '@/features/calendar/useTodayId';
+import { IconButton } from '@/components/IconButton';
 import { useConfirm } from '@/components/useConfirm';
 import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, usePalette } from '@/features/tags/ui';
+
+import { DatePickerModal } from './DatePickerModal';
 
 interface Props {
   type: LibraryItemType;
@@ -30,6 +34,8 @@ export function LibraryItemForm({ type, initial, submitLabel, onSubmit, onCancel
   const [title, setTitle] = useState(start.title);
   const [date, setDate] = useState(start.date);
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const todayId = useTodayId();
 
   const noun = libraryTypeLabel(type).toLowerCase();
   const verb = type === 'movie' ? 'watched' : 'read';
@@ -79,15 +85,42 @@ export function LibraryItemForm({ type, initial, submitLabel, onSubmit, onCancel
         onChangeText={setTitle}
         style={fieldStyle}
       />
-      <TextInput
-        accessibilityLabel={`Date ${verb}`}
-        placeholder={`Date ${verb} (yyyy-mm-dd, optional)`}
-        placeholderTextColor={palette.muted}
-        autoCapitalize="none"
-        autoCorrect={false}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: palette.border,
+          borderRadius: 10,
+          paddingLeft: 12,
+        }}
+      >
+        <TextInput
+          accessibilityLabel={`Date ${verb}`}
+          placeholder={`Date ${verb} (yyyy-mm-dd, optional)`}
+          placeholderTextColor={palette.muted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={date}
+          onChangeText={setDate}
+          style={{ flex: 1, minHeight: 44, color: palette.text, fontSize: 16 }}
+        />
+        <IconButton
+          icon={Calendar}
+          accessibilityLabel={`Pick date ${verb}`}
+          onPress={() => setPicking(true)}
+        />
+      </View>
+      <DatePickerModal
+        visible={picking}
         value={date}
-        onChangeText={setDate}
-        style={fieldStyle}
+        todayId={todayId}
+        title={`Pick date ${verb}`}
+        onPick={(dayId) => {
+          setDate(dayId);
+          setPicking(false);
+        }}
+        onClose={() => setPicking(false)}
       />
       {error !== null ? (
         <Text accessibilityRole="alert" style={{ color: palette.danger, fontSize: 14 }}>
