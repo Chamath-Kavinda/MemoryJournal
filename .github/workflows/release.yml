@@ -1,7 +1,8 @@
 name: Release
 
-# Pushing a version tag (for example v0.2.0) builds the Android APKs and the
-# Windows installer and publishes them on the GitHub Releases page.
+# Pushing a version tag (for example v0.2.0) runs the checks (ci.yml), then builds
+# the Android APK and the Windows installer and publishes them on the GitHub
+# Releases page. Nothing is built or published unless the checks pass.
 #
 #   git tag -a v0.2.0 -m "v0.2.0"
 #   git push origin main --follow-tags
@@ -47,9 +48,14 @@ jobs:
           done
           echo "version=$tag" >> "$GITHUB_OUTPUT"
 
+  ci:
+    name: Checks
+    needs: check
+    uses: ./.github/workflows/ci.yml
+
   android:
     name: Android APKs (EAS)
-    needs: check
+    needs: [check, ci]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -77,7 +83,7 @@ jobs:
 
   windows:
     name: Windows installer
-    needs: check
+    needs: [check, ci]
     runs-on: windows-latest
     timeout-minutes: 45
     env:

@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  # Runs only when a version tag such as v0.2.1 is pushed, not on every commit.
-  push:
-    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+  # Called by release.yml, so every version tag is checked before anything is built.
+  # It does not run on ordinary commits.
+  workflow_call:
   # Lets you start it by hand from the Actions tab when you want a check without a tag.
   workflow_dispatch:
 
