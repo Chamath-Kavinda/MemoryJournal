@@ -1,4 +1,7 @@
+import { pageOf } from './dayPage';
 import type { MessageContext, MessageFirsts } from './messages';
+import { contentOf } from './revisions';
+import { timeBlocksOf } from './timeLines';
 import { daysAway } from './messages';
 import { DETAIL_WINDOW_DAYS, recallScore, recallScoreDelta, type ScoreDay } from './score';
 import { computeStreak, countsTowardStreak, type StreakStats } from './streak';
@@ -87,7 +90,9 @@ function latestSave(days: readonly ScoreDay[]): Save | null {
 
 const usesTag = (revision: DayRevision): boolean => revision.mentions.length > 0;
 const usesMinuteMarker = (revision: DayRevision): boolean =>
-  revision.blocks.some((block) => block.minute !== null && block.text.trim() !== '');
+  timeBlocksOf(pageOf(contentOf(revision))).some(
+    (block) => block.minute !== null && block.text.trim() !== '',
+  );
 
 /** Whether `save` is the only pass in the whole journal that does what `uses` looks for. */
 function isFirstUse(

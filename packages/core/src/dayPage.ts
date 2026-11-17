@@ -1,4 +1,4 @@
-import { sortBlocks, type DayContent } from './revisions';
+import type { DayContent } from './revisions';
 import { formatTimeLine, timeBlocksOf } from './timeLines';
 import type { DayBlock } from './types';
 
@@ -8,6 +8,9 @@ import type { DayBlock } from './types';
  * and that would reorder what the person wrote. A pass written before then holds Free Notes plus
  * hourly blocks. These helpers read both the same way.
  */
+
+const byTime = (a: DayBlock, b: DayBlock): number =>
+  a.hour - b.hour || (a.minute ?? -1) - (b.minute ?? -1);
 
 /** True for a pass in the page shape (no blocks), which is also how a library page is stored. */
 export function isPageContent(content: DayContent): boolean {
@@ -22,7 +25,7 @@ export function pageOf(content: DayContent): string {
   if (isPageContent(content)) return content.freeNotes;
   const parts: string[] = [];
   if (content.freeNotes.trim() !== '') parts.push(content.freeNotes.trimEnd());
-  for (const block of sortBlocks(content.blocks)) {
+  for (const block of [...content.blocks].sort(byTime)) {
     if (block.text.trim() === '') continue;
     parts.push(`${formatTimeLine(block.hour, block.minute)}\n${block.text.trim()}`);
   }

@@ -42,6 +42,14 @@ export function parseTimeLine(line: string): TimeOfDay | null {
   return { hour: Number(match[1]), minute: match[2] === undefined ? null : Number(match[2]) };
 }
 
+/** The character ranges `[start, end)` of the time lines in a page. */
+export function timeLineRanges(text: string): [number, number][] {
+  const ranges: [number, number][] = [];
+  for (const match of text.matchAll(TIME_LINES_GLOBAL)) {
+    ranges.push([match.index, match.index + match[0].length]);
+  }
+  return ranges;
+}
 /** Counts whitespace-separated words, leaving the time lines out. */
 export function countPageWords(text: string): number {
   const withoutTimes = text.replace(TIME_LINES_GLOBAL, '');

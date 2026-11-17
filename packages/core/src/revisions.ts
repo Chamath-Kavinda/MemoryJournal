@@ -1,3 +1,5 @@
+import { pageOf } from './dayPage';
+import { countPageWords, timeLineRanges } from './timeLines';
 import type { DayBlock, DayRevision, EpochMs, RevisionKind } from './types';
 
 /** A sitting ends after this much inactivity (section 5.3). */
@@ -106,11 +108,9 @@ export function contentEquals(a: DayContent, b: DayContent): boolean {
   return JSON.stringify(normalizeContent(a)) === JSON.stringify(normalizeContent(b));
 }
 
+/** Words of a pass, read through `pageOf`; time lines never count as words (section 18.5). */
 export function countContentWords(content: DayContent): number {
-  return content.blocks.reduce(
-    (total, block) => total + countWords(block.text),
-    countWords(content.freeNotes),
-  );
+  return countPageWords(pageOf(content));
 }
 
 // ---------------------------------------------------------------------------
@@ -124,14 +124,20 @@ export interface AdditionsResult {
   addedWordCount: number;
 }
 
+/** The words of a pass as a multiset, read through `pageOf` with time lines left out. */
 function buildWordPool(content: DayContent): Map<string, number> {
   const pool = new Map<string, number>();
-  const texts = [content.freeNotes, ...content.blocks.map((block) => block.text)];
-  for (const text of texts) {
-    for (const token of text.match(/\S+/g) ?? []) {
-      const key = wordKey(token);
-      pool.set(key, (pool.get(key) ?? 0) + 1);
-    }
+  const page = pageOf(content);
+  let text = '';
+  let position = 0;
+  for (const [start, end] of timeLineRanges(page)) {
+    text += `${page.slice(position, start)}\n`;
+    position = end;
+  }
+  text += page.slice(position);
+  for (const token of text.match(/\S+/g) ?? []) {
+    const key = wordKey(token);
+    pool.set(key, (pool.get(key) ?? 0) + 1);
   }
   return pool;
 }
@@ -171,14 +177,44 @@ function markText(
 }
 
 /**
+ * Like `markText`, but time lines (section 18.3) are never marked and never counted: they are
+ * kept as plain segments and only the text between them is compared.
+ */
+function markPageText(
+  pool: Map<string, number> | null,
+  text: string,
+): { segments: TextSegment[]; added: number } {
+  const segments: TextSegment[] = [];
+  let added = 0;
+  const push = (piece: string, flag: boolean): void => {
+    if (piece === '') return;
+    const last = segments[segments.length - 1];
+    if (last && last.added === flag) last.text += piece;
+    else segments.push({ text: piece, added: flag });
+  };
+  let position = 0;
+  for (const [start, end] of timeLineRanges(text)) {
+    const marked = markText(pool, text.slice(position, start));
+    marked.segments.forEach((segment) => push(segment.text, segment.added));
+    added += marked.added;
+    push(text.slice(start, end), false);
+    position = end;
+  }
+  const rest = markText(pool, text.slice(position));
+  rest.segments.forEach((segment) => push(segment.text, segment.added));
+  return { segments, added: added + rest.added };
+}
+
+/**
  * Marks the words of `current` that were not present in `previous`
  * (case and surrounding punctuation are ignored). Words are matched as a
  * multiset, so a word repeated more often than before counts as added.
- * With no previous pass, every word is added.
+ * With no previous pass, every word is added. Both passes are read through `pageOf`, so a pass
+ * in the old shape and one in the new shape compare fairly, and time lines are never marked.
  */
 export function markAdditions(previous: DayContent | null, current: DayContent): AdditionsResult {
   const pool = previous ? buildWordPool(previous) : null;
-  const freeNotes = markText(pool, current.freeNotes);
+  const freeNotes = markPageText(pool, current.freeNotes);
   const blocks = current.blocks.map((block) => markText(pool, block.text));
   return {
     freeNotes: freeNotes.segments,

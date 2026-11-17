@@ -1,5 +1,6 @@
-import { hourHasText, HOURS } from './dayContent';
+import { pageOf } from './dayPage';
 import { contentOf, countAddedWords } from './revisions';
+import { timeBlocksOf } from './timeLines';
 import { addDays, compareDayIds, daysBetween } from './time';
 import type { DayId, DayRevision } from './types';
 
@@ -86,15 +87,17 @@ function scoreWritten(
   const ratio = average > 0 ? Math.min(first.wordCount / average, DETAIL_CAP_RATIO) : 0;
   const detail = (SCORE_WEIGHTS.detail * ratio) / DETAIL_CAP_RATIO;
 
-  // Coverage: distinct hours that have text, out of the waking hours.
-  const content = contentOf(first);
-  const hours = HOURS.filter((hour) => hourHasText(content, hour)).length;
+  // Coverage: distinct hours that have a time line followed by text, out of the waking hours.
+  // A pass is read through the day page, so legacy blocks and new time lines count the same way
+  // (section 18.6). A page with no time lines has no coverage.
+  const timeBlocks = timeBlocksOf(pageOf(contentOf(first))).filter(
+    (block) => block.text.trim() !== '',
+  );
+  const hours = new Set(timeBlocks.map((block) => block.hour)).size;
   const coverage = (SCORE_WEIGHTS.coverage * Math.min(hours, WAKING_HOURS)) / WAKING_HOURS;
 
-  // Precision: exact minute markers plus tagged people, places and numbers.
-  const markers = first.blocks.filter(
-    (block) => block.minute !== null && block.text.trim() !== '',
-  ).length;
+  // Precision: time lines with minutes plus tagged people, places and numbers.
+  const markers = timeBlocks.filter((block) => block.minute !== null).length;
   const precisionCount = markers + new Set(first.mentions).size;
   const precision =
     (SCORE_WEIGHTS.precision * Math.min(precisionCount, PRECISION_TARGET)) / PRECISION_TARGET;
