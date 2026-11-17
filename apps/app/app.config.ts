@@ -22,6 +22,9 @@ function androidArchs(): AndroidArch[] {
   return requested as AndroidArch[];
 }
 
+/** The brand colour of the splash and the window behind it. Keep in sync with SPLASH_BACKGROUND in src/theme/tokens.ts. */
+const SPLASH_BACKGROUND = '#07070D';
+
 const config: ExpoConfig = {
   name: 'Memory Journal',
   slug: 'memory-journal',
@@ -35,6 +38,8 @@ const config: ExpoConfig = {
     package: 'com.memoryjournal.app',
     // Off so a reinstall starts clean and a guest journal is never restored from a backup (D-040).
     allowBackup: false,
+    // No white or grey frame before or after the splash (section 16.3).
+    backgroundColor: SPLASH_BACKGROUND,
   },
   ios: {
     bundleIdentifier: 'com.memoryjournal.app',
@@ -48,6 +53,20 @@ const config: ExpoConfig = {
     'expo-router',
     '@react-native-google-signin/google-signin',
     'expo-notifications',
+    // Solid dark splash with a fully transparent image, so no default icon shows (section 16.3).
+    // The dark variant is identical, so the splash is the same in both system themes.
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: SPLASH_BACKGROUND,
+        image: './assets/splash-transparent.png',
+        imageWidth: 200,
+        dark: {
+          backgroundColor: SPLASH_BACKGROUND,
+          image: './assets/splash-transparent.png',
+        },
+      },
+    ],
     // enforceContrast false lets the app colour the navigation bar buttons (section 16.3).
     ['expo-navigation-bar', { enforceContrast: false }],
     [

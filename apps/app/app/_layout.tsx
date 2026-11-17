@@ -13,6 +13,9 @@ import { useDesktopReminder } from '@/features/reminder/useDesktopReminder';
 import { useReminder } from '@/features/reminder/useReminder';
 import { reminderWanted, useSettings } from '@/features/settings/useSettings';
 import { useThemeDefaultV2 } from '@/features/settings/useThemeDefaultV2';
+import { BrandSplash } from '@/features/splash/BrandSplash';
+import { keepNativeSplash } from '@/features/splash/nativeSplash';
+import { useSplashGate } from '@/features/splash/useSplashGate';
 import { BottomTabBar, NAV_ITEMS, SideNav, isTabScreen } from '@/navigation/AppNav';
 import { useNavShortcuts } from '@/navigation/shortcuts';
 import { SystemBars } from '@/platform/SystemBars';
@@ -20,6 +23,9 @@ import { useFocusRing } from '@/theme/focusRing';
 import { useAppFonts } from '@/theme/fonts';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { useLayout } from '@/theme/useLayout';
+
+// Keep the native splash (solid #07070D, no image) until the brand splash is on screen.
+keepNativeSplash();
 
 /** The page background, the status bar and, on wide windows, the side navigation. */
 function Shell({ showNav }: { showNav: boolean }) {
@@ -62,6 +68,8 @@ export default function RootLayout() {
   const reminderOn = reminderWanted(settings);
   // The fonts are bundled files, so this resolves quickly and never waits for the network.
   const fontsReady = useAppFonts();
+  // The brand splash waits only for the fonts and the saved settings, never for the network.
+  const splash = useSplashGate(fontsReady && settings.status !== 'loading');
 
   useEffect(() => startAuthListener(), []);
   useProfileSync();
@@ -83,11 +91,14 @@ export default function RootLayout() {
       <SystemBars />
       {/* Every delete, remove, discard and sign-out asks through this one dialog. */}
       <ConfirmProvider>
-        {status === 'loading' || !fontsReady ? (
-          <LoadingShell />
-        ) : (
-          <Shell showNav={segments[0] !== 'sign-in'} />
-        )}
+        <View style={{ flex: 1 }}>
+          {status === 'loading' || !fontsReady ? (
+            <LoadingShell />
+          ) : (
+            <Shell showNav={segments[0] !== 'sign-in'} />
+          )}
+          {splash !== 'done' ? <BrandSplash fading={splash === 'fading'} /> : null}
+        </View>
       </ConfirmProvider>
     </ThemeProvider>
   );

@@ -68,3 +68,8 @@ export function staggerDelay(index: number): number {
   const safe = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
   return Math.min(safe, STAGGER_MAX_ITEMS - 1) * STAGGER_STEP;
 }
+
+/** The brand splash shows for at least 500 ms and at most 3 seconds, then fades out over 200 ms (section 15.5). */
+export const SPLASH_MIN_MS = 500;
+export const SPLASH_MAX_MS = 3000;
+export const SPLASH_FADE_MS = 200;
