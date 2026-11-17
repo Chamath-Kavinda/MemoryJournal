@@ -48,6 +48,8 @@ const config: ExpoConfig = {
     'expo-router',
     '@react-native-google-signin/google-signin',
     'expo-notifications',
+    // enforceContrast false lets the app colour the navigation bar buttons (section 16.3).
+    ['expo-navigation-bar', { enforceContrast: false }],
     [
       'expo-build-properties',
       {

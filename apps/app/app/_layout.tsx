@@ -15,6 +15,7 @@ import { reminderWanted, useSettings } from '@/features/settings/useSettings';
 import { useThemeDefaultV2 } from '@/features/settings/useThemeDefaultV2';
 import { BottomTabBar, NAV_ITEMS, SideNav, isTabScreen } from '@/navigation/AppNav';
 import { useNavShortcuts } from '@/navigation/shortcuts';
+import { SystemBars } from '@/platform/SystemBars';
 import { useFocusRing } from '@/theme/focusRing';
 import { useAppFonts } from '@/theme/fonts';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
@@ -78,6 +79,8 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider preference={settings.settings.theme}>
+      {/* The Android navigation bar follows the theme (section 16.3). */}
+      <SystemBars />
       {/* Every delete, remove, discard and sign-out asks through this one dialog. */}
       <ConfirmProvider>
         {status === 'loading' || !fontsReady ? (
