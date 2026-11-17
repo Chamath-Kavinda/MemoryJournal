@@ -1,5 +1,29 @@
 # Release notes
 
+## v0.2.4 (2026-11-17)
+
+Version 0.2.4 changes how a day is shown and written (section 18 of the build document). The journal rules (21:00 unlock, revisions, tags, score, streak) and the Firestore rules are unchanged.
+
+### What is new
+
+- **A day is a page.** Tapping a date opens the day as a read-only page with a pencil in the header. Time lines show as small clock chips and tag mentions show as tag chips that open the tag. An empty day shows a Write button.
+- **One free writing space.** The pencil opens one large field, with no Free Notes block and no hourly rows. Write anything in any order. The header has Cancel and Save, and Cancel with unsaved changes asks "Discard changes?".
+- **Add time.** Choose Hour only (`⏱ 21`) or Hour and minutes (`⏱ 21:25`). The time goes on its own line at the cursor, and adding a time that is already on the page moves the cursor to it.
+- **Add tag.** The tag picker lists every category of the Tags screen, filters by category and search, inserts `@Name` at the cursor and lets you create a tag without leaving the day.
+- **Older days keep working.** A day written before v0.2.4 shows its Free Notes and then its rows in time order. Editing it opens one text with the rows as time lines, and saving makes a new pass while the older pass stays as it was.
+- **Score and highlights read both shapes.** Coverage and Precision read the time lines of the new pages and the rows of old ones. Highlight additions compares an old pass with a new one fairly, and time lines never count as words.
+
+### Removed
+
+- The Free Notes block, the 24 hourly rows, the Add minute and Remove minute buttons and the code behind them. The lesson text and the Insights tips no longer mention them.
+
+### Known limits
+
+- The new Day screen has been checked by tests, not yet by a person on a phone or in the Windows app.
+- A page with no time lines gets no Coverage and no minute Precision for that day. The Insights text does not call this a fault.
+- Older versions of the app show a v0.2.4 pass as plain free text, with the time lines readable as they are.
+- Detail, Coverage and Precision still read your first pass of a day, so they do not change when you edit that day later.
+
 ## v0.2.3 (2026-11-17)
 
 Version 0.2.3 adds Sri Lankan public holidays to the calendar, makes the calendar use the width of a wide window, styles the scrollbar to match the theme, and adds an End User License Agreement (section 17 of the build document). The journal rules are unchanged.

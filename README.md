@@ -101,8 +101,10 @@ Other Android commands, run from `apps/app` (or with `pnpm --filter app <script>
 - ✅ Today is read-only until 9:00 PM local time, with a countdown
 - ✅ After 9:00 PM you write everything you remember about the day
 - ✅ Past days stay editable forever; future days cannot be opened
-- ✅ 24 hourly rows plus a Free Notes block for things you cannot place in time
-- ✅ Add minute markers (like `:25`) inside an hour
+- ✅ A day opens as a read-only page; the pencil turns it into one free writing space
+- ✅ Add time (hour only, or hour and minutes) puts a clock line such as `⏱ 21:25` wherever you are typing
+- ✅ Write in any order, with no required rows or sections
+
 - ✅ Autosaved drafts while you type
 - ✅ Every writing pass is kept as a revision (1st, 2nd, 3rd...)
 - ✅ Revision toggle shows the day exactly as it was in each pass
@@ -218,7 +220,7 @@ All business logic lives in `packages/core` so mobile and desktop behave identic
 
 These steps are for people who got the APK directly from the developer. Only install an app from someone you trust.
 
-1. Download `MemoryJournal-v0.2.3-android.apk` from the [GitHub Releases](../../releases) page. It works on 64-bit and 32-bit phones. You can compare the file with the SHA-256 checksum in the release text.
+1. Download `MemoryJournal-v0.2.4-android.apk` from the [GitHub Releases](../../releases) page. It works on 64-bit and 32-bit phones. You can compare the file with the SHA-256 checksum in the release text.
 2. Open the file. If Android asks, allow your browser or file manager to install apps from this source.
 3. If Google Play Protect shows **App blocked** or **Unknown developer**, this is not a virus finding. It means Google has not seen an app from this developer before, because the app is signed with a new key and installed from outside Google Play. Tap **Install anyway** (the small text link under the description), then continue.
 4. A new version installs over the old one and keeps your data. You do not need to uninstall first.
@@ -290,6 +292,6 @@ Journal text is never sent to any AI service or third party. The analyzer runs e
 ## License
 
 Memory Journal — End User License Agreement  
-Version 0.2.3  
+Version 0.2.4  
 Copyright © 2026 Chama Bro. All rights reserved.  
 See `LICENSE.txt` for full terms.

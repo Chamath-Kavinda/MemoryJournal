@@ -214,3 +214,21 @@ There is no country setting, so the country is the constant `LK`. A year is down
 The 56 px cell limit from section 15.9 now applies to compact windows only; wider windows give the calendar the full content width with 72 px tall rectangular cells. The scrollbar is styled through a style element on the web build and in Electron (the same way as the focus ring), from the theme tokens, and the system scrollbar is left alone on phones. The license is an End User License Agreement in `LICENSE.txt` with clauses for the license grant, restrictions, data and privacy, third-party software and data, and the disclaimers; it is shown by the Windows installer, summarised in the README, and the holiday project's MIT notice is kept in `THIRD_PARTY_NOTICES.md`. The copyright year is 2026, the year this app was made. The exact copyright line of the holiday project's LICENSE file was not readable while this was planned and must be checked before a release.
 
 Note on numbering: section 15.14 says the v0.2.0 decisions are recorded from D-040, but `docs/decisions.md` ended at D-039 before this entry, so those v0.2.0 to v0.2.2 decisions were never written down. This entry takes the next free number and does not fill that gap.
+
+## D-043: A page is stored in `freeNotes` with empty `blocks`
+
+The Day page is one string, so a pass saved by v0.2.4 puts the whole page in `freeNotes` and saves `blocks` as an empty list. This avoids a schema change and a Firestore rules change. `normalizeContent` sorts blocks into time order, which would reorder what the person wrote, so new passes do not use blocks. `packages/core/src/dayPage.ts` reads and writes the page (`pageOf`, `contentFromPage`, `timeBlocksOf` and the time line and cursor helpers).
+
+Known limit: an older version of the app that reads such a pass shows it as plain free text.
+
+## D-044: Time lines are lines of the form `⏱ HH` or `⏱ HH:MM`
+
+A line is a time only when the whole line is exactly the symbol, a space and two digits for the hour, with optional `:` and two digits for the minutes. The symbol inside a sentence stays plain text. Add time puts the line on its own line at the cursor and moves the cursor to an identical line that already exists instead of adding a second one. Two identical lines typed by hand are both kept.
+
+## D-045: The score reads time lines, and a page with none is valid
+
+Detail uses the word count of revision 1 without time lines. Coverage counts the distinct hours with a time line followed by non-blank text, and Precision counts the time lines with minutes plus the distinct tags. A page with no time lines scores 0 for Coverage and for the minute part of Precision on that day, which is the cost of not marking times. Later recall, Consistency and the streak are unchanged, and the 20-word rule ignores time lines.
+
+## D-046: Older days convert on first edit and SaveBar stays
+
+Existing days and passes are never rewritten. View mode shows them through `pageOf` (Free Notes first, then the rows in time order). The Pencil on a legacy Latest pass starts the editor with `pageOf(content)`, and saving creates the next pass, or updates the open one, in the new shape. Section 18.8 listed `SaveBar` for removal, but the Library item screen still uses it, so only `DayWriter`, `HighlightedDay`, the old Day tests and `minuteMarkers.ts` were removed (step 6).

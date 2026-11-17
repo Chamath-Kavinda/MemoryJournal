@@ -1,6 +1,6 @@
 {
   "name": "memory-journal",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "description": "A private journaling app that trains memory by recalling the day each night.",
   "author": "Chama Bro",

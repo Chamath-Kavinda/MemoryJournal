@@ -29,7 +29,7 @@ const config: ExpoConfig = {
   name: 'Memory Journal',
   slug: 'memory-journal',
   scheme: 'memoryjournal',
-  version: '0.2.3',
+  version: '0.2.4',
   // Layouts follow the window size (section 15.9), so rotation is allowed.
   orientation: 'default',
   icon: './assets/icon.png',
