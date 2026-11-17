@@ -27,12 +27,6 @@
         "buildType": "apk"
       }
     },
-    "preview-arm64": {
-      "extends": "preview",
-      "env": {
-        "ANDROID_ARCHS": "arm64-v8a"
-      }
-    },
     "production": {
       "autoIncrement": true,
       "env": {

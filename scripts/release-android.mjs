@@ -4,9 +4,8 @@
 // application-<build id>.apk. Run it with `pnpm release:android`.
 //
 // Usage:
-//   pnpm release:android                     builds preview and preview-arm64
-//   pnpm release:android --profile preview   builds one profile only
-//   pnpm release:android --dry-run           prints the planned file names
+//   pnpm release:android                     builds the preview APK (arm64 and 32-bit)
+//   pnpm release:android --dry-run           prints the planned file name
 
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -21,10 +20,9 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const appDir = path.join(rootDir, 'apps', 'app');
 const outDir = path.join(rootDir, 'release', 'android');
 
-/** EAS profile name to the suffix of the saved file name. */
+/** EAS profile name to the suffix of the saved file name. Only the 52 MB build (arm64 + 32-bit) is published. */
 const PROFILES = {
   preview: '',
-  'preview-arm64': '-arm64',
 };
 
 function parseArgs(argv) {
@@ -168,7 +166,7 @@ async function download(url, file) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log('Usage: pnpm release:android [--profile preview|preview-arm64] [--dry-run]');
+    console.log('Usage: pnpm release:android [--dry-run]');
     return;
   }
 

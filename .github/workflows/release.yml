@@ -66,8 +66,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Builds preview and preview-arm64 on EAS, then saves
-      # MemoryJournal-v<version>-android.apk and ...-android-arm64.apk.
+      # Builds the preview profile on EAS, then saves MemoryJournal-v<version>-android.apk.
       - run: pnpm release:android
 
       - uses: actions/upload-artifact@v4
@@ -159,7 +158,6 @@ jobs:
             echo "## Downloads"
             echo
             echo "- **Android (phones, most devices):** \`MemoryJournal-v$VERSION-android.apk\`"
-            echo "- **Android (64-bit only, smaller):** \`MemoryJournal-v$VERSION-android-arm64.apk\`"
             echo "- **Windows:** \`Memory.Journal-Setup-$VERSION.exe\`"
             echo
             echo "## SHA-256"
