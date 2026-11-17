@@ -154,12 +154,21 @@ describe('scoreDay', () => {
   });
 
   describe('Later recall', () => {
-    const withLater = (dayId: string, ...added: number[]) =>
-      day(
-        dayId,
-        rev(1, { wordCount: 50 }),
-        ...added.map((addedWordCount, i) => rev(i + 2, { addedWordCount })),
-      );
+    /** `count` distinct words that start with `prefix`. */
+    const text = (count: number, prefix: string): string =>
+      Array.from({ length: count }, (_, i) => `${prefix}${i}`).join(' ');
+
+    const FIRST_TEXT = text(5, 'first');
+
+    /** A first pass of 5 words, then one later pass per entry that keeps the text and adds words. */
+    const withLater = (dayId: string, ...added: number[]) => {
+      let notes = FIRST_TEXT;
+      const later = added.map((count, i) => {
+        notes = `${notes} ${text(count, `pass${i + 2}word`)}`.trim();
+        return rev(i + 2, { freeNotes: notes });
+      });
+      return day(dayId, rev(1, { wordCount: 5, freeNotes: FIRST_TEXT }), ...later);
+    };
 
     it('does not count passes on a day that is only one day old', () => {
       const score = scoreDay([withLater('2026-11-13', 30)], '2026-11-13', TODAY);
@@ -173,7 +182,7 @@ describe('scoreDay', () => {
       expect(score?.laterRecall).toBeCloseTo(7.5);
     });
 
-    it('adds up every later pass and stops at 30 words', () => {
+    it('adds up what every later pass added and stops at 30 words', () => {
       const some = scoreDay([withLater('2026-11-01', 10, 10)], '2026-11-01', TODAY);
       const many = scoreDay([withLater('2026-11-01', 40, 40)], '2026-11-01', TODAY);
 
@@ -186,6 +195,36 @@ describe('scoreDay', () => {
 
       expect(scoreDay(days, '2026-11-13', '2026-11-14')?.laterRecall).toBe(0);
       expect(scoreDay(days, '2026-11-13', '2026-11-15')?.laterRecall).toBe(15);
+    });
+
+    it('earns nothing for words that were added and then deleted again', () => {
+      const added = withLater('2026-11-01', 20);
+      const deleted = day(
+        '2026-11-01',
+        ...added.revisions,
+        rev(3, { freeNotes: FIRST_TEXT, addedWordCount: 0 }),
+      );
+
+      expect(scoreDay([added], '2026-11-01', TODAY)?.laterRecall).toBeCloseTo(10);
+      expect(scoreDay([deleted], '2026-11-01', TODAY)?.laterRecall).toBe(0);
+    });
+
+    it('drops by the number of added words that were deleted, and no more', () => {
+      const added = withLater('2026-11-01', 20);
+      const halfDeleted = day(
+        '2026-11-01',
+        ...added.revisions,
+        rev(3, { freeNotes: `${FIRST_TEXT} ${text(10, 'pass2word')}`, addedWordCount: 0 }),
+      );
+
+      expect(scoreDay([halfDeleted], '2026-11-01', TODAY)?.laterRecall).toBeCloseTo(5);
+    });
+
+    it('does not depend on the order the passes are listed in', () => {
+      const ordered = withLater('2026-11-01', 10, 10);
+      const shuffled = day('2026-11-01', ...[...ordered.revisions].reverse());
+
+      expect(scoreDay([shuffled], '2026-11-01', TODAY)?.laterRecall).toBeCloseTo(10);
     });
   });
 

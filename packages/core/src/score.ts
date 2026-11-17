@@ -1,5 +1,5 @@
 import { hourHasText, HOURS } from './dayContent';
-import { contentOf } from './revisions';
+import { contentOf, countAddedWords } from './revisions';
 import { addDays, compareDayIds, daysBetween } from './time';
 import type { DayId, DayRevision } from './types';
 
@@ -99,13 +99,17 @@ function scoreWritten(
   const precision =
     (SCORE_WEIGHTS.precision * Math.min(precisionCount, PRECISION_TARGET)) / PRECISION_TARGET;
 
-  // Later recall: words added after the first pass, once the day is older than a day.
+  // Later recall: words the newest pass has that the first pass did not, once the day is older
+  // than a day. This is the net result, not the sum of every pass, so text that was added and
+  // then deleted again earns nothing.
   const age = daysBetween(day.dayId, today);
+  const latest = day.revisions.reduce(
+    (newest, revision) => (revision.n > newest.n ? revision : newest),
+    first,
+  );
   const added =
-    age > LATER_RECALL_MIN_AGE_DAYS
-      ? day.revisions
-          .filter((revision) => revision.n > 1)
-          .reduce((sum, revision) => sum + revision.addedWordCount, 0)
+    age > LATER_RECALL_MIN_AGE_DAYS && latest.n > first.n
+      ? countAddedWords(contentOf(first), contentOf(latest))
       : 0;
   const laterRecall =
     (SCORE_WEIGHTS.laterRecall * Math.min(added, LATER_RECALL_TARGET_WORDS)) /
