@@ -1,5 +1,20 @@
 # Release notes
 
+## v0.2.1 (2026-11-17)
+
+Version 0.2.1 fixes the recall score and simplifies how the Android app is published.
+
+### What is new
+
+- **Recall score fix.** The Later recall part of the score now counts the words your newest pass has that your first pass did not. Text you add to an older day and then delete again no longer keeps its points, and deleting only some of it takes away only those points.
+- **One Android file.** Each release now has a single APK, `MemoryJournal-v0.2.1-android.apk`, which runs on 64-bit and 32-bit phones. The separate arm64-only file is no longer published.
+- **Faster releases.** Building the release takes about half as long, because only one Android build is made.
+- **Checks on tags only.** The automatic checks on GitHub run when a version tag is pushed or when started by hand, not on every commit.
+
+### Known limits
+
+- Detail, Coverage and Precision still read your first pass of a day, so they do not change when you edit that day later.
+
 ## v0.2.0 (2026-11-16)
 
 Version 0.2.0 changes how the app opens, how it looks and how big it is. You can now use it without signing in, the default look is a dark neon-gradient theme, navigation is icon-only, every delete asks first, and the Android build is set up to be much smaller. The first phone test of v0.1.0 drove this version (section 15 of the build document).
