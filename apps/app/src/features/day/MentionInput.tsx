@@ -3,9 +3,12 @@ import {
   displaySegments,
   displayToStoredOffset,
   fromDisplayText,
+  insertTimeLine,
   mentionTargets,
   mentionToken,
   replaceDisplayRange,
+  storedSegments,
+  storedToDisplayOffset,
   suggestTags,
   toDisplayText,
   type Tag,
@@ -13,7 +16,7 @@ import {
   type TagGroup,
 } from '@memory-journal/core';
 import { AtSign, Tag as TagIcon } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { Pressable, View, type StyleProp, type TextStyle } from 'react-native';
 
 import { IconButton } from '@/components/IconButton';
@@ -54,6 +57,21 @@ interface Props {
   style: StyleProp<TextStyle>;
   /** Called as the cursor moves, with its position in the stored text. */
   onCursorChange?: (storedOffset: number) => void;
+  /** False hides the small @ and Save as tag buttons, for a screen with its own toolbar. */
+  inlineTools?: boolean;
+  /** Lets the screen insert a time line or a tag at the cursor. */
+  handle?: Ref<MentionInputHandle>;
+}
+
+/** What a screen with its own toolbar can ask the field to do. */
+export interface MentionInputHandle {
+  /** Adds the time line of section 18.3 at the cursor, or moves the cursor to an existing one. */
+  insertTime: (hour: number, minute: number | null) => void;
+  /** Puts a mention at the cursor (section 18.4), or in place of the selection when asked. */
+  insertTag: (id: string, name: string, replaceSelection?: boolean) => void;
+  /** The selected text, for Save as tag. Empty when nothing is selected. */
+  selectedText: () => string;
+  focus: () => void;
 }
 
 function TagGroups({
@@ -103,6 +121,8 @@ export function MentionInput({
   autoFocus,
   style,
   onCursorChange,
+  inlineTools = true,
+  handle,
 }: Props) {
   const palette = usePalette();
   const tags = tagging?.tags ?? NO_TAGS;
@@ -146,6 +166,32 @@ export function MentionInput({
     setPanel(null);
   }
 
+  const inputRef = useRef<{ focus: () => void } | null>(null);
+  useImperativeHandle(
+    handle,
+    () => ({
+      insertTime: (hour, minute) => {
+        const cursor = displayToStoredOffset(displaySegments(display, targets), selection.end);
+        const edit = insertTimeLine(value, cursor, hour, minute);
+        if (edit.text !== value) onChangeValue(edit.text);
+        const at = storedToDisplayOffset(storedSegments(edit.text, names), edit.cursor);
+        setForced({ start: at, end: at });
+        inputRef.current?.focus();
+      },
+      insertTag: (id, name, replaceSelection = false) => {
+        const range = replaceSelection
+          ? { start: selection.start, end: selection.end }
+          : { start: selection.end, end: selection.end };
+        insertMention(range, id, name);
+        inputRef.current?.focus();
+      },
+      selectedText: () => selectedText,
+      focus: () => inputRef.current?.focus(),
+    }),
+    // The handle reads the newest text and cursor each time the field renders.
+    [value, display, targets, names, selection, selectedText, onChangeValue],
+  );
+
   function handleSelection(next: Range) {
     setSelection(next);
     setForced(null);
@@ -166,6 +212,9 @@ export function MentionInput({
   return (
     <View style={{ gap: 6 }}>
       <TextInput
+        ref={(node) => {
+          inputRef.current = node;
+        }}
         accessibilityLabel={label}
         multiline
         autoFocus={autoFocus}
@@ -178,7 +227,7 @@ export function MentionInput({
         style={style}
       />
 
-      {editable && tagging !== undefined && (touched || panel !== null) ? (
+      {inlineTools && editable && tagging !== undefined && (touched || panel !== null) ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.xs }}>
           <IconButton
             icon={AtSign}

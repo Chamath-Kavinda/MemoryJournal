@@ -177,6 +177,27 @@ export function displayToStoredOffset(segments: readonly DisplaySegment[], offse
 }
 
 /**
+ * The reverse of `displayToStoredOffset`: converts a cursor position in stored text to the
+ * matching position in editor text. A position inside a token moves to the nearer edge of the
+ * mention it shows as.
+ */
+export function storedToDisplayOffset(segments: readonly DisplaySegment[], offset: number): number {
+  let displayPos = 0;
+  let storedPos = 0;
+  for (const segment of segments) {
+    const length = segment.stored.length;
+    if (offset <= storedPos + length) {
+      if (segment.mentionId === null) return displayPos + (offset - storedPos);
+      const nearStart = offset - storedPos <= length / 2;
+      return nearStart ? displayPos : displayPos + segment.display.length;
+    }
+    displayPos += segment.display.length;
+    storedPos += length;
+  }
+  return displayPos;
+}
+
+/**
  * Replaces a range of editor text with stored text (for example a mention token) and returns
  * the new stored text. Works on the stored form directly, so a tag that was only just created
  * and is not in `targets` yet still ends up in the text.

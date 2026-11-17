@@ -1,13 +1,15 @@
 import { parseDayId, type DayId, type GuestDayAccess } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { Lock, Pencil, TriangleAlert, type LucideIcon } from 'lucide-react-native';
+import { Lock, Pencil, Save, TriangleAlert, X, type LucideIcon } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { BackButton } from '@/components/BackButton';
+import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { FadeUp } from '@/components/FadeUp';
 import { Icon } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
+import { useBackShortcut } from '@/navigation/shortcuts';
 import { SPACING } from '@/theme/layout';
 import type { Palette } from '@/theme/palette';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -24,6 +26,13 @@ interface Props {
   onEdit?: (() => void) | undefined;
   /** True when the pencil is shown but writing is not possible now, for example before 21:00. */
   editDisabled?: boolean;
+  /** Edit mode: the header shows Cancel (X) and Save instead of Back and the pencil. */
+  editing?: boolean;
+  onCancel?: (() => void) | undefined;
+  onSave?: (() => void) | undefined;
+  saving?: boolean;
+  /** False while a sheet is open, so Esc closes the sheet and does not cancel the edit. */
+  cancelShortcut?: boolean;
 }
 
 interface Banner {
@@ -63,12 +72,36 @@ function bannerFor(access: GuestDayAccess | null): Banner | null {
   }
 }
 
+/** The X of edit mode. On the web build and in the Windows app Esc does the same. */
+function CancelButton({ onCancel, shortcut }: { onCancel: () => void; shortcut: boolean }) {
+  useBackShortcut(shortcut ? onCancel : noop);
+  return (
+    <IconButton testID="cancel-edit" icon={X} accessibilityLabel="Cancel" onPress={onCancel} />
+  );
+}
+
+function noop(): void {
+  // Nothing to do: the shortcut is switched off while a sheet is open.
+}
+
 /**
- * Header of the Day screen: the Back icon, a lock chip with the countdown, a Pencil that starts
- * editing, the date and, only when writing is not possible for a reason the chip does not give,
- * a status banner with an icon. It fades up when the screen opens. The page sits below it.
+ * Header of the Day screen. In View mode: the Back icon, a lock chip with the countdown, a Pencil
+ * that starts editing, the date and, only when writing is not possible for a reason the chip
+ * does not give, a status banner with an icon. In edit mode (section 18.2): a Cancel X and a
+ * gradient Save button. It fades up when the screen opens. The page sits below it.
  */
-export function DayScreenView({ dayId, access, onBack, onEdit, editDisabled = false }: Props) {
+export function DayScreenView({
+  dayId,
+  access,
+  onBack,
+  onEdit,
+  editDisabled = false,
+  editing = false,
+  onCancel,
+  onSave,
+  saving = false,
+  cancelShortcut = true,
+}: Props) {
   const { palette } = useTheme();
   const parts = parseDayId(dayId);
   const heading = parts
@@ -88,10 +121,16 @@ export function DayScreenView({ dayId, access, onBack, onEdit, editDisabled = fa
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <BackButton onBack={onBack} />
+        {editing && onCancel ? (
+          <CancelButton onCancel={onCancel} shortcut={cancelShortcut} />
+        ) : (
+          <BackButton onBack={onBack} />
+        )}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
           <LockChip access={access} />
-          {onEdit ? (
+          {editing && onSave ? (
+            <Button testID="save-day" label="Save" icon={Save} loading={saving} onPress={onSave} />
+          ) : onEdit ? (
             <IconButton
               testID="edit-day"
               icon={Pencil}

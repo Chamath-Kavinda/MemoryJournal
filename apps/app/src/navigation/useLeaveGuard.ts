@@ -13,6 +13,8 @@ interface Options {
   message: string;
   /** Throws the unsaved changes away. Called after the person confirms and before `leave`. */
   onDiscard?: () => void;
+  /** The button that stays on the screen. Defaults to Cancel; the Day screen says Keep editing. */
+  keepLabel?: string;
 }
 
 /**
@@ -21,10 +23,16 @@ interface Options {
  * build, because the Back button wires those. On Android it also takes over the hardware Back
  * button while there are unsaved changes.
  */
-export function useLeaveGuard({ dirty, leave, message, onDiscard }: Options): () => void {
+export function useLeaveGuard({
+  dirty,
+  leave,
+  message,
+  onDiscard,
+  keepLabel,
+}: Options): () => void {
   const confirm = useConfirm();
-  const latest = useRef({ dirty, leave, message, onDiscard });
-  latest.current = { dirty, leave, message, onDiscard };
+  const latest = useRef({ dirty, leave, message, onDiscard, keepLabel });
+  latest.current = { dirty, leave, message, onDiscard, keepLabel };
   // A second Back while the dialog is open must not open a second dialog.
   const asking = useRef(false);
 
@@ -40,6 +48,7 @@ export function useLeaveGuard({ dirty, leave, message, onDiscard }: Options): ()
       title: 'Discard changes?',
       message: current.message,
       confirmLabel: 'Discard changes',
+      ...(current.keepLabel !== undefined ? { cancelLabel: current.keepLabel } : {}),
       icon: TriangleAlert,
     }).then((confirmed) => {
       asking.current = false;

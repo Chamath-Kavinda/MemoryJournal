@@ -1,5 +1,4 @@
 import {
-  contentEquals,
   contentOf,
   emptyContent,
   isContentEmpty,
@@ -11,7 +10,7 @@ import {
 } from '@memory-journal/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
@@ -20,17 +19,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from '@/components/Snackbar';
 import { useConfirm } from '@/components/useConfirm';
 import { useAuthStore } from '@/features/auth/authStore';
+import {
+  DayPageEditor,
+  DayPageSheets,
+  DayPageToolbar,
+  useDayPageTools,
+} from '@/features/day/DayPageEditor';
 import { DayPageView } from '@/features/day/DayPageView';
 import { DayScreenView } from '@/features/day/DayScreenView';
-import { DayWriter } from '@/features/day/DayWriter';
 import { DraftStatus } from '@/features/day/DraftStatus';
 import { draftStorage } from '@/features/day/draftStorage';
 import { draftOwner } from '@/features/day/draftStore';
 import { EmptyDay } from '@/features/day/EmptyDay';
 import { showFirstSaveNoticeOnce } from '@/features/day/firstSaveNotice';
 import { HighlightSwitch } from '@/features/day/HighlightSwitch';
+import { contentToSave, draftAfterTyping, draftText, pageChanged } from '@/features/day/pageDraft';
 import { RevisionToggle } from '@/features/day/RevisionToggle';
-import { SAVE_BAR_CLEARANCE, SaveBar } from '@/features/day/SaveBar';
 import type { Tagging } from '@/features/day/tagging';
 import { useDayAccess } from '@/features/day/useDayAccess';
 import { useDayDraft } from '@/features/day/useDayDraft';
@@ -105,14 +109,20 @@ export default function DayRoute() {
     history !== null &&
     seededDay === dayId;
 
+  // The latest saved pass, which the writing is compared with (section 18.5).
+  const savedContent = latest ? contentOf(latest) : emptyContent();
+  const canSave = editable && pageChanged(draft.content, savedContent);
+
   // A day opens in View mode. The pencil switches the same screen to editing (section 18.2).
   const [editing, setEditing] = useState(false);
   const [selection, setSelection] = useState<RevisionSelection>('latest');
   const [highlight, setHighlight] = useState(false);
+  const [restoreChecked, setRestoreChecked] = useState(false);
   useEffect(() => {
     setSelection('latest');
     setHighlight(false);
     setEditing(false);
+    setRestoreChecked(false);
   }, [dayId]);
 
   // Home's Write today opens the day already in edit mode, once the day is writable.
@@ -123,13 +133,26 @@ export default function DayRoute() {
     setPendingEdit(false);
   }, [pendingEdit, ready, editable]);
 
+  // A draft restored from the device (the app closed before Save) opens straight in edit mode.
+  useEffect(() => {
+    if (!ready || restoreChecked) return;
+    setRestoreChecked(true);
+    if (editable && pageChanged(draft.content, savedContent)) setEditing(true);
+  }, [ready, restoreChecked, editable, draft.content, savedContent]);
+
+  // The Clock and Tag buttons and their sheets (sections 18.3 and 18.4).
+  const tools = useDayPageTools();
+  const closeSheet = tools.close;
+
   const daySave = useDaySave({
     repository,
     owner,
     dayId,
     history,
-    content: draft.content,
-    discardDraft: draft.discard,
+    // The page as it would be stored. Unchanged writing gives back the saved pass itself, so a
+    // day written before v0.2.4 is not rewritten without an edit (section 18.7).
+    content: contentToSave(draft.content, savedContent),
+    discardDraft: () => draft.discard(draft.content),
     editable,
     storage: draftStorage,
   });
@@ -142,12 +165,19 @@ export default function DayRoute() {
   const dismissSnack = useCallback(() => setSnack((s) => ({ ...s, message: null })), []);
 
   // A guest is told once, after their first revision is really saved, where the journal lives.
-  // A finished save returns to View mode on the latest pass.
+  // A finished save returns to View mode on the latest pass. With nothing changed, Save just
+  // returns to View mode.
   const confirm = useConfirm();
   const saveAndNotify = async () => {
+    if (!canSave) {
+      closeSheet();
+      setEditing(false);
+      return;
+    }
     const saved = await daySave.save();
     if (saved) {
-      setSnack((s) => ({ message: 'Saved', id: s.id + 1 }));
+      setSnack((s) => ({ message: 'All changes saved', id: s.id + 1 }));
+      closeSheet();
       setEditing(false);
     }
     if (saved && uid === undefined) await showFirstSaveNoticeOnce(draftStorage, confirm);
@@ -159,36 +189,50 @@ export default function DayRoute() {
   const previous =
     history === null || target === null ? null : previousRevision(history.revisions, target.n);
   const highlighting = highlight && target !== null && previous !== null;
-  const savedContent = latest ? contentOf(latest) : emptyContent();
-  const canSave = editable && !contentEquals(draft.content, savedContent);
 
-  const showEditor = ready && editing;
-  // The Save bar sticks to the bottom while the draft is being edited.
-  const showSaveBar = showEditor && editable;
+  const showEditor = ready && editing && editable;
   // The pencil belongs to the Latest pass in View mode. Older passes are always read-only.
   const showPencil = ready && !editing && selection === 'latest';
   const startEdit = () => {
     if (editable && selection === 'latest') setEditing(true);
   };
 
-  // Leaving with unsaved writing asks first. Confirming drops the text and its stored draft.
+  // Cancel (X) and Back with unsaved changes ask first. Confirming drops the text and its stored
+  // draft and returns to View mode. Without changes, Cancel returns at once. In View mode Back
+  // leaves the screen.
   const back = useLeaveGuard({
     dirty: showEditor && canSave,
-    leave: () => (router.canGoBack() ? router.back() : router.replace('/home')),
+    leave: () => {
+      if (editing) {
+        closeSheet();
+        setEditing(false);
+        return;
+      }
+      if (router.canGoBack()) router.back();
+      else router.replace('/home');
+    },
     message: 'Your unsaved changes to this day will be lost.',
+    keepLabel: 'Keep editing',
     onDiscard: () => {
       draft.setContent(savedContent);
       draft.discard(savedContent);
     },
   });
 
+  const pendingSync = history?.hasPendingWrites ?? false;
+  let saveNote = '';
+  if (daySave.failed) saveNote = 'Could not save. Your text is still on this device.';
+  else if (pendingSync) saveNote = 'Saved on this device. It will sync when you are online.';
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{ paddingBottom: showSaveBar ? SAVE_BAR_CLEARANCE : SPACING.xl }}
+          contentContainerStyle={{ paddingBottom: SPACING.xl }}
         >
           <DayScreenView
             dayId={dayId}
@@ -196,6 +240,11 @@ export default function DayRoute() {
             onBack={back}
             onEdit={showPencil ? startEdit : undefined}
             editDisabled={!editable}
+            editing={showEditor}
+            onCancel={back}
+            onSave={() => void saveAndNotify()}
+            saving={daySave.saving && !pendingSync}
+            cancelShortcut={tools.sheet === null}
           />
           {historyFailed ? (
             <Text
@@ -207,14 +256,30 @@ export default function DayRoute() {
             </Text>
           ) : null}
           {tagError !== null ? <ErrorBanner message={tagError} onDismiss={clearTagError} /> : null}
-          {ready && editing ? (
+          {showEditor ? (
             <>
               <DraftStatus state={draft.saveState} />
-              <DayWriter
-                content={draft.content}
-                onChange={draft.setContent}
+              {saveNote !== '' ? (
+                <Text
+                  variant="caption"
+                  accessibilityRole={daySave.failed ? 'alert' : undefined}
+                  accessibilityLiveRegion="polite"
+                  style={{
+                    paddingHorizontal: SPACING.lg,
+                    paddingBottom: SPACING.sm,
+                    textAlign: 'center',
+                    color: daySave.failed ? palette.danger : palette.muted,
+                  }}
+                >
+                  {saveNote}
+                </Text>
+              ) : null}
+              <DayPageEditor
+                text={draftText(draft.content)}
+                onChange={(text) => draft.setContent(draftAfterTyping(text))}
                 editable={editable}
                 tagging={tagging}
+                tools={tools}
               />
             </>
           ) : null}
@@ -243,17 +308,14 @@ export default function DayRoute() {
             </>
           ) : null}
         </ScrollView>
-        {showSaveBar ? (
-          <SaveBar
-            canSave={canSave}
-            saving={daySave.saving}
-            failed={daySave.failed}
-            pendingSync={history?.hasPendingWrites ?? false}
-            onSave={() => void saveAndNotify()}
-          />
+        {showEditor ? (
+          <>
+            <DayPageToolbar tools={tools} canTag={tagging !== undefined} />
+            <DayPageSheets tools={tools} tagging={tagging} />
+          </>
         ) : null}
         <Snackbar message={snack.message} id={snack.id} onDismiss={dismissSnack} />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

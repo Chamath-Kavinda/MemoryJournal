@@ -65,4 +65,79 @@ describe('DayScreenView', () => {
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  describe('view mode', () => {
+    it('shows the pencil and starts editing when it is pressed', async () => {
+      const onEdit = jest.fn();
+      await render(
+        <DayScreenView
+          dayId="2026-11-10"
+          access={{ state: 'open' }}
+          onBack={jest.fn()}
+          onEdit={onEdit}
+        />,
+      );
+
+      await fireEvent.press(screen.getByLabelText('Edit day'));
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(screen.queryByLabelText('Cancel')).toBeNull();
+      expect(screen.queryByText('Save')).toBeNull();
+    });
+
+    it('shows no pencil when there is nothing to edit, such as an older pass', async () => {
+      await render(
+        <DayScreenView dayId="2026-11-10" access={{ state: 'open' }} onBack={jest.fn()} />,
+      );
+
+      expect(screen.queryByLabelText('Edit day')).toBeNull();
+    });
+  });
+
+  describe('edit mode', () => {
+    function editing() {
+      const onCancel = jest.fn();
+      const onSave = jest.fn();
+      const element = (
+        <DayScreenView
+          dayId="2026-11-10"
+          access={{ state: 'open' }}
+          onBack={jest.fn()}
+          onEdit={jest.fn()}
+          editing
+          onCancel={onCancel}
+          onSave={onSave}
+        />
+      );
+      return { onCancel, onSave, element };
+    }
+
+    it('shows Cancel and Save instead of Back and the pencil', async () => {
+      const { element } = editing();
+      await render(element);
+
+      expect(screen.getByLabelText('Cancel')).toBeTruthy();
+      expect(screen.getByText('Save')).toBeTruthy();
+      expect(screen.queryByLabelText('Back')).toBeNull();
+      expect(screen.queryByLabelText('Edit day')).toBeNull();
+    });
+
+    it('cancels when the X is pressed', async () => {
+      const { element, onCancel } = editing();
+      await render(element);
+
+      await fireEvent.press(screen.getByLabelText('Cancel'));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('saves when Save is pressed', async () => {
+      const { element, onSave } = editing();
+      await render(element);
+
+      await fireEvent.press(screen.getByText('Save'));
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+  });
 });

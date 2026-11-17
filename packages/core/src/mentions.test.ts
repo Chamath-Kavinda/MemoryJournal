@@ -1,4 +1,4 @@
-import {
+﻿import {
   MAX_MENTION_QUERY,
   activeMention,
   displaySegments,
@@ -8,6 +8,7 @@ import {
   mentionTargets,
   replaceDisplayRange,
   storedSegments,
+  storedToDisplayOffset,
   suggestTags,
   toDisplayText,
   type MentionTarget,
@@ -227,5 +228,32 @@ describe('mapContentText', () => {
       freeNotes: 'A',
       blocks: [{ hour: 9, minute: 25, text: 'B' }],
     });
+  });
+});
+
+describe('storedToDisplayOffset', () => {
+  const stored = `met ${mentionToken('t1', 'Ravi')} today`;
+  const segments = storedSegments(stored, names);
+  const token = mentionToken('t1', 'Ravi');
+
+  it('is the same position in plain text', () => {
+    expect(storedToDisplayOffset(storedSegments('hello', names), 3)).toBe(3);
+    expect(storedToDisplayOffset([], 0)).toBe(0);
+  });
+
+  it('counts a mention as the @Name it shows as', () => {
+    // "met " is 4 characters in both forms; the token ends at 4 + token.length, "@Ravi" at 4 + 5.
+    expect(storedToDisplayOffset(segments, 4 + token.length)).toBe(9);
+    expect(storedToDisplayOffset(segments, stored.length)).toBe(
+      toDisplayText(stored, names).length,
+    );
+  });
+
+  it('moves a position inside a token to its nearer edge and undoes displayToStoredOffset', () => {
+    expect(storedToDisplayOffset(segments, 5)).toBe(4);
+    expect(storedToDisplayOffset(segments, 4 + token.length - 1)).toBe(9);
+    for (const offset of [0, 4, 9, 12]) {
+      expect(storedToDisplayOffset(segments, displayToStoredOffset(segments, offset))).toBe(offset);
+    }
   });
 });
