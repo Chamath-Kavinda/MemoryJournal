@@ -751,6 +751,14 @@ This change is documentation only. No code is written until the plan below is co
    - The open banner and the locked banner are removed. The lock chip with the countdown stays and is the only lock indicator.
    - The banners for a future day, a day that is not valid and a wrong device clock stay, because they explain why writing is not possible.
    - Sections 5.3 and 15.11 mention a banner for the locked state; this section replaces that.
+6. **Branded splash instead of the default one.**
+   - Native splash: add `expo-splash-screen` and its config plugin in `app.config.ts` with `backgroundColor` `#07070D` and a fully transparent image `assets/splash-transparent.png` (1024 by 1024, a few hundred bytes), for the light and the dark variant alike, so the splash is the same in both system themes. Android 12 and newer always draw an icon area, and the transparent image is how it stays empty. The Android window background is also `#07070D`, so there is no white or grey frame before or after the splash.
+   - The app keeps the native splash visible with `SplashScreen.preventAutoHideAsync()` until the first React screen is on the screen, and then hides it, so the hand-off to the in-app splash has no flash.
+   - In-app brand splash: a `BrandSplash` component in `apps/app/src/features/splash/` built exactly as section 15.5 says. The name Memory Journal in large bold text with a soft violet glow, a thin indeterminate loading bar with the violet to blue gradient, and the colours of the dark palette whatever theme is saved. Reduce motion makes the bar static and the text Loading.
+   - `app/_layout.tsx` shows `BrandSplash` instead of the plain spinner. It waits only for the bundled fonts and the saved settings, shows for at least 500 ms and at most 3 seconds, and fades out over 200 ms (the `base` token is 250 ms, so use `DURATION.fast` plus the fade rules of section 15.16) into the saved theme. It never waits for the network or for Firebase.
+   - The web build and the Windows app use the same `BrandSplash`. Check that the Electron window keeps `backgroundColor` `#07070D` and stays hidden until `ready-to-show` (section 15.5).
+   - The native part needs a new native build. A JavaScript update changes only the in-app splash, so the default splash stays on an installed v0.2.1 build until the new APK is installed.
+   - Section 15.5 stays the design of record; this item makes it true. The known limit about the default splash icon in the release notes is removed once it is checked on a phone.
 
 ### 16.4 Version and release rules
 
@@ -763,7 +771,8 @@ This change is documentation only. No code is written until the plan below is co
   4. `fix(app): shorten the theme change animation`
   5. `feat(app): add a calendar picker to the Library date field`
   6. `refactor(app): remove the open and locked banners from the Day screen`
-  7. `chore: release v0.2.2 with notes`
+  7. `feat(app): replace the default splash with the branded name and loading bar`
+  8. `chore: release v0.2.2 with notes`
 - Tag the last commit with `git tag -a v0.2.2 -m "v0.2.2"`, then push the commits and the tag. The tag starts the checks and the release build.
 
 ### 16.5 Acceptance criteria for v0.2.2
@@ -774,4 +783,5 @@ This change is documentation only. No code is written until the plan below is co
 4. Add movie, Add book and the item edit form each show a Calendar icon at the end of the date input. Picking a date fills the input with `yyyy-mm-dd`, future dates cannot be picked, and a typed date still works.
 5. The Day screen shows no banner for an open or a locked day. The lock chip still shows the state and the countdown. Future days, invalid days and a wrong device clock still show their banner.
 6. The Settings footer shows v0.2.2 and the version is 0.2.2 in all five `package.json` files and the app config. The git history has no version-only commit and the `v0.2.2` tag is on the final commit.
-7. Core tests, app tests, rules tests and CI pass.
+7. On a fresh start the screen shows no default Android splash and no icon. The native splash is a solid `#07070D` screen with no image, and the first React screen shows the name Memory Journal with the loading bar on the same colour, in both the dark and the light theme, then fades into Home. It never waits for the network.
+8. Core tests, app tests, rules tests and CI pass.
