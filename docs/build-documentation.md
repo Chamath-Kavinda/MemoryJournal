@@ -827,10 +827,11 @@ Rules:
 
 ### 17.4 Themed scrollbar (web build and Windows app)
 
-- The scrollbar follows the active theme and changes with it. Track: `bg`. Thumb: a vertical `neonViolet` to `neonBlue` gradient, 12 px wide with a 3 px inset in the track color so it looks like a rounded pill. Hover: the thumb gets the brighter `neonCyan` end. The corner uses the track color.
+- The scrollbar follows the active theme and changes with it. Track: `bg`. Thumb: a vertical `neonViolet` to `neonBlue` gradient, 12 px wide with a 3 px inset in the track color so it looks like a rounded pill. Hover: the thumb gets the brighter `neonCyan` end. The corner uses the track color. A horizontal scrollbar uses the same colors with the gradient turned to run left to right.
 - It applies to every scrollable area, including the main page scroll and text fields.
-- Browsers that do not support `::-webkit-scrollbar` get a thin scrollbar with `scrollbar-color` in the same colors.
-- It is added in the same way as the focus ring (`useFocusRing`): a small hook injects one style element on the web build and removes it when the colors change. It does nothing on Android and iOS, where the system scrollbar is already a thin overlay.
+- Browsers that do not support `::-webkit-scrollbar` get a thin scrollbar with `scrollbar-color` in the same colors. These rules sit inside `@supports not selector(::-webkit-scrollbar)`, because a browser that knows the standard `scrollbar-color` ignores `::-webkit-scrollbar` altogether, which would lose the gradient and the pill shape.
+- It is added in the same way as the focus ring (`useFocusRing`): the hook `useScrollbarTheme` in `apps/app/src/theme/scrollbar.ts` injects one style element on the web build and removes it when the colors change. The rules come from the pure function `scrollbarCss`, which is unit tested in `scrollbar.test.ts`. `Shell` in `apps/app/app/_layout.tsx` calls the hook with `background`, `neonViolet`, `neonBlue` and `neonCyan` of the active palette. It does nothing on Android and iOS, where the system scrollbar is already a thin overlay.
+- Not checked on a running app yet: the look in the Windows installer build and the web build is confirmed by hand (acceptance criterion 1).
 
 ### 17.5 License and notices
 
@@ -855,6 +856,8 @@ The license follows the WorkTracker project: an End User License Agreement in `L
   5. `fix(app): match the scrollbar to the theme on web and desktop`
   6. `docs: add end user license, third-party notice and installer license`
   7. `chore: release v0.2.3 with notes`
+- Three commits were added during the work, outside the numbered plan, and each passed lint, typecheck and tests: `fix(desktop): load the Google client from .env in installer builds` and `fix(app): keep the sign-in form in a narrow centered column` (both from testing the Windows installer), and `feat(app): greet the person on Home by time of day` (section 17.8, committed before the scrollbar commit).
+- Commit 5 is `fix(app): match the scrollbar to the theme on web and desktop` and holds `theme/scrollbar.ts`, its test and the `useScrollbarTheme` call in `Shell`.
 - Tag the last commit `v0.2.3` and push, as in section 16.4.
 
 ### 17.7 Acceptance criteria for v0.2.3

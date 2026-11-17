@@ -22,6 +22,7 @@ import { SystemBars } from '@/platform/SystemBars';
 import { useFocusRing } from '@/theme/focusRing';
 import { useAppFonts } from '@/theme/fonts';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
+import { useScrollbarTheme } from '@/theme/scrollbar';
 import { useLayout } from '@/theme/useLayout';
 
 // Keep the native splash (solid #07070D, no image) until the brand splash is on screen.
@@ -38,6 +39,13 @@ function Shell({ showNav }: { showNav: boolean }) {
   // The bottom bar shows on the five tab screens only; Day, Settings and the other screens hide it.
   const bottomBar = showNav && !wide && isTabScreen(pathname);
   useFocusRing(palette.accent);
+  // The scrollbars follow the theme: dark track and violet to blue thumb, or the light equivalents.
+  useScrollbarTheme({
+    track: palette.background,
+    from: palette.neonViolet,
+    to: palette.neonBlue,
+    hover: palette.neonCyan,
+  });
   // Alt+1 to Alt+6 jump between the main sections, on the web build and in the desktop app.
   useNavShortcuts(
     NAV_ITEMS.length,
