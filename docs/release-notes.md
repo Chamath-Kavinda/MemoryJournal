@@ -1,5 +1,27 @@
 # Release notes
 
+## v0.2.3 (2026-11-17)
+
+Version 0.2.3 adds Sri Lankan public holidays to the calendar, makes the calendar use the width of a wide window, styles the scrollbar to match the theme, and adds an End User License Agreement (section 17 of the build document). The journal rules are unchanged.
+
+### What is new
+
+- **Public holidays.** Sri Lanka public holidays show as a small yellow dot on the calendar, next to the written dot when both apply, and the holidays of the shown month are listed under the calendar legend. The calendar works with no network and shows no error when holidays cannot be loaded. Holidays are display only and never change the 21:00 lock, the streak or the score.
+- **Wide calendar.** On windows 600 px wide and above the calendar fills the content width, with 72 px tall rounded date cells. Phones look as before.
+- **Themed scrollbar.** On the web build and in the Windows app the scrollbar follows the theme, with a violet to blue thumb. Phones keep the system scrollbar.
+- **Home greeting.** Home shows Good morning, Good afternoon, Good evening or Good night from the local clock, with your first name when you are signed in.
+- **End User License Agreement.** `LICENSE.txt` is shown by the Windows installer and summarised in the README. `THIRD_PARTY_NOTICES.md` credits the holiday data project.
+
+### Privacy
+
+- The app downloads one public holiday file per year from GitHub and keeps it on the device for 7 days. The request carries only the year, never journal text or account details. Guest mode still makes no Firebase call.
+
+### Known limits
+
+- The holiday data covers Sri Lanka only, from 2021, and there is no country setting.
+- The scrollbar and the wide calendar have been checked by tests, not yet by a person on a real Windows install.
+- Detail, Coverage and Precision still read your first pass of a day, so they do not change when you edit that day later.
+
 ## v0.2.2 (2026-11-17)
 
 Version 0.2.2 polishes the look and feel after v0.2.1 was used on a real Android phone (section 16 of the build document). The journal rules are unchanged.
