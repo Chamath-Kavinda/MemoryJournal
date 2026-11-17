@@ -14,6 +14,7 @@ import { TodayCard } from '@/features/calendar/TodayCard';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { useHolidays } from '@/features/holidays/useHolidays';
+import { Greeting } from '@/features/home/Greeting';
 import { StatsBar } from '@/features/insights/StatsBar';
 import { useInsights } from '@/features/insights/useInsights';
 import { TabHeader } from '@/navigation/TabHeader';
@@ -61,6 +62,7 @@ export default function HomeScreen() {
             title="Memory Journal"
             trailing={<SignInPill onPress={() => router.push('/sign-in')} />}
           />
+          <Greeting />
           <GuestSignInBanner onSignIn={() => router.push('/sign-in')} />
 
           <StatsBar
