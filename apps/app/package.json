@@ -19,6 +19,9 @@
   "jest": {
     "preset": "jest-expo",
     "resolver": "react-native-reanimated/jest/resolver",
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
       "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
