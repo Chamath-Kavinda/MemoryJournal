@@ -98,7 +98,7 @@ When a list is longer, join the pictures into one short story, with each step le
 
 ## Try it tonight
 
-Take six things from today, such as people, places or tasks. Link them in order into one short story and tell it to yourself once. Then write the six items in the Free Notes of today's page.
+Take six things from today, such as people, places or tasks. Link them in order into one short story and tell it to yourself once. Then write the six items in today's page.
 `.trim();
 
 const CHUNKING_NUMBERS = `

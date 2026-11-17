@@ -32,27 +32,33 @@ Android device / version: ________   Windows version: ________
 
 ## 3. The 9 PM lock (acceptance 2)
 
-- [ ] Before 21:00 local, today opens read-only with a countdown to 9:00 PM and nothing can be typed.
-- [ ] At 21:00 today becomes writable without leaving the screen or restarting the app.
+- [ ] Before 21:00 local, today opens in View mode with the countdown chip and a disabled Pencil. A day that already has text can still be read, and nothing can be typed.
+- [ ] At 21:00 the Pencil works without leaving the screen or restarting the app.
 - [ ] Set the device clock forward past 21:00 while still before 21:00 real time: the screen may unlock, but saving is refused by Firestore (the rules use server time). Put the clock back afterwards.
-- [ ] A past day is always editable.
+- [ ] A past day is always editable with the Pencil.
+
 - [ ] Change the device time zone and reopen the app: the lock follows the new local time and the stored offset is updated.
 
 ## 4. Writing (acceptance 3)
 
-- [ ] Expand an hourly row, type, collapse it: the one-line preview shows.
-- [ ] Add minute inserts a marker such as `:25` at the cursor, and text after it belongs to that minute.
-- [ ] Free Notes accepts text with no time.
-- [ ] Empty rows stay collapsed. You can save with most rows empty.
-- [ ] Type, wait a few seconds, close the app without saving, reopen: the draft is back.
-- [ ] Save shows "All changes saved".
+- [ ] Tapping a day opens it in View mode: the saved text with nothing to type into, a Pencil in the header, and a "Nothing written for this day yet." card with a Write button when the day is empty.
+- [ ] Press the Pencil: one large writing field replaces the page, with no Free Notes block and no hourly rows. The header shows X (Cancel) and Save, and the bottom toolbar has Add time and Add tag.
+- [ ] Add time, Hour only: inserts a line such as `⏱ 21` on its own line at the cursor. Hour and minutes inserts `⏱ 21:25`, with the :00, :15, :30 and :45 chips and a minute field that takes 0 to 59.
+- [ ] Add a time that is already in the page: the cursor moves to the existing line instead of adding a second one.
+- [ ] Save, then look at View mode: time lines show as clock chips (`21:00`, `21:25`) with the text under them.
+- [ ] You can write anything in any order, with no time at all, and save.
+- [ ] Type, wait a few seconds, close the app without saving, reopen: the draft is back and opens straight in edit mode.
+- [ ] Save shows "All changes saved" and returns to View mode on the Latest pass. With nothing changed, Save just returns to View mode.
+- [ ] Cancel or Back with unsaved changes asks "Discard changes?" with a Keep editing button; discarding removes the draft. Without changes it leaves at once.
+- [ ] A day written before v0.2.4 shows its Free Notes first, then its rows in time order. The Pencil opens it as one text with the rows as time lines, and saving creates a new pass while the older pass stays unchanged.
 
 ## 5. Revisions (acceptance 4)
 
 - [ ] The first save of a day is revision 1.
 - [ ] Save twice in the same sitting: still one revision, updated.
 - [ ] After 30 minutes of inactivity, or after closing the day, a later save creates revision 2.
-- [ ] Reopen an older day, add text, save: a new revision appears, and the toggle shows Latest, 1st, 2nd and so on.
+- [ ] Reopen an older day with the Pencil, add text, save: a new revision appears, and the toggle shows Latest, 1st, 2nd and so on. Older passes are read-only.
+
 - [ ] Choosing an earlier pass shows the day as it was then.
 - [ ] Highlight additions marks only the words that were not in the previous pass.
 
@@ -60,9 +66,10 @@ Android device / version: ________   Windows version: ________
 
 - [ ] People, Places and Numbers exist by default. Create, rename and delete a custom category.
 - [ ] Create a tag with a note and an alias.
-- [ ] Typing `@` in a row opens suggestions grouped by category; choosing one inserts a mention chip.
-- [ ] The toolbar picker opens, and Create new tag works without leaving the Day screen.
+- [ ] Typing `@` in the writing field opens suggestions grouped by category; choosing one inserts `@Name`, and in View mode it shows as a tag chip that opens the tag.
+- [ ] Add tag opens the picker with a chip for every category (All, People, Places, Numbers and each custom one); the chips and the search (name or alias) narrow the list; Create new tag works without leaving the Day screen and inserts the new tag at once.
 - [ ] Select text, Save as tag: the tag exists and the text becomes a mention.
+
 - [ ] The tag detail screen lists every day, movie and book that mentions it, newest first.
 - [ ] Search and the category filter narrow the list.
 - [ ] Delete a tag: the old entries keep the mention as plain text.
@@ -106,7 +113,8 @@ Android device / version: ________   Windows version: ________
 ## 12. Look and accessibility
 
 - [ ] Theme: System, Light and Dark each apply on every screen, including the sign-in button border in dark.
-- [ ] Windows: Alt+1 to Alt+6 open Home, Tags, Library, Insights, Learn and Settings. Escape closes the add-minute form and the tag search.
+- [ ] Windows: Alt+1 to Alt+6 open Home, Tags, Library, Insights, Learn and Settings. Escape cancels editing a day (asking to discard if there are changes), closes the Add time and Add tag sheets and closes the tag search.
+
 - [ ] Windows or web: tabbing through a screen shows a visible focus ring and the tab order makes sense. (Not reviewed so far.)
 - [ ] Screen reader (TalkBack on Android, Narrator or NVDA on Windows): the navigation is announced as a navigation area, and "All changes saved" is announced after saving. (Not reviewed so far.)
 - [ ] Small buttons are easy to hit on a phone.
