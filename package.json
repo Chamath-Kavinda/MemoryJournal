@@ -3,6 +3,8 @@
   "version": "0.2.2",
   "private": true,
   "description": "A private journaling app that trains memory by recalling the day each night.",
+  "author": "Chama Bro",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": ">=20"

@@ -1,10 +1,140 @@
-# Memory Journal
+# Memory Journal — Build Instructions
 
 A private journaling app that trains memory. Writing about today unlocks at 9:00 PM local time; after that you write everything you remember about the day. Later you can come back, add details you remembered afterwards, and compare every writing pass.
 
-Targets: Android, Windows (Electron) and optionally iOS, from one React Native (Expo) codebase.
+Targets: Android and Windows (Electron), and optionally iOS, from one React Native (Expo) codebase.
 
 The full specification is in [docs/build-documentation.md](docs/build-documentation.md). Implementation choices that the specification left open are recorded in [docs/decisions.md](docs/decisions.md).
+
+## Requirements
+
+- Node.js v20+ ([https://nodejs.org](https://nodejs.org))
+- pnpm (`npm install -g pnpm`)
+- Windows 10/11 (for building the .exe)
+- A Firebase project and a Google OAuth client (only to sign in; guest mode needs neither)
+- JDK 21 or newer (only to run the Firestore rules tests with the emulator)
+
+## Build Steps
+
+1. Open this folder in PowerShell
+2. Install the packages:
+
+   ```powershell
+   pnpm install
+   ```
+
+3. Copy `apps/app/.env.example` to `apps/app/.env` and `apps/desktop/.env.example` to `apps/desktop/.env`, then fill in the Firebase and Google values
+4. Build the Windows installer:
+
+   ```powershell
+   pnpm --filter desktop dist
+   ```
+
+5. Find your installer at: `apps/desktop/release/Memory Journal-Setup-<version>.exe`
+
+To try the app without building an installer, run `pnpm --filter app web` for the web build or `pnpm --filter desktop start` for the Windows app.
+
+## What you get
+
+- `.exe` NSIS installer for Windows 10/11 that shows the license and asks you to accept it
+- Installs to a folder you choose, with a Start Menu shortcut
+- A signed Android APK built with EAS, published on [GitHub Releases](../../releases)
+- A web build that runs in any modern browser
+
+## Features
+
+### Day Writer
+
+- ✅ Today is read-only until 9:00 PM local time, with a countdown
+- ✅ After 9:00 PM you write everything you remember about the day
+- ✅ Past days stay editable forever; future days cannot be opened
+- ✅ 24 hourly rows plus a Free Notes block for things you cannot place in time
+- ✅ Add minute markers (like `:25`) inside an hour
+- ✅ Autosaved drafts while you type
+- ✅ Every writing pass is kept as a revision (1st, 2nd, 3rd...)
+- ✅ Revision toggle shows the day exactly as it was in each pass
+- ✅ Highlight additions marks what you remembered later
+- ✅ The 9:00 PM lock cannot be bypassed by changing the device clock
+
+### Tags
+
+- ✅ Default categories: People, Places, Numbers
+- ✅ Create, rename and delete your own categories
+- ✅ Type `@` while writing to insert a tag as a mention
+- ✅ Create a tag without leaving the Day screen
+- ✅ Tag page lists every day, movie or book where the tag was mentioned
+- ✅ Search and filter by category
+- ✅ Deleting a tag keeps its text in old entries
+
+### Library (Movies and Books)
+
+- ✅ Movies and Books tabs with a free page for each item
+- ✅ Optional date watched or read, picked in a custom themed calendar
+- ✅ Tags and revisions work here too, with no 9:00 PM lock
+
+### Insights
+
+- ✅ Recall score from 0 to 100
+- ✅ Streak of consecutive written days
+- ✅ 30-day trend
+- ✅ Motivational message that follows your progress
+- ✅ Everything is calculated on the device; nothing is sent to an AI service
+
+### Learn
+
+- ✅ Bundled lessons on memory techniques, readable offline
+- ✅ The memory palace, linking and visual stories, chunking numbers, names and faces, spaced recall, evening review habit
+- ✅ Mark lessons as done
+- ✅ Each lesson ends with a Try it tonight exercise
+
+### Home and Calendar
+
+- ✅ Greeting by time of day: Good morning, afternoon, evening or night
+- ✅ Signed-in people are greeted by first name; guests see the greeting alone
+- ✅ Month calendar with a dot on every written day and a gradient ring on today
+- ✅ Sri Lanka public holidays shown as a small yellow dot, with the names listed under the calendar
+- ✅ The calendar fills the width of the window on desktop
+- ✅ Tap any past date to open that day
+
+### Guest Mode and Accounts
+
+- ✅ The app opens straight to Home with no sign-in
+- ✅ A guest journal stays on the device only
+- ✅ Continue with Google through a sign-in modal on Home, in Settings or from the guest banner
+- ✅ On sign-in the guest journal is merged into the account, nothing is lost
+- ✅ Windows sign-in uses the system browser, not an embedded window
+- ✅ Signing out removes the journal from the device and returns to an empty guest mode
+- ✅ Real-time sync across devices through Firestore
+
+### Notifications
+
+- ✅ Daily reminder at 9:00 PM: Time to write your day
+- ✅ Android uses a scheduled local notification
+- ✅ Windows keeps running in the system tray and shows a native notification
+- ✅ Reminder can be turned off in Settings
+
+### Design
+
+- ✅ Dark neon violet-to-blue theme by default, with light and system themes
+- ✅ Scrollbar follows the theme on the web build and in the Windows app
+- ✅ Bottom bar on phones, side navigation on wide windows
+- ✅ Alt+1 to Alt+6 shortcuts jump between sections on desktop
+- ✅ Every delete, remove and sign-out asks for confirmation
+- ✅ Motion and animation that respect the reduce-motion setting
+
+### Settings
+
+- ✅ Profile, reminder toggle and theme
+- ✅ Export all data as JSON
+- ✅ Delete account and all data, or erase guest data
+- ✅ App version shown in the footer
+
+## Data Location
+
+- A guest journal is stored on the device only (the app's own storage).
+- When signed in with a Google account, the journal is stored in your own Firebase Cloud Firestore account and shown on every device you sign in on.
+- Security rules allow each person to read and write only their own data.
+- Journal text is never sent to an AI service or any other third party.
 
 ## Repository layout
 
@@ -15,21 +145,9 @@ The full specification is in [docs/build-documentation.md](docs/build-documentat
 | `packages/core` | Pure TypeScript business logic (time rules, score, streak...) |
 | `firebase`      | Firestore security rules, indexes and rules tests             |
 | `docs`          | Documentation                                                 |
+| `LICENSE.txt`   | End User License Agreement                                    |
 
 All business logic lives in `packages/core` so mobile and desktop behave identically.
-
-## Requirements
-
-- Node.js 20 or newer
-- pnpm (`npm install -g pnpm`)
-
-## Getting started
-
-```bash
-pnpm install
-pnpm typecheck
-pnpm lint
-```
 
 ## Scripts
 
@@ -39,6 +157,8 @@ pnpm lint
 | `pnpm format`          | Format all files with Prettier                                                                               |
 | `pnpm format:check`    | Check formatting without changing files                                                                      |
 | `pnpm typecheck`       | Run the TypeScript compiler in every package                                                                 |
+| `pnpm test`            | Run all tests, including the Firestore rules tests in the emulator                                           |
+| `pnpm emulators`       | Start the local Firebase emulators                                                                           |
 | `pnpm release:android` | Build the Android APKs on EAS and save them as `MemoryJournal-v<version>-android.apk` with SHA-256 checksums |
 
 ## Installing on Android
@@ -53,6 +173,55 @@ These steps are for people who got the APK directly from the developer. Only ins
 
 If you uninstall the app, the data on the phone is removed (a guest journal is not backed up).
 
+## Google OAuth Setup (for developers)
+
+The Windows app signs in with Google through the system browser and a loopback redirect on `127.0.0.1`. To use your own Google Cloud project:
+
+1. Go to **Google Cloud Console → APIs & Services → Credentials**
+2. Create an **OAuth client ID** of type **Desktop app**
+3. Put its values in `apps/desktop/.env`:
+
+   ```
+   MJ_GOOGLE_DESKTOP_CLIENT_ID=
+   MJ_GOOGLE_DESKTOP_CLIENT_SECRET=
+   ```
+
+4. For Android and the web build, put the Web client ID in `apps/app/.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+
+For a desktop client Google does not treat the secret as confidential, but keep both files out of git. They are already ignored.
+
+## Holiday Data
+
+Public holidays are shown on the calendar. Sri Lanka holidays are downloaded from:
+[https://github.com/Dilshan-H/srilanka-holidays](https://github.com/Dilshan-H/srilanka-holidays)
+
+- No API key required
+- Data sourced from official Sri Lankan government gazettes
+- Updated every year by the open-source maintainer
+- Cached on the device after the first load (one download per year, refreshed after 7 days)
+- The calendar works with no network and shows no error without holidays
+- The request carries only the year, never journal text or account details
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the credit and license.
+
+## Dependencies
+
+| Package                   | Purpose                                 |
+| ------------------------- | --------------------------------------- |
+| `expo` and `expo-router`  | App framework and file-based navigation |
+| `react-native-web`        | Compiles the app for the web build      |
+| `electron`                | Windows desktop shell                   |
+| `electron-builder`        | Packaging and NSIS installer            |
+| `firebase`                | Authentication and Cloud Firestore      |
+| `zustand`                 | UI state                                |
+| `date-fns`                | Date handling                           |
+| `zod`                     | Data validation                         |
+| `lucide-react-native`     | Icons                                   |
+| `react-native-reanimated` | Motion and animation                    |
+| `expo-linear-gradient`    | The neon gradient theme                 |
+
+The app's other npm packages keep their own licenses (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+
 ## Contributing
 
 - Branch from `main` using `feat/<name>`.
@@ -63,3 +232,10 @@ If you uninstall the app, the data on the phone is removed (a guest journal is n
 ## Privacy
 
 Journal text is never sent to any AI service or third party. The analyzer runs entirely on the device.
+
+## License
+
+Memory Journal — End User License Agreement  
+Version 0.2.2  
+Copyright © 2026 Chama Bro. All rights reserved.  
+See `LICENSE.txt` for full terms.

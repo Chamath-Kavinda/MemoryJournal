@@ -3,7 +3,8 @@
   "version": "0.2.2",
   "private": true,
   "description": "Electron shell that wraps the Expo web build for Windows.",
-  "author": "Memory Journal",
+  "author": "Chama Bro",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "main": "dist/main.js",
   "scripts": {
     "build": "node scripts/build.mjs",

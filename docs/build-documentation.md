@@ -843,7 +843,9 @@ The license follows the WorkTracker project: an End User License Agreement in `L
 - `THIRD_PARTY_NOTICES.md`: credits `Dilshan-H/srilanka-holidays` (MIT, attribution required: author name and license info stay intact) with the MIT permission text, and says that the app's npm packages keep their own licenses. The holiday files are downloaded, not copied into the app, and the notice is linked from the license and the README.
 - `electron-builder.yml`: `copyright` becomes `Copyright (c) 2026 Chama Bro. All rights reserved.` and `nsis.license` points to `LICENSE.txt`, so the installer shows the agreement and the person must accept it.
 - `package.json` (root and `apps/desktop`): `author` is `Chama Bro` and `license` is `SEE LICENSE IN LICENSE.txt`. The packages stay `private`.
-- The exact copyright line of the holiday project's own LICENSE file must be checked before a release and copied into `THIRD_PARTY_NOTICES.md`.
+- The exact copyright line of the holiday project's own LICENSE file must be checked before a release and copied into `THIRD_PARTY_NOTICES.md`. Until then the notice points to that file instead of quoting the line, so no copyright line is guessed.
+- The README is laid out like the WorkTracker README so the GitHub page reads the same way: Requirements, Build Steps, What you get, Features (grouped, each item marked with a check), Data Location, Repository layout, Scripts, Installing on Android, Google OAuth Setup, Holiday Data, Dependencies, Contributing, Privacy and License. The Features list must be updated whenever a feature is added or removed.
+- The README, `LICENSE.txt` and the Android install step carry the app version, so they change in the release commit.
 
 ### 17.6 Version and commits
 

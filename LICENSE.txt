@@ -1,0 +1,44 @@
+Memory Journal - End User License Agreement
+Version 0.2.2
+Copyright (c) 2026 Chama Bro. All rights reserved.
+
+BY INSTALLING OR USING THIS SOFTWARE YOU AGREE TO THE FOLLOWING TERMS.
+
+1. LICENSE GRANT
+   Chama Bro grants you a personal, non-exclusive, non-transferable license to
+   install and use Memory Journal on any Windows computer or Android device
+   you own or control.
+
+2. RESTRICTIONS
+   You may not:
+   (a) Sell, sublicense, or redistribute the software or any portion of it.
+   (b) Reverse-engineer, decompile, or disassemble the software.
+   (c) Remove or alter any proprietary notices or labels.
+
+3. DATA & PRIVACY
+   Memory Journal stores your journal on your own device. If you choose to
+   sign in with a Google account, your journal is also synced to Google
+   Firebase Cloud Firestore under your own Google account. Your journal text
+   is never sent to an AI service, and no data is sold or shared with third
+   parties. To show public holidays, the app downloads a public holiday file
+   from GitHub once a year. That request contains only the year. It carries
+   no journal text, no account id, and no tag.
+
+4. THIRD-PARTY SOFTWARE & DATA
+   The app uses open-source software and open data that keep their own
+   licenses. The Sri Lanka public holiday data comes from the
+   Dilshan-H/srilanka-holidays project (MIT License). It is downloaded by the
+   app and is not copied into it. See THIRD_PARTY_NOTICES.md for the credits
+   and license text.
+
+5. DISCLAIMER OF WARRANTIES
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+6. LIMITATION OF LIABILITY
+   IN NO EVENT SHALL CHAMA BRO BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+   SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR RELATED TO YOUR USE
+   OF THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+If you do not agree to these terms, do not install or use Memory Journal.

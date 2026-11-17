@@ -1,6 +1,6 @@
 appId: com.memoryjournal.desktop
 productName: Memory Journal
-copyright: Copyright (c) 2026 Memory Journal
+copyright: Copyright (c) 2026 Chama Bro. All rights reserved.
 directories:
   output: release
 asar: true
@@ -25,3 +25,4 @@ nsis:
   allowToChangeInstallationDirectory: true
   perMachine: false
   shortcutName: Memory Journal
+  license: ../../LICENSE.txt
