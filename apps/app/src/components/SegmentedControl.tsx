@@ -11,7 +11,8 @@ import Animated, {
 
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
-import { DURATION, SPRING } from '@/theme/motion';
+import { DURATION, SPRING_CALM } from '@/theme/motion';
+
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 import { GRADIENT_END, GRADIENT_START } from '@/theme/tokens';
@@ -39,7 +40,8 @@ export interface SegmentedControlProps<T extends string> {
 
 /**
  * A row of two or more choices where exactly one is selected, such as Movies and Books. A
- * gradient thumb slides to the selected segment with the shared spring (section 15.16). With
+ * gradient thumb slides to the selected segment with the calm spring, which has no visible bounce
+ * (sections 15.16 and 16.3). With
  * reduce motion on the thumb does not slide: it appears at the new segment with a 100 ms fade.
  * Every segment keeps its text label next to its icon, and is at least 44 high (48 on Android).
  */
@@ -72,7 +74,7 @@ export function SegmentedControl<T extends string>({
       fade.value = 0;
       fade.value = withTiming(1, { duration: DURATION.reduced });
     } else {
-      position.value = withSpring(index, SPRING);
+      position.value = withSpring(index, SPRING_CALM);
     }
   }, [index, reduce, position, fade]);
 

@@ -24,6 +24,9 @@ export const EASE_IN = [0.4, 0, 1, 1] as const;
 /** The one shared spring, for pops and bounces. */
 export const SPRING = { damping: 15, stiffness: 180 } as const;
 
+/** A spring with no bounce (damping ratio above 1), for a thumb that slides between choices (section 16.3). */
+export const SPRING_CALM = { damping: 36, stiffness: 300 } as const;
+
 /** Every button, tab, chip, card and icon button scales to this on press. */
 export const PRESS_SCALE = 0.97;
 

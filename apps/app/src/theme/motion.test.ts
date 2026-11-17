@@ -6,6 +6,7 @@ import {
   POP_SCALE,
   PRESS_SCALE,
   SPRING,
+  SPRING_CALM,
   STAGGER_MAX_ITEMS,
   STAGGER_STEP,
   staggerDelay,
@@ -25,6 +26,12 @@ describe('motion tokens', () => {
     expect(SPRING).toEqual({ damping: 15, stiffness: 180 });
     expect(PRESS_SCALE).toBe(0.97);
     expect(POP_SCALE).toBe(1.2);
+  });
+
+  it('has a calm spring that never overshoots, for the theme control thumb', () => {
+    const dampingRatio = SPRING_CALM.damping / (2 * Math.sqrt(SPRING_CALM.stiffness));
+    expect(dampingRatio).toBeGreaterThanOrEqual(1);
+    expect(SPRING_CALM.damping).toBeGreaterThan(SPRING.damping);
   });
 
   it('describes ease-out as decelerating and ease-in as accelerating', () => {

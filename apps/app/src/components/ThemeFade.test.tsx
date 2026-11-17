@@ -34,7 +34,7 @@ describe('ThemeFade', () => {
     expect(screen.queryByTestId('theme-fade-layer', { includeHiddenElements: true })).toBeNull();
   });
 
-  it('fades a layer in the old background over 250 ms and then removes it', async () => {
+  it('fades a layer in the old background over 150 ms and then removes it', async () => {
     const view = await render(
       <ThemeProvider preference="dark">
         <ThemeFade />
@@ -51,7 +51,7 @@ describe('ThemeFade', () => {
     expect(layer.props.pointerEvents).toBe('none');
     expect(JSON.stringify(layer.props.style)).toContain(paletteFor('dark').background);
 
-    await advance(200);
+    await advance(100);
     expect(
       screen.queryByTestId('theme-fade-layer', { includeHiddenElements: true }),
     ).not.toBeNull();

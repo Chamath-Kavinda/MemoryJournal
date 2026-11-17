@@ -14,7 +14,7 @@ export interface ThemeFadeProps {
 
 /**
  * Cross-fades the colours when the theme changes (section 15.16): the screen shows the new theme
- * at once while a layer in the old background colour fades out over 250 ms on top of it, so the
+ * at once while a layer in the old background colour fades out over 150 ms on top of it, so the
  * change melts instead of flipping. With reduce motion on the fade lasts 100 ms. The layer never
  * takes touches, so nothing is blocked while it fades.
  */
@@ -30,7 +30,7 @@ export function ThemeFade({ children }: ThemeFadeProps) {
     const old = previous.current.background;
     previous.current = { scheme, background: palette.background };
 
-    const duration = reduce ? DURATION.reduced : DURATION.base;
+    const duration = reduce ? DURATION.reduced : DURATION.fast;
     setFrom(old);
     opacity.value = 1;
     opacity.value = withTiming(0, { duration, easing: easeOut });
