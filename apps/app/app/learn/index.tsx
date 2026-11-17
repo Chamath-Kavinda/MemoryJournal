@@ -9,14 +9,16 @@ import { LessonList } from '@/features/learn/LessonList';
 import { useLearnProgress } from '@/features/learn/useLearnProgress';
 import { usePalette } from '@/features/tags/ui';
 import { TabHeader } from '@/navigation/TabHeader';
+import { useTabScreenEdges } from '@/navigation/useTabScreenEdges';
 
 export default function LearnRoute() {
   const router = useRouter();
   const palette = usePalette();
+  const edges = useTabScreenEdges();
   const { completed, status } = useLearnProgress();
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView edges={edges} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <TabHeader title="Learn" />
         {/* The lessons are bundled with the app, so they show at once, online or not. */}

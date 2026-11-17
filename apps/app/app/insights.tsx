@@ -9,11 +9,15 @@ import { useTodayId } from '@/features/calendar/useTodayId';
 import { InsightsView } from '@/features/insights/InsightsView';
 import { useInsights } from '@/features/insights/useInsights';
 import { TabHeader } from '@/navigation/TabHeader';
+import { useTabScreenEdges } from '@/navigation/useTabScreenEdges';
+
 import { SPACING } from '@/theme/layout';
 import { useLayout } from '@/theme/useLayout';
 
 export default function InsightsRoute() {
   const { contentMaxWidth } = useLayout();
+  const edges = useTabScreenEdges();
+
   const todayId = useTodayId();
   const { insights, status, reload } = useInsights(todayId);
 
@@ -28,7 +32,7 @@ export default function InsightsRoute() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView edges={edges} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: SPACING.xl }}>
         <TabHeader title="Insights" />
         {insights !== null && message !== null ? (

@@ -13,19 +13,23 @@ import { useMentionCounts } from '@/features/tags/useMentionCounts';
 import { useTagData } from '@/features/tags/useTagData';
 import { useJournalRepository } from '@/lib/journal';
 import { TabHeader } from '@/navigation/TabHeader';
+import { useTabScreenEdges } from '@/navigation/useTabScreenEdges';
+
 import { SPACING } from '@/theme/layout';
 import { CONTENT_MAX_WIDTH } from '@/theme/palette';
 
 export default function TagsRoute() {
   const router = useRouter();
   const repository = useJournalRepository();
+  const edges = useTabScreenEdges();
+
   const { categories, tags, status } = useTagData(repository);
   const counts = useMentionCounts(repository);
   const message = useTagErrorStore((s) => s.message);
   const clearMessage = useTagErrorStore((s) => s.clear);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView edges={edges} style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled">
         <TabHeader title="Tags" icon={TagGlyph} />
         {message !== null ? <ErrorBanner message={message} onDismiss={clearMessage} /> : null}

@@ -9,16 +9,18 @@ import { useTagErrorStore, watchWrite } from '@/features/tags/tagErrors';
 import { ErrorBanner } from '@/features/tags/ui';
 import { useJournalRepository } from '@/lib/journal';
 import { TabHeader } from '@/navigation/TabHeader';
+import { useTabScreenEdges } from '@/navigation/useTabScreenEdges';
 
 export default function LibraryRoute() {
   const router = useRouter();
   const repository = useJournalRepository();
+  const edges = useTabScreenEdges();
   const { items, status } = useLibrary(repository);
   const error = useTagErrorStore((s) => s.message);
   const clearError = useTagErrorStore((s) => s.clear);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView edges={edges} style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <TabHeader title="Library" />
         {error !== null ? <ErrorBanner message={error} onDismiss={clearError} /> : null}

@@ -16,12 +16,16 @@ import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { StatsBar } from '@/features/insights/StatsBar';
 import { useInsights } from '@/features/insights/useInsights';
 import { TabHeader } from '@/navigation/TabHeader';
+import { useTabScreenEdges } from '@/navigation/useTabScreenEdges';
+
 import { SPACING } from '@/theme/layout';
 import { useLayout } from '@/theme/useLayout';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { contentMaxWidth } = useLayout();
+  const edges = useTabScreenEdges();
+
   const todayId = useTodayId();
   // Start on the current month, then follow the user's own navigation.
   const [month, setMonth] = useState<MonthRef>(() => monthOfDayId(todayId));
@@ -46,7 +50,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView edges={edges} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: SPACING.xxl }}>
         <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
           {/* The sections are the tabs of the bottom bar (or the sidebar), so Home has no link list. */}
