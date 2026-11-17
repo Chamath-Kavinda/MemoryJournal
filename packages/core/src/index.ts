@@ -9,6 +9,7 @@ export * from './journalRepository';
 export * from './library';
 export * from './localRepository';
 export * from './mentionHistory';
+export * from './holidays';
 export * from './mentions';
 export * from './messages';
 export * from './minuteMarkers';
