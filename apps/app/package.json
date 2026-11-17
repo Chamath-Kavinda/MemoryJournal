@@ -18,7 +18,8 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "resolver": "react-native-reanimated/jest/resolver",
+    "resolver": "<rootDir>/jest.resolver.js",
+    "globalSetup": "<rootDir>/jest.globalSetup.js",
     "setupFiles": [
       "<rootDir>/jest.setup.js"
     ],

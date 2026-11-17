@@ -15,19 +15,13 @@ import { syncUserProfile } from './profileService';
 
 const user = { uid: 'u1', displayName: 'Chama', email: 'chama@example.com' };
 // 2026-11-14 12:00 UTC. Asia/Colombo is UTC+05:30 all year.
+// The time zone is fixed to Asia/Colombo for the whole run in jest.globalSetup.js:
+// setting process.env.TZ inside a test does not reach the real process under Jest.
 const NOW = Date.UTC(2026, 10, 14, 12, 0, 0);
 
 describe('syncUserProfile', () => {
-  const originalZone = process.env.TZ;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.TZ = 'Asia/Colombo';
-  });
-
-  afterAll(() => {
-    if (originalZone === undefined) delete process.env.TZ;
-    else process.env.TZ = originalZone;
   });
 
   it('creates the profile on first sign-in with the device zone', async () => {
