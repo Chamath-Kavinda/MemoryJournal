@@ -788,7 +788,7 @@ This change is documentation only. No code is written until the plan below is co
 
 ## 17. Version 0.2.3: Holidays, wide calendar, themed scrollbar and license
 
-This section is the plan for release v0.2.3. It was written after the Windows app was used at a wide window. It adds Sri Lankan public holidays to the calendar, makes the calendar use the width of the window, styles the scrollbar to match the theme, and adds a license in the same way as the WorkTracker project. It does not change the journal rules (21:00 unlock, revisions, tags, score, streak). Where this section and sections 1 to 16 disagree, this section wins.
+This section is the plan for release v0.2.3. It was written after the Windows app was used at a wide window. It adds Sri Lankan public holidays to the calendar, makes the calendar use the width of the window, styles the scrollbar to match the theme, and adds an End User License. It does not change the journal rules (21:00 unlock, revisions, tags, score, streak). Where this section and sections 1 to 16 disagree, this section wins.
 
 This change is documentation only. No code is written until the plan below is committed.
 
@@ -801,7 +801,7 @@ This change is documentation only. No code is written until the plan below is co
 
 ### 17.2 Sri Lanka public holidays
 
-Source: the open data of `Dilshan-H/srilanka-holidays` (MIT license). The app downloads one static JSON file per year from `https://raw.githubusercontent.com/Dilshan-H/srilanka-holidays/main/json/<year>.json`. This is the same way the WorkTracker project reads the data.
+Source: the open data of `Dilshan-H/srilanka-holidays` (MIT license). The app downloads one static JSON file per year from `https://raw.githubusercontent.com/Dilshan-H/srilanka-holidays/main/json/<year>.json`.
 
 Why not the live API at `srilanka-holidays.vercel.app`: since its v2.0.0 every request needs an `X-API-Key` header, and the key is issued to one developer on request. A key inside an app that is given to other people is not secret and could be revoked for everyone. The static data files need no key. If the maintainer later issues a key for this app, the source can be switched in one constant.
 
@@ -835,16 +835,16 @@ Rules:
 
 ### 17.5 License and notices
 
-The license follows the WorkTracker project: an End User License Agreement in `LICENSE.txt`, the same short section in the README, and the license shown to the person who installs the Windows app.
+The license is an End User License Agreement in `LICENSE.txt`, with a short License section in the README, and the license is shown to the person who installs the Windows app.
 
 - `LICENSE.txt` at the repository root: Memory Journal, End User License Agreement, version, copyright line `Copyright (c) 2026 Chama Bro. All rights reserved.`, and the clauses License grant, Restrictions, Data and privacy, Third-party software and data, Disclaimer of warranties, Limitation of liability. The grant covers Windows computers and Android devices the person owns or controls. The privacy clause matches sections 7.4 and 17.2 (the journal stays on the device or in the person's own Firebase account, journal text is never sent to an AI service, and the app downloads public holiday files from GitHub).
 - The version line of `LICENSE.txt` is the app version. It changes in the release commit together with the other version fields (section 17.6).
-- README: a Holiday Data section (source, no API key, cached once per year) and a License section in the same words as WorkTracker: the agreement name, version, copyright line and "See `LICENSE.txt` for full terms."
+- README: a Holiday Data section (source, no API key, cached once per year) and a License section with the agreement name, version, copyright line and "See `LICENSE.txt` for full terms."
 - `THIRD_PARTY_NOTICES.md`: credits `Dilshan-H/srilanka-holidays` (MIT, attribution required: author name and license info stay intact) with the MIT permission text, and says that the app's npm packages keep their own licenses. The holiday files are downloaded, not copied into the app, and the notice is linked from the license and the README.
 - `electron-builder.yml`: `copyright` becomes `Copyright (c) 2026 Chama Bro. All rights reserved.` and `nsis.license` points to `LICENSE.txt`, so the installer shows the agreement and the person must accept it.
 - `package.json` (root and `apps/desktop`): `author` is `Chama Bro` and `license` is `SEE LICENSE IN LICENSE.txt`. The packages stay `private`.
 - The exact copyright line of the holiday project's own LICENSE file must be checked before a release and copied into `THIRD_PARTY_NOTICES.md`. Until then the notice points to that file instead of quoting the line, so no copyright line is guessed.
-- The README is laid out like the WorkTracker README so the GitHub page reads the same way: Requirements, Build Steps (set up, the Windows installer and the Android APK on EAS), What you get, Features (grouped, each item marked with a check), Data Location, Repository layout, Scripts, Installing on Android, Google OAuth Setup (desktop, web and Android), Holiday Data, Dependencies, Contributing, Privacy and License. The Features list must be updated whenever a feature is added or removed, and the Android build steps must follow `scripts/release-android.mjs` and `apps/app/eas.json`.
+- The README is laid out so the GitHub page reads as a full project page: Requirements, Build Steps (set up, the Windows installer and the Android APK on EAS), What you get, Features (grouped, each item marked with a check), Data Location, Repository layout, Scripts, Installing on Android, Google OAuth Setup (desktop, web and Android), Holiday Data, Dependencies, Contributing, Privacy and License. The Features list must be updated whenever a feature is added or removed, and the Android build steps must follow `scripts/release-android.mjs` and `apps/app/eas.json`.
 - The README, `LICENSE.txt` and the Android install step carry the app version, so they change in the release commit.
 
 ### 17.6 Version and commits
