@@ -11,10 +11,13 @@ The full specification is in [docs/build-documentation.md](docs/build-documentat
 - Node.js v20+ ([https://nodejs.org](https://nodejs.org))
 - pnpm (`npm install -g pnpm`)
 - Windows 10/11 (for building the .exe)
+- A free [Expo](https://expo.dev) account (for building the Android APK on EAS; no Android Studio needed)
 - A Firebase project and a Google OAuth client (only to sign in; guest mode needs neither)
 - JDK 21 or newer (only to run the Firestore rules tests with the emulator)
 
 ## Build Steps
+
+### 1. Set up (both platforms)
 
 1. Open this folder in PowerShell
 2. Install the packages:
@@ -24,21 +27,71 @@ The full specification is in [docs/build-documentation.md](docs/build-documentat
    ```
 
 3. Copy `apps/app/.env.example` to `apps/app/.env` and `apps/desktop/.env.example` to `apps/desktop/.env`, then fill in the Firebase and Google values
-4. Build the Windows installer:
+
+To try the app without building anything, run `pnpm --filter app web` for the web build or `pnpm --filter desktop start` for the Windows app.
+
+### 2. Build the Windows installer
+
+1. Run:
 
    ```powershell
    pnpm --filter desktop dist
    ```
 
-5. Find your installer at: `apps/desktop/release/Memory Journal-Setup-<version>.exe`
+2. Find your installer at: `apps/desktop/release/Memory Journal-Setup-<version>.exe`
 
-To try the app without building an installer, run `pnpm --filter app web` for the web build or `pnpm --filter desktop start` for the Windows app.
+### 3. Build the Android APK
+
+The APK is built in the cloud by [EAS Build](https://docs.expo.dev/build/introduction/), so the phone toolchain (Android Studio, the Android SDK) is not needed on your computer.
+
+1. Sign in to Expo once. The first command asks for your Expo username and password:
+
+   ```powershell
+   cd apps/app
+   npx eas-cli login
+   ```
+
+2. The `.env` file is not uploaded to EAS, so the `EXPO_PUBLIC_*` values from `apps/app/.env.example` must exist as EAS environment variables for the build. Create each one once (use the same values as your `.env`, and visibility `plaintext` or `sensitive`):
+
+   ```powershell
+   npx eas-cli env:create --environment preview
+   ```
+
+3. Go back to the repository root and tag the commit you are releasing, so the file name and the version match:
+
+   ```powershell
+   cd ../..
+   git tag v<version>
+   ```
+
+4. Build, download and name the APK in one step:
+
+   ```powershell
+   pnpm release:android
+   ```
+
+   Use `pnpm release:android --dry-run` first to see the file name without building. The build takes a few minutes on the free EAS queue.
+
+5. Find the files in `release/android/`:
+   - `MemoryJournal-v<version>-android.apk` works on 64-bit and 32-bit phones
+   - `SHA256SUMS.txt` has the SHA-256 checksum to paste into the release text
+
+6. Upload the APK to [GitHub Releases](../../releases). The app version is read from `apps/app/package.json`, and EAS raises the Android version code on every build by itself.
+
+Other Android commands, run from `apps/app` (or with `pnpm --filter app <script>`):
+
+| Command                      | What it does                                                          |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `pnpm build:android:preview` | The same EAS build as the release, without the renaming and checksum  |
+| `pnpm build:android:dev`     | A development build with the Expo dev client, for all four CPU types  |
+| `pnpm build:android`         | A production Android App Bundle (AAB), for Google Play                |
+| `pnpm android`               | Build and run on a connected phone or emulator (needs Android Studio) |
 
 ## What you get
 
 - `.exe` NSIS installer for Windows 10/11 that shows the license and asks you to accept it
 - Installs to a folder you choose, with a Start Menu shortcut
-- A signed Android APK built with EAS, published on [GitHub Releases](../../releases)
+- A signed Android APK (`MemoryJournal-v<version>-android.apk`) built with EAS, published on [GitHub Releases](../../releases)
 - A web build that runs in any modern browser
 
 ## Features
@@ -186,7 +239,8 @@ The Windows app signs in with Google through the system browser and a loopback r
    MJ_GOOGLE_DESKTOP_CLIENT_SECRET=
    ```
 
-4. For Android and the web build, put the Web client ID in `apps/app/.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+4. For the web build, put the Web client ID in `apps/app/.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+5. For Android, the same Web client ID is used for the sign-in token. Google also needs to know which app is asking, so create an **OAuth client ID** of type **Android** with the package name `com.memoryjournal.app` and the SHA-1 fingerprint of the key that signs your APK (run `npx eas-cli credentials` in `apps/app` to see it). Add the same SHA-1 to the Android app in your Firebase project settings. Without it, Google sign-in fails on the phone, while guest mode keeps working.
 
 For a desktop client Google does not treat the secret as confidential, but keep both files out of git. They are already ignored.
 
