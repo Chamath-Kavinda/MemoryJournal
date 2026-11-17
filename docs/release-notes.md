@@ -1,5 +1,23 @@
 # Release notes
 
+## v0.2.2 (2026-11-17)
+
+Version 0.2.2 polishes the look and feel after v0.2.1 was used on a real Android phone (section 16 of the build document). The journal rules are unchanged.
+
+### What is new
+
+- **Navigation bar follows the theme (Android).** The system navigation bar now takes the app's background colour and uses light buttons on dark and dark buttons on light, and it updates as soon as the theme changes.
+- **No empty strip above the bottom bar.** Content on the five tab screens now scrolls down to the bottom bar instead of stopping at a gap of the page colour.
+- **Calmer theme change.** Changing the theme takes about 150 ms, and the theme control thumb moves without bouncing.
+- **Date picker in the Library.** Add movie, Add book and the item edit form have a Calendar button on the date field. It opens a month picker, future dates cannot be picked, and typing a date still works.
+- **Cleaner Day screen.** The open and locked banners are gone, because the lock chip with the countdown already shows the state. Future days, invalid days and a wrong device clock still show their banner.
+- **Branded splash.** The default Android splash is replaced by a solid `#07070D` screen with no icon, followed by the app name with a loading bar, in both themes. It never waits for the network.
+
+### Known limits
+
+- The navigation bar colour and the new splash need the new native build. They do not reach an installed v0.2.1 build, and both still need checking on a real phone.
+- Detail, Coverage and Precision still read your first pass of a day, so they do not change when you edit that day later.
+
 ## v0.2.1 (2026-11-17)
 
 Version 0.2.1 fixes the recall score and simplifies how the Android app is published.
