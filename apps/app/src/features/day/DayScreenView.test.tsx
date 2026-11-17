@@ -8,7 +8,7 @@ function setup(access: Parameters<typeof DayScreenView>[0]['access'], dayId = '2
 }
 
 describe('DayScreenView', () => {
-  it('shows the date and the countdown when today is still locked', async () => {
+  it('shows the date and the lock chip, with no banner, when today is still locked', async () => {
     const unlocksAt = Date.UTC(2026, 10, 14, 15, 30);
     const { element } = setup({
       state: 'locked',
@@ -18,16 +18,18 @@ describe('DayScreenView', () => {
     await render(element);
 
     expect(screen.getByText('Saturday, 14 November 2026')).toBeTruthy();
-    expect(screen.getByText('Read-only until 9:00 PM')).toBeTruthy();
-    expect(screen.getByText('Opens for writing in 3:12:45')).toBeTruthy();
+    expect(screen.getByLabelText('Opens in 3:12:45')).toBeTruthy();
+    expect(screen.queryByText('Read-only until 9:00 PM')).toBeNull();
+    expect(screen.queryByText(/Opens for writing in/)).toBeNull();
   });
 
-  it('says the day is open when it can be written', async () => {
+  it('shows the lock chip, with no banner, when the day can be written', async () => {
     const { element } = setup({ state: 'open' }, '2026-11-10');
     await render(element);
 
     expect(screen.getByText('Tuesday, 10 November 2026')).toBeTruthy();
-    expect(screen.getByText('This day is open for writing.')).toBeTruthy();
+    expect(screen.getByLabelText('Open for writing')).toBeTruthy();
+    expect(screen.queryByText('This day is open for writing.')).toBeNull();
   });
 
   it('explains that a future day cannot be opened', async () => {

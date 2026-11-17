@@ -1,6 +1,6 @@
-import { formatCountdown, parseDayId, type DayId, type GuestDayAccess } from '@memory-journal/core';
+import { parseDayId, type DayId, type GuestDayAccess } from '@memory-journal/core';
 import { format } from 'date-fns';
-import { Lock, LockOpen, TriangleAlert, type LucideIcon } from 'lucide-react-native';
+import { Lock, TriangleAlert, type LucideIcon } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { BackButton } from '@/components/BackButton';
@@ -28,7 +28,12 @@ interface Banner {
   tone: (palette: Palette) => string;
 }
 
-function bannerFor(access: GuestDayAccess | null): Banner {
+/**
+ * A banner only explains why writing is not possible: a future day, a day that is not valid or a
+ * wrong device clock. The open and locked states have none, because the lock chip already shows
+ * the state and the countdown (section 16.3).
+ */
+function bannerFor(access: GuestDayAccess | null): Banner | null {
   if (!access) {
     return { title: 'This is not a valid day.', icon: TriangleAlert, tone: (p) => p.danger };
   }
@@ -40,13 +45,6 @@ function bannerFor(access: GuestDayAccess | null): Banner {
         icon: Lock,
         tone: (p) => p.muted,
       };
-    case 'locked':
-      return {
-        title: 'Read-only until 9:00 PM',
-        detail: `Opens for writing in ${formatCountdown(access.msUntilUnlock)}`,
-        icon: Lock,
-        tone: (p) => p.warning,
-      };
     case 'clockWrong':
       return {
         title: 'Your device clock looks wrong.',
@@ -54,14 +52,16 @@ function bannerFor(access: GuestDayAccess | null): Banner {
         icon: TriangleAlert,
         tone: (p) => p.warning,
       };
+    case 'locked':
     case 'open':
-      return { title: 'This day is open for writing.', icon: LockOpen, tone: (p) => p.success };
+      return null;
   }
 }
 
 /**
- * Header of the Day screen: the Back icon, a lock chip with the countdown, the date and a status
- * banner with an icon. It fades up when the screen opens. The writer sits below it.
+ * Header of the Day screen: the Back icon, a lock chip with the countdown, the date and, only
+ * when writing is not possible for a reason the chip does not give, a status banner with an icon.
+ * It fades up when the screen opens. The writer sits below it.
  */
 export function DayScreenView({ dayId, access, onBack }: Props) {
   const { palette } = useTheme();
@@ -70,7 +70,7 @@ export function DayScreenView({ dayId, access, onBack }: Props) {
     ? format(new Date(parts.year, parts.month - 1, parts.day), 'EEEE, d MMMM yyyy')
     : dayId;
   const banner = bannerFor(access);
-  const tone = banner.tone(palette);
+  const tone = banner ? banner.tone(palette) : null;
 
   return (
     <FadeUp
@@ -91,21 +91,23 @@ export function DayScreenView({ dayId, access, onBack }: Props) {
         {heading}
       </Text>
 
-      <View accessibilityRole="summary">
-        <Card style={{ borderColor: tone }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
-            <Icon icon={banner.icon} size="control" color={tone} />
-            <View style={{ flex: 1, flexShrink: 1, gap: SPACING.xs }}>
-              <Text variant="heading">{banner.title}</Text>
-              {banner.detail ? (
-                <Text variant="body" style={{ color: palette.muted }}>
-                  {banner.detail}
-                </Text>
-              ) : null}
+      {banner !== null && tone !== null ? (
+        <View accessibilityRole="summary">
+          <Card style={{ borderColor: tone }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
+              <Icon icon={banner.icon} size="control" color={tone} />
+              <View style={{ flex: 1, flexShrink: 1, gap: SPACING.xs }}>
+                <Text variant="heading">{banner.title}</Text>
+                {banner.detail ? (
+                  <Text variant="body" style={{ color: palette.muted }}>
+                    {banner.detail}
+                  </Text>
+                ) : null}
+              </View>
             </View>
-          </View>
-        </Card>
-      </View>
+          </Card>
+        </View>
+      ) : null}
     </FadeUp>
   );
 }
