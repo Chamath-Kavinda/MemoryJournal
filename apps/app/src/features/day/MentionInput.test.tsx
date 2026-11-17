@@ -1,15 +1,9 @@
-import {
-  emptyContent,
-  type DayContent,
-  type Tag,
-  type TagCategory,
-  type TagDraft,
-} from '@memory-journal/core';
+import type { Tag, TagCategory, TagDraft } from '@memory-journal/core';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useState } from 'react';
 import { ConfirmProvider } from '@/components/useConfirm';
 
-import { DayWriter } from './DayWriter';
+import { MentionInput } from './MentionInput';
 
 import type { Tagging } from './tagging';
 
@@ -23,24 +17,28 @@ function tag(id: string, name: string, categoryId = 'people'): Tag {
 }
 
 function Harness({
-  initial = emptyContent(),
+  initial = '',
   tagging,
   onChange,
+  editable = true,
 }: {
-  initial?: DayContent;
+  initial?: string;
   tagging?: Tagging;
-  onChange?: (content: DayContent) => void;
+  onChange?: (value: string) => void;
+  editable?: boolean;
 }) {
-  const [content, setContent] = useState(initial);
+  const [value, setValue] = useState(initial);
   return (
     // The inline tag form asks through the shared confirm dialog, so it needs the provider.
     <ConfirmProvider>
-      <DayWriter
-        content={content}
-        editable
+      <MentionInput
+        label="Notes"
+        style={{}}
+        editable={editable}
         tagging={tagging}
-        onChange={(next) => {
-          setContent(next);
+        value={value}
+        onChangeValue={(next) => {
+          setValue(next);
           onChange?.(next);
         }}
       />
@@ -52,7 +50,7 @@ function selection(start: number, end: number = start) {
   return { nativeEvent: { selection: { start, end } } };
 }
 
-describe('DayWriter tag mentions', () => {
+describe('MentionInput tag mentions', () => {
   it('lists matching tags after @ and inserts the chosen one as a mention', async () => {
     const onChange = jest.fn();
     await render(
@@ -62,7 +60,7 @@ describe('DayWriter tag mentions', () => {
       />,
     );
 
-    const input = screen.getByLabelText('Free notes');
+    const input = screen.getByLabelText('Notes');
     await fireEvent.changeText(input, 'Met @Ra');
     await fireEvent(input, 'selectionChange', selection(7));
 
@@ -71,17 +69,14 @@ describe('DayWriter tag mentions', () => {
 
     await fireEvent.press(screen.getByLabelText('Mention Ravi'));
 
-    expect(onChange).toHaveBeenLastCalledWith({
-      freeNotes: 'Met {{tag:t1|Ravi}} ',
-      blocks: [],
-    });
+    expect(onChange).toHaveBeenLastCalledWith('Met {{tag:t1|Ravi}} ');
     expect(screen.getByDisplayValue('Met @Ravi ')).toBeTruthy();
   });
 
   it('shows a mention with the current name of its tag', async () => {
     await render(
       <Harness
-        initial={{ freeNotes: '{{tag:t1|Ravi}} came by', blocks: [] }}
+        initial="{{tag:t1|Ravi}} came by"
         tagging={{ tags: [tag('t1', 'Ravindu')], categories }}
       />,
     );
@@ -91,10 +86,7 @@ describe('DayWriter tag mentions', () => {
 
   it('keeps the stored name of a mention whose tag was deleted', async () => {
     await render(
-      <Harness
-        initial={{ freeNotes: 'Lunch with {{tag:gone|Ravi}}', blocks: [] }}
-        tagging={{ tags: [], categories }}
-      />,
+      <Harness initial="Lunch with {{tag:gone|Ravi}}" tagging={{ tags: [], categories }} />,
     );
 
     expect(screen.getByDisplayValue('Lunch with @Ravi')).toBeTruthy();
@@ -105,17 +97,14 @@ describe('DayWriter tag mentions', () => {
     await render(
       <Harness
         onChange={onChange}
-        initial={{ freeNotes: '{{tag:t1|Ravi}} ', blocks: [] }}
+        initial="{{tag:t1|Ravi}} "
         tagging={{ tags: [tag('t1', 'Ravi')], categories }}
       />,
     );
 
-    await fireEvent.changeText(screen.getByLabelText('Free notes'), '@Ravi was late');
+    await fireEvent.changeText(screen.getByLabelText('Notes'), '@Ravi was late');
 
-    expect(onChange).toHaveBeenLastCalledWith({
-      freeNotes: '{{tag:t1|Ravi}} was late',
-      blocks: [],
-    });
+    expect(onChange).toHaveBeenLastCalledWith('{{tag:t1|Ravi}} was late');
   });
 
   it('turns a mention back into plain text when its name is edited', async () => {
@@ -123,14 +112,14 @@ describe('DayWriter tag mentions', () => {
     await render(
       <Harness
         onChange={onChange}
-        initial={{ freeNotes: '{{tag:t1|Ravi}} ', blocks: [] }}
+        initial="{{tag:t1|Ravi}} "
         tagging={{ tags: [tag('t1', 'Ravi')], categories }}
       />,
     );
 
-    await fireEvent.changeText(screen.getByLabelText('Free notes'), '@Rav ');
+    await fireEvent.changeText(screen.getByLabelText('Notes'), '@Rav ');
 
-    expect(onChange).toHaveBeenLastCalledWith({ freeNotes: '@Rav ', blocks: [] });
+    expect(onChange).toHaveBeenLastCalledWith('@Rav ');
   });
 
   it('inserts a space so a mention never touches the word before it', async () => {
@@ -138,21 +127,18 @@ describe('DayWriter tag mentions', () => {
     await render(
       <Harness
         onChange={onChange}
-        initial={{ freeNotes: 'Hello', blocks: [] }}
+        initial="Hello"
         tagging={{ tags: [tag('t1', 'Ravi')], categories }}
       />,
     );
 
-    const input = screen.getByLabelText('Free notes');
+    const input = screen.getByLabelText('Notes');
     await fireEvent(input, 'focus');
     await fireEvent(input, 'selectionChange', selection(5));
     await fireEvent.press(screen.getByLabelText('Insert tag'));
     await fireEvent.press(screen.getByLabelText('Mention Ravi'));
 
-    expect(onChange).toHaveBeenLastCalledWith({
-      freeNotes: 'Hello {{tag:t1|Ravi}} ',
-      blocks: [],
-    });
+    expect(onChange).toHaveBeenLastCalledWith('Hello {{tag:t1|Ravi}} ');
   });
 
   it('searches the picker and offers every category', async () => {
@@ -162,7 +148,7 @@ describe('DayWriter tag mentions', () => {
       />,
     );
 
-    const input = screen.getByLabelText('Free notes');
+    const input = screen.getByLabelText('Notes');
     await fireEvent(input, 'focus');
     await fireEvent.press(screen.getByLabelText('Insert tag'));
 
@@ -180,7 +166,7 @@ describe('DayWriter tag mentions', () => {
     const createTag = jest.fn((_draft: TagDraft) => 'new1');
     await render(<Harness onChange={onChange} tagging={{ tags: [], categories, createTag }} />);
 
-    const input = screen.getByLabelText('Free notes');
+    const input = screen.getByLabelText('Notes');
     await fireEvent.changeText(input, 'Hi @Sam');
     await fireEvent(input, 'selectionChange', selection(7));
     await fireEvent.press(screen.getByLabelText('Create new tag Sam'));
@@ -190,10 +176,7 @@ describe('DayWriter tag mentions', () => {
 
     expect(createTag).toHaveBeenCalledTimes(1);
     expect(createTag.mock.calls[0]?.[0]).toMatchObject({ name: 'Sam', categoryId: 'people' });
-    expect(onChange).toHaveBeenLastCalledWith({
-      freeNotes: 'Hi {{tag:new1|Sam}} ',
-      blocks: [],
-    });
+    expect(onChange).toHaveBeenLastCalledWith('Hi {{tag:new1|Sam}} ');
   });
 
   it('saves the selected text as a tag and replaces it with a mention', async () => {
@@ -202,12 +185,12 @@ describe('DayWriter tag mentions', () => {
     await render(
       <Harness
         onChange={onChange}
-        initial={{ freeNotes: 'Walked around Galle Fort today', blocks: [] }}
+        initial="Walked around Galle Fort today"
         tagging={{ tags: [], categories, createTag }}
       />,
     );
 
-    const input = screen.getByLabelText('Free notes');
+    const input = screen.getByLabelText('Notes');
     await fireEvent(input, 'focus');
     await fireEvent(input, 'selectionChange', selection(14, 24));
     await fireEvent.press(screen.getByLabelText('Save as tag'));
@@ -216,39 +199,15 @@ describe('DayWriter tag mentions', () => {
     await fireEvent.press(screen.getByText('Create tag'));
 
     expect(createTag.mock.calls[0]?.[0]).toMatchObject({ name: 'Galle Fort' });
-    expect(onChange).toHaveBeenLastCalledWith({
-      freeNotes: 'Walked around {{tag:new2|Galle%20Fort}} today',
-      blocks: [],
-    });
+    expect(onChange).toHaveBeenLastCalledWith('Walked around {{tag:new2|Galle%20Fort}} today');
   });
 
-  it('does not offer tags while the day is read-only', async () => {
-    await render(
-      <DayWriter
-        content={{ freeNotes: '', blocks: [] }}
-        editable={false}
-        onChange={jest.fn()}
-        tagging={{ tags: [tag('t1', 'Ravi')], categories }}
-      />,
-    );
+  it('does not offer tags while the field is read-only', async () => {
+    await render(<Harness editable={false} tagging={{ tags: [tag('t1', 'Ravi')], categories }} />);
 
-    const input = screen.getByLabelText('Free notes');
+    const input = screen.getByLabelText('Notes');
     await fireEvent(input, 'focus');
 
     expect(screen.queryByLabelText('Insert tag')).toBeNull();
-  });
-
-  it('shows mentions as names in the collapsed row preview', async () => {
-    await render(
-      <Harness
-        initial={{
-          freeNotes: '',
-          blocks: [{ hour: 9, minute: null, text: 'Tea with {{tag:t1|Ravi}}' }],
-        }}
-        tagging={{ tags: [tag('t1', 'Ravi')], categories }}
-      />,
-    );
-
-    expect(screen.getByLabelText('09:00, Tea with @Ravi')).toBeTruthy();
   });
 });

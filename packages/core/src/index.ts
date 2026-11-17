@@ -13,7 +13,6 @@ export * from './mentionHistory';
 export * from './holidays';
 export * from './mentions';
 export * from './messages';
-export * from './minuteMarkers';
 export * from './profile';
 export * from './reminder';
 export * from './repositoryExport';

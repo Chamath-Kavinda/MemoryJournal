@@ -1,4 +1,4 @@
-import { emptyContent, setHourText, setMinuteText } from '@memory-journal/core';
+import { emptyContent, setHourText, type DayContent } from '@memory-journal/core';
 
 import { createMemoryStorage } from '@/test-utils/memoryStorage';
 
@@ -17,9 +17,15 @@ describe('draftKey', () => {
 describe('saveDraft and loadDraft', () => {
   it('stores a draft and reads it back with its save time', async () => {
     const storage = createMemoryStorage();
-    const content = setMinuteText(setHourText(emptyContent(), 9, 'Breakfast'), 9, 25, 'Call Amma');
+    const content: DayContent = {
+      freeNotes: 'Somewhere',
+      blocks: [
+        { hour: 9, minute: null, text: 'Breakfast' },
+        { hour: 9, minute: 25, text: 'Call Amma' },
+      ],
+    };
 
-    await saveDraft(storage, 'u1', DAY, { ...content, freeNotes: 'Somewhere' }, 1234);
+    await saveDraft(storage, 'u1', DAY, content, 1234);
 
     expect(await loadDraft(storage, 'u1', DAY)).toEqual({
       savedAt: 1234,
@@ -56,7 +62,13 @@ describe('saveDraft and loadDraft', () => {
 
   it('treats a marker with no text as an empty day', async () => {
     const storage = createMemoryStorage();
-    await saveDraft(storage, 'u1', DAY, setMinuteText(emptyContent(), 9, 25, ''), 1);
+    await saveDraft(
+      storage,
+      'u1',
+      DAY,
+      { freeNotes: '', blocks: [{ hour: 9, minute: 25, text: '' }] },
+      1,
+    );
     expect(storage.data.size).toBe(0);
   });
 

@@ -391,8 +391,8 @@ const RULES: readonly TriggerRule[] = [
     texts: [
       'Details you remember later still count. Come back and add them.',
       'Type @ to mention a tag, and your people, places and numbers become easy to find again.',
-      'Minute markers pin a memory to an exact minute and add to your precision.',
-      'Free notes hold what you remember but cannot place in time.',
+      'Add time pins a memory to an exact minute and adds to your precision.',
+      'You can write in any order, so a memory you cannot place in time still belongs on the page.',
       'A day counts toward your streak when you write it between 9 PM and midnight, with at least 20 words.',
       'Older days can be edited at any time. Extra details improve your score, though not your streak.',
       'Movies and books have their own pages with no time sections. Write whatever comes back.',
