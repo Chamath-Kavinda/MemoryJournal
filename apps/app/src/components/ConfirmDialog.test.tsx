@@ -258,7 +258,7 @@ describe('ConfirmDialog', () => {
 });
 
 describe('ConfirmDialog motion', () => {
-  it('fades the backdrop in and scales the dialog up from 0.92 to 1', async () => {
+  it('fades the backdrop and the dialog in place, without scaling', async () => {
     await render(
       <ConfirmProvider>
         <Harness onResult={jest.fn()} />

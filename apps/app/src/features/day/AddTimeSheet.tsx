@@ -2,10 +2,10 @@ import { Clock, Timer } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { AppSheet } from '@/components/AppSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { SegmentedControl, type Segment } from '@/components/SegmentedControl';
-import { Sheet } from '@/components/Sheet';
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text, TextInput } from '@/theme/themed';
@@ -55,8 +55,26 @@ export function AddTimeSheet({ now, onInsert, onClose }: Props) {
     onInsert(hour, kind === 'hour' ? null : minute);
   }
 
+  const footer = (
+    <>
+      <Button
+        variant="secondary"
+        label="Cancel"
+        onPress={onClose}
+        style={{ flexGrow: 1, flexBasis: 120 }}
+      />
+      <Button
+        label="Insert"
+        accessibilityLabel="Insert time"
+        disabled={!ready}
+        onPress={insert}
+        style={{ flexGrow: 1, flexBasis: 120 }}
+      />
+    </>
+  );
+
   return (
-    <Sheet title="Add time" onClose={onClose} testID="add-time-sheet">
+    <AppSheet title="Add time" onClose={onClose} testID="add-time-sheet" footer={footer}>
       <SegmentedControl
         accessibilityLabel="Kind of time"
         segments={KINDS}
@@ -131,22 +149,6 @@ export function AddTimeSheet({ now, onInsert, onClose }: Props) {
           ) : null}
         </View>
       ) : null}
-
-      <View style={{ flexDirection: 'row', gap: SPACING.sm, paddingTop: SPACING.sm }}>
-        <Button
-          variant="secondary"
-          label="Cancel"
-          onPress={onClose}
-          style={{ flexGrow: 1, flexBasis: 120 }}
-        />
-        <Button
-          label="Insert"
-          accessibilityLabel="Insert time"
-          disabled={!ready}
-          onPress={insert}
-          style={{ flexGrow: 1, flexBasis: 120 }}
-        />
-      </View>
-    </Sheet>
+    </AppSheet>
   );
 }

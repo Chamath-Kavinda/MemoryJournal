@@ -8,7 +8,7 @@ import { Text, TextInput } from '@/theme/themed';
 
 import { ActionButton, Chip, usePalette } from './ui';
 
-interface Props {
+interface Options {
   categories: readonly TagCategory[];
   /** All tags, to refuse a duplicate name inside a category. */
   tags: readonly Tag[];
@@ -26,8 +26,31 @@ interface Props {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-/** Create or edit a tag: name, category, optional note, optional aliases. */
-export function TagForm({
+/** Everything the form fields and the action buttons share. */
+export interface TagFormModel {
+  name: string;
+  setName: (value: string) => void;
+  categoryId: string;
+  setCategoryId: (value: string) => void;
+  note: string;
+  setNote: (value: string) => void;
+  aliasesText: string;
+  setAliasesText: (value: string) => void;
+  error: string | null;
+  editing: boolean;
+  /** Checks the form, asks before removing aliases, then calls `onSubmit`. */
+  submit: () => Promise<void>;
+  /** Cancels at once, or asks first when there are changes that would be lost. */
+  askCancel: () => Promise<void>;
+  askDelete: () => Promise<void>;
+}
+
+/**
+ * The state and the actions of the tag form. `TagForm` draws them in a screen with its buttons
+ * under the fields; the Add tag sheet draws the fields in its body and the buttons in its fixed
+ * footer, so the buttons are never under a system button (v0.2.5, section 7).
+ */
+export function useTagForm({
   categories,
   tags,
   initial,
@@ -37,8 +60,7 @@ export function TagForm({
   onCancel,
   onDelete,
   onDirtyChange,
-}: Props) {
-  const palette = usePalette();
+}: Options): TagFormModel {
   const confirm = useConfirm();
   // What the form started with, to tell whether anything has changed.
   const [start] = useState(() => ({
@@ -118,6 +140,33 @@ export function TagForm({
     if (confirmed) onDelete?.();
   };
 
+  return {
+    name,
+    setName,
+    categoryId,
+    setCategoryId,
+    note,
+    setNote,
+    aliasesText,
+    setAliasesText,
+    error,
+    editing: initial !== undefined,
+    submit,
+    askCancel,
+    askDelete,
+  };
+}
+
+/** Name, category, optional note, optional aliases and the error line. No buttons. */
+export function TagFormFields({
+  form,
+  categories,
+}: {
+  form: TagFormModel;
+  categories: readonly TagCategory[];
+}) {
+  const palette = usePalette();
+
   const input = {
     minHeight: 44,
     paddingHorizontal: 12,
@@ -131,14 +180,14 @@ export function TagForm({
   const label = { color: palette.text, fontSize: 15, fontWeight: '600' } as const;
 
   return (
-    <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}>
+    <View style={{ gap: 12 }}>
       <Text style={label}>Name</Text>
       <TextInput
         accessibilityLabel="Name"
         placeholder="For example Ravi, Galle Fort or 0771234567"
         placeholderTextColor={palette.muted}
-        value={name}
-        onChangeText={setName}
+        value={form.name}
+        onChangeText={form.setName}
         style={input}
       />
 
@@ -148,8 +197,8 @@ export function TagForm({
           <Chip
             key={category.id}
             label={category.name}
-            selected={categoryId === category.id}
-            onPress={() => setCategoryId(category.id)}
+            selected={form.categoryId === category.id}
+            onPress={() => form.setCategoryId(category.id)}
           />
         ))}
       </View>
@@ -159,8 +208,8 @@ export function TagForm({
         accessibilityLabel="Note"
         placeholder="For example where you met"
         placeholderTextColor={palette.muted}
-        value={note}
-        onChangeText={setNote}
+        value={form.note}
+        onChangeText={form.setNote}
         multiline
         style={{ ...input, minHeight: 88, textAlignVertical: 'top' }}
       />
@@ -170,30 +219,61 @@ export function TagForm({
         accessibilityLabel="Aliases"
         placeholder="Other names, separated by commas"
         placeholderTextColor={palette.muted}
-        value={aliasesText}
-        onChangeText={setAliasesText}
+        value={form.aliasesText}
+        onChangeText={form.setAliasesText}
         autoCorrect={false}
         style={input}
       />
 
-      {error !== null ? (
+      {form.error !== null ? (
         <Text accessibilityRole="alert" style={{ color: palette.danger, fontSize: 14 }}>
-          {error}
+          {form.error}
         </Text>
       ) : null}
+    </View>
+  );
+}
+
+/** Create or edit a tag: name, category, optional note, optional aliases. */
+export function TagForm({
+  categories,
+  tags,
+  initial,
+  defaultCategoryId,
+  defaultName,
+  onSubmit,
+  onCancel,
+  onDelete,
+  onDirtyChange,
+}: Options) {
+  const form = useTagForm({
+    categories,
+    tags,
+    ...(initial ? { initial } : {}),
+    ...(defaultCategoryId !== undefined ? { defaultCategoryId } : {}),
+    ...(defaultName !== undefined ? { defaultName } : {}),
+    onSubmit,
+    onCancel,
+    ...(onDelete ? { onDelete } : {}),
+    ...(onDirtyChange ? { onDirtyChange } : {}),
+  });
+
+  return (
+    <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', padding: 16, gap: 12 }}>
+      <TagFormFields form={form} categories={categories} />
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <ActionButton
-          label={initial ? 'Save changes' : 'Create tag'}
+          label={form.editing ? 'Save changes' : 'Create tag'}
           tone="primary"
-          onPress={() => void submit()}
+          onPress={() => void form.submit()}
         />
-        <ActionButton label="Cancel" onPress={() => void askCancel()} />
+        <ActionButton label="Cancel" onPress={() => void form.askCancel()} />
       </View>
 
       {onDelete ? (
         <View style={{ alignItems: 'flex-start', paddingTop: 8 }}>
-          <ActionButton label="Delete tag" tone="danger" onPress={() => void askDelete()} />
+          <ActionButton label="Delete tag" tone="danger" onPress={() => void form.askDelete()} />
         </View>
       ) : null}
     </View>

@@ -1,16 +1,12 @@
 import { Info, Trash2, type LucideIcon } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useState } from 'react';
+import { View } from 'react-native';
 
-import { easeOut } from '@/motion/easing';
-import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
-import { DURATION } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text, TextInput } from '@/theme/themed';
-import { SCRIM } from '@/theme/tokens';
 
+import { AppSheet } from './AppSheet';
 import { Button } from './Button';
 import { Icon } from './Icon';
 
@@ -52,10 +48,17 @@ interface Props extends ConfirmOptions {
   onCancel: () => void;
 }
 
+/** The widest the confirmation dialog grows. */
+const CONFIRM_MAX_WIDTH = 420;
+
 /**
  * The one confirmation popup for every delete, remove, discard, erase and sign-out (section 15.10).
  * Tapping the backdrop, the hardware Back button and Esc all mean Cancel. Cancel comes first, so it
  * is the control focus lands on. Use it through `useConfirm()`, not directly.
+ *
+ * It is built on `AppSheet` (v0.2.5, section 7): the text scrolls when it is long or the font is
+ * large, and the buttons sit in a fixed footer that stays clear of the system buttons. It fades in
+ * place, and nothing scales, slides or springs.
  */
 export function ConfirmDialog({
   title,
@@ -72,169 +75,105 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   const { palette } = useTheme();
-  const reduce = useReduceMotion();
-  const { height } = useWindowDimensions();
   const [typedText, setTypedText] = useState('');
-
-  const backdrop = useSharedValue(0);
-  const appear = useSharedValue(0);
-
-  // The dialog and its backdrop fade in place (150 ms, or 100 ms with reduce motion on).
-  // Nothing scales, slides or springs (v0.2.5, section 4).
-  useEffect(() => {
-    const duration = reduce ? DURATION.reduced : DURATION.fast;
-    backdrop.value = withTiming(1, { duration, easing: easeOut });
-    appear.value = withTiming(1, { duration, easing: easeOut });
-  }, [reduce, backdrop, appear]);
-
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdrop.value }));
-  const dialogStyle = useAnimatedStyle(() => ({ opacity: appear.value }));
 
   const canConfirm = typed === undefined || typed.matches(typedText);
   const calm = notice || neutral;
   const shownIcon = icon ?? (calm ? Info : Trash2);
   const tint = calm ? palette.accent : palette.danger;
 
-  return (
-    <Modal
-      testID="confirm-modal"
-      transparent
-      visible
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={onCancel}
-    >
-      <View style={{ flex: 1 }}>
-        <Animated.View
-          testID="confirm-scrim"
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }, backdropStyle]}
-        />
-        <Pressable
-          testID="confirm-backdrop"
-          accessible={false}
-          importantForAccessibility="no"
-          style={StyleSheet.absoluteFill}
+  const footer = (
+    <>
+      {/* Cancel is first, so it is the first control focus reaches. A notice has no Cancel. */}
+      {notice ? null : (
+        <Button
+          variant="secondary"
+          label={cancelLabel}
           onPress={onCancel}
+          style={{ flexGrow: 1, flexBasis: 120 }}
         />
+      )}
+      {alternativeLabel && onAlternative ? (
+        <Button
+          variant="secondary"
+          label={alternativeLabel}
+          onPress={onAlternative}
+          style={{ flexGrow: 1, flexBasis: 120 }}
+        />
+      ) : null}
+      <Button
+        variant={calm ? 'primary' : 'danger'}
+        label={confirmLabel}
+        onPress={onConfirm}
+        disabled={!canConfirm}
+        style={{ flexGrow: 1, flexBasis: 120 }}
+      />
+    </>
+  );
+
+  return (
+    <AppSheet
+      kind="dialog"
+      title={title}
+      onClose={onCancel}
+      testID="confirm"
+      panelTestID="confirm-dialog"
+      maxWidth={CONFIRM_MAX_WIDTH}
+      footer={footer}
+    >
+      <View style={{ alignSelf: 'center' }}>
         <View
-          pointerEvents="box-none"
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg }}
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: RADIUS.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            // The tint colour at 15 percent, as a hex alpha.
+            backgroundColor: `${tint}26`,
+          }}
         >
-          <Animated.View
-            testID="confirm-dialog"
-            role="alertdialog"
-            aria-modal
-            accessibilityViewIsModal
-            style={[
-              {
-                width: '100%',
-                maxWidth: 420,
-                maxHeight: height - SPACING.lg * 2,
-                borderRadius: RADIUS.sheet,
-                borderWidth: BORDER_WIDTH,
-                borderColor: palette.border,
-                backgroundColor: palette.surfaceRaised,
-              },
-              dialogStyle,
-            ]}
-          >
-            <ScrollView
-              bounces={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ padding: SPACING.xl, gap: SPACING.md }}
-            >
-              <View style={{ alignSelf: 'center' }}>
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: RADIUS.pill,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    // The tint colour at 15 percent, as a hex alpha.
-                    backgroundColor: `${tint}26`,
-                  }}
-                >
-                  <Icon icon={shownIcon} size="control" color={tint} />
-                </View>
-              </View>
-
-              <Text
-                accessibilityRole="header"
-                style={{ fontSize: 22, lineHeight: 28, fontWeight: '700', textAlign: 'center' }}
-              >
-                {title}
-              </Text>
-              <Text
-                style={{
-                  color: palette.muted,
-                  fontSize: 16,
-                  lineHeight: 24,
-                  textAlign: 'center',
-                }}
-              >
-                {message}
-              </Text>
-
-              {typed ? (
-                <TextInput
-                  accessibilityLabel={typed.label}
-                  placeholder={typed.label}
-                  placeholderTextColor={palette.muted}
-                  value={typedText}
-                  onChangeText={setTypedText}
-                  autoFocus
-                  autoCorrect={false}
-                  style={{
-                    minHeight: MIN_TARGET,
-                    paddingHorizontal: SPACING.md,
-                    borderRadius: RADIUS.input,
-                    borderWidth: BORDER_WIDTH,
-                    borderColor: palette.border,
-                    color: palette.text,
-                    fontSize: 16,
-                  }}
-                />
-              ) : null}
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: SPACING.sm,
-                  paddingTop: SPACING.sm,
-                }}
-              >
-                {/* Cancel is first, so it is the first control focus reaches. A notice has no Cancel. */}
-                {notice ? null : (
-                  <Button
-                    variant="secondary"
-                    label={cancelLabel}
-                    onPress={onCancel}
-                    style={{ flexGrow: 1, flexBasis: 120 }}
-                  />
-                )}
-                {alternativeLabel && onAlternative ? (
-                  <Button
-                    variant="secondary"
-                    label={alternativeLabel}
-                    onPress={onAlternative}
-                    style={{ flexGrow: 1, flexBasis: 120 }}
-                  />
-                ) : null}
-                <Button
-                  variant={calm ? 'primary' : 'danger'}
-                  label={confirmLabel}
-                  onPress={onConfirm}
-                  disabled={!canConfirm}
-                  style={{ flexGrow: 1, flexBasis: 120 }}
-                />
-              </View>
-            </ScrollView>
-          </Animated.View>
+          <Icon icon={shownIcon} size="control" color={tint} />
         </View>
       </View>
-    </Modal>
+
+      <Text
+        accessibilityRole="header"
+        style={{ fontSize: 22, lineHeight: 28, fontWeight: '700', textAlign: 'center' }}
+      >
+        {title}
+      </Text>
+      <Text
+        style={{
+          color: palette.muted,
+          fontSize: 16,
+          lineHeight: 24,
+          textAlign: 'center',
+        }}
+      >
+        {message}
+      </Text>
+
+      {typed ? (
+        <TextInput
+          accessibilityLabel={typed.label}
+          placeholder={typed.label}
+          placeholderTextColor={palette.muted}
+          value={typedText}
+          onChangeText={setTypedText}
+          autoFocus
+          autoCorrect={false}
+          style={{
+            minHeight: MIN_TARGET,
+            paddingHorizontal: SPACING.md,
+            borderRadius: RADIUS.input,
+            borderWidth: BORDER_WIDTH,
+            borderColor: palette.border,
+            color: palette.text,
+            fontSize: 16,
+          }}
+        />
+      ) : null}
+    </AppSheet>
   );
 }
