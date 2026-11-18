@@ -232,7 +232,10 @@ export default function DayRoute() {
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: SPACING.xl }}
+          // In edit mode the Clock and Tag row is the second child, right under the date, and
+          // stays at the top of the window while the page scrolls (v0.2.5, section 8.1).
+          stickyHeaderIndices={showEditor ? [1] : undefined}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: SPACING.xl }}
         >
           <DayScreenView
             dayId={dayId}
@@ -246,6 +249,7 @@ export default function DayRoute() {
             saving={daySave.saving && !pendingSync}
             cancelShortcut={tools.sheet === null}
           />
+          {showEditor ? <DayPageToolbar tools={tools} canTag={tagging !== undefined} /> : null}
           {historyFailed ? (
             <Text
               accessibilityRole="alert"
@@ -308,12 +312,7 @@ export default function DayRoute() {
             </>
           ) : null}
         </ScrollView>
-        {showEditor ? (
-          <>
-            <DayPageToolbar tools={tools} canTag={tagging !== undefined} />
-            <DayPageSheets tools={tools} tagging={tagging} />
-          </>
-        ) : null}
+        {showEditor ? <DayPageSheets tools={tools} tagging={tagging} /> : null}
         <Snackbar message={snack.message} id={snack.id} onDismiss={dismissSnack} />
       </KeyboardAvoidingView>
     </SafeAreaView>

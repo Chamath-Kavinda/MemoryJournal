@@ -33,6 +33,8 @@ export function useDayPageTools(): DayPageTools {
   const [now, setNow] = useState(() => new Date());
   const [selected, setSelected] = useState('');
 
+  // The field keeps its last cursor and selection as state, so a tap on a toolbar button that
+  // takes focus away does not lose them (section 8.3). Add tag also reads the selected text now.
   const openTime = useCallback(() => {
     setNow(new Date());
     setSheet('time');
@@ -57,31 +59,40 @@ interface EditorProps {
 
 /**
  * The one large writing field of edit mode (section 18.2): no Free Notes block and no hourly
- * rows. It grows with the text and scrolls with the page.
+ * rows. It fills the room under the toolbar, down to the bottom inset or the keyboard, and grows
+ * with the text.
  */
 export function DayPageEditor({ text, onChange, editable, tagging, tools }: EditorProps) {
   const { palette } = useTheme();
   return (
     <View
-      style={{ width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: SPACING.lg }}
+      style={{
+        flexGrow: 1,
+        width: '100%',
+        maxWidth: 720,
+        alignSelf: 'center',
+        paddingHorizontal: SPACING.lg,
+      }}
     >
       <MentionInput
         label="Day page"
         handle={tools.handle}
         inlineTools={false}
+        fill
         autoFocus={editable}
         editable={editable}
         tagging={tagging}
         value={text}
         onChangeValue={onChange}
         style={{
+          flexGrow: 1,
           color: palette.text,
           backgroundColor: palette.surfaceRaised,
           borderColor: palette.border,
           borderWidth: BORDER_WIDTH,
           borderRadius: RADIUS.input,
           padding: SPACING.md,
-          minHeight: 320,
+          minHeight: 240,
           fontSize: 16,
           lineHeight: 24,
           textAlignVertical: 'top',
@@ -97,18 +108,15 @@ interface ToolbarProps {
   canTag: boolean;
 }
 
-/** Clock and Tag buttons, at the bottom of the window above the keyboard (section 18.2). */
+/**
+ * Clock and Tag buttons in a row under the date, above the writing field (section 8.1 of
+ * v0.2.5). The Day screen pins this row, so it stays in place while the page scrolls. It has the
+ * page background so text scrolling under it is hidden, and no bar or border of its own.
+ */
 export function DayPageToolbar({ tools, canTag }: ToolbarProps) {
   const { palette } = useTheme();
   return (
-    <View
-      testID="day-toolbar"
-      style={{
-        borderTopWidth: BORDER_WIDTH,
-        borderColor: palette.border,
-        backgroundColor: palette.surface,
-      }}
-    >
+    <View testID="day-toolbar" style={{ backgroundColor: palette.background }}>
       <View
         style={{
           width: '100%',
@@ -116,8 +124,9 @@ export function DayPageToolbar({ tools, canTag }: ToolbarProps) {
           alignSelf: 'center',
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'flex-start',
           gap: SPACING.sm,
-          paddingHorizontal: SPACING.md,
+          paddingHorizontal: SPACING.lg,
           paddingVertical: SPACING.xs,
         }}
       >
@@ -146,14 +155,22 @@ interface SheetsProps {
   tagging?: Tagging | undefined;
 }
 
-/** The Add time and Add tag sheets. Choosing something inserts it at the cursor and closes. */
+/**
+ * The Add time and Add tag sheets. Choosing something inserts it at the saved cursor and closes.
+ * Cancel, the close icon and hardware Back give the writing field its focus and cursor back.
+ */
 export function DayPageSheets({ tools, tagging }: SheetsProps) {
   const { handle, close } = tools;
+  // The sheet is a Modal, so the field can only take focus once the Modal has gone.
+  const closeAndRefocus = () => {
+    close();
+    setTimeout(() => handle.current?.focus(), 0);
+  };
   if (tools.sheet === 'time') {
     return (
       <AddTimeSheet
         now={tools.now}
-        onClose={close}
+        onClose={closeAndRefocus}
         onInsert={(hour, minute) => {
           close();
           handle.current?.insertTime(hour, minute);
@@ -166,7 +183,7 @@ export function DayPageSheets({ tools, tagging }: SheetsProps) {
       <AddTagSheet
         tagging={tagging}
         selectedText={tools.selected}
-        onClose={close}
+        onClose={closeAndRefocus}
         onChoose={(id, name, replaceSelection) => {
           close();
           handle.current?.insertTag(id, name, replaceSelection);

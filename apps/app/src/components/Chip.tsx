@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -17,6 +18,8 @@ export interface ChipProps {
   disabled?: boolean;
   /** Only needed when the screen reader should say more than the visible label. */
   accessibilityLabel?: string;
+  /** Layout of the touchable area, for example `{ flex: 1 }` to share a row in equal widths. */
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
@@ -28,12 +31,14 @@ export function Chip({
   icon,
   disabled = false,
   accessibilityLabel,
+  style,
   testID,
 }: ChipProps) {
   const { palette } = useTheme();
   return (
     <PressableScale
       testID={testID}
+      style={style}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected, disabled }}
       disabled={disabled}

@@ -59,6 +59,8 @@ interface Props {
   onCursorChange?: (storedOffset: number) => void;
   /** False hides the small @ and Save as tag buttons, for a screen with its own toolbar. */
   inlineTools?: boolean;
+  /** True lets the field grow to fill the room its parent has left (the Day writing page). */
+  fill?: boolean;
   /** Lets the screen insert a time line or a tag at the cursor. */
   handle?: Ref<MentionInputHandle>;
 }
@@ -122,6 +124,7 @@ export function MentionInput({
   style,
   onCursorChange,
   inlineTools = true,
+  fill = false,
   handle,
 }: Props) {
   const palette = usePalette();
@@ -186,7 +189,11 @@ export function MentionInput({
         inputRef.current?.focus();
       },
       selectedText: () => selectedText,
-      focus: () => inputRef.current?.focus(),
+      // Gives the field back to the writer with the cursor where it was before a sheet opened.
+      focus: () => {
+        setForced({ start: selection.start, end: selection.end });
+        inputRef.current?.focus();
+      },
     }),
     // The handle reads the newest text and cursor each time the field renders.
     [value, display, targets, names, selection, selectedText, onChangeValue],
@@ -210,7 +217,7 @@ export function MentionInput({
   } as const;
 
   return (
-    <View style={{ gap: 6 }}>
+    <View style={fill ? { gap: 6, flexGrow: 1 } : { gap: 6 }}>
       <TextInput
         ref={(node) => {
           inputRef.current = node;
