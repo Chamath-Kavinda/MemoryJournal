@@ -42,7 +42,7 @@ Android device / version: ________   Windows version: ________
 ## 4. Writing (acceptance 3)
 
 - [ ] Tapping a day opens it in View mode: the saved text with nothing to type into, a Pencil in the header, and a "Nothing written for this day yet." card with a Write button when the day is empty.
-- [ ] Press the Pencil: one large writing field replaces the page, with no Free Notes block and no hourly rows. The header shows X (Cancel) and Save, and the bottom toolbar has Add time and Add tag.
+- [ ] Press the Pencil: one large writing field replaces the page, with no Free Notes block and no hourly rows. The header shows X (Cancel) and Save, and a row under the date, above the field, has Add time and Add tag (section 15 checks where it sits).
 - [ ] Add time, Hour only: inserts a line such as `⏱ 21` on its own line at the cursor. Hour and minutes inserts `⏱ 21:25`, with the :00, :15, :30 and :45 chips and a minute field that takes 0 to 59.
 - [ ] Add a time that is already in the page: the cursor moves to the existing line instead of adding a second one.
 - [ ] Save, then look at View mode: time lines show as clock chips (`21:00`, `21:25`) with the text under them.
@@ -171,6 +171,77 @@ Run sections 1 to 13 first. Where a v0.1.0 line says "returns to the sign-in scr
 - [ ] The production App Bundle builds.
 - [ ] Settings footer shows v0.2.0. The Windows installer is named `Memory Journal-Setup-0.2.0.exe`.
 - [ ] `git log` has no version-only commit, and the `v0.2.0` tag is on the final commit.
+
+## 15. v0.2.5: calmer motion, visible system buttons, top day tools
+
+Run sections 1 to 14 first. Where a v0.2.0 line in "Motion and layout" mentions animation, the rules below replace it. The plan is `docs/build-documentation-v0.2.5.md`; the numbers in brackets are its acceptance criteria.
+
+### Motion: nothing moves (acceptance 1 to 3)
+
+- [ ] Run this search from the repository root. It must find no animation code. The only hits allowed are comments, the `PressableScale` name, the `-scale` test ID and tests that assert nothing moves:
+      `Get-ChildItem -Recurse apps/app/src,apps/app/app -Include *.ts,*.tsx | Select-String -Pattern 'withSpring|translateX|translateY|\bscale\b|rotate|SlideIn|SlideOut|FadeInDown|FadeInUp|ZoomIn|BounceIn|LinearTransition|slide_from_right|slide_from_bottom|LayoutAnimation'`
+- [ ] Open and leave a stack screen (Day, Tag detail, Settings), including with hardware Back: the screen fades in 150 ms and nothing slides.
+- [ ] Open and close every sheet and dialog (Add time, Add tag, Create new tag, confirmation, sign-in, merge): it appears in place while the backdrop fades. It does not rise, scale or shake.
+- [ ] Switch tabs, switch a Settings toggle, change a segmented control, change the calendar month, press a button, a chip, a card and an icon button: only colors and opacity change. Nothing moves, grows or shrinks.
+- [ ] Still working: the score ring and trend line draw, progress bars fill, the Check icon draws after saving, the streak and score count up, skeletons shimmer, the theme cross-fades, the splash fades into Home.
+- [ ] At 21:00 the Today card cross-fades Lock to LockOpen with an opacity glow and no shake.
+- [ ] Turn on the system reduce motion setting: loops stop, every transition is a 100 ms fade or none, and final values show at once.
+
+### System navigation buttons (acceptance 4, 5)
+
+Repeat each check in the dark theme, the light theme, and System with the phone switching between dark and light.
+
+- [ ] Three-button navigation: Back, Home and Recent are clearly visible, and they change when the theme changes without restarting the app.
+- [ ] Two-button navigation: the buttons are visible and nothing of the app is drawn under them.
+- [ ] Gesture navigation: the gesture pill is visible.
+- [ ] The status bar icons are visible in both themes.
+- [ ] The area behind the system buttons has the same color as the bottom tab bar, so they read as one block. A screen with no tab bar uses the page background.
+- [ ] The bottom tab bar and every screen that reaches the bottom edge sit fully above the system buttons.
+- [ ] Cold start and rotation show no white flash, and the splash uses the dark color with light buttons.
+
+### Home greeting (acceptance 6, 7)
+
+- [ ] The Home top bar shows the greeting where Memory Journal was, and the text Memory Journal is not on Home. The greeting is not repeated under the top bar.
+- [ ] As a guest at 09:00 it reads `Good morning`. Signed in as Sam Perera at 20:00 it reads `Good evening, Sam`. At 23:00 it reads `Good night`. Check the edges: 04:59, 05:00, 11:59, 12:00, 16:59, 17:00, 20:59 and 21:00.
+- [ ] At font scale 200 percent and at a 360 wide window the greeting wraps onto a second line, and the Sign in pill and the Settings gear stay visible. It is never cut off with an ellipsis.
+- [ ] The Windows window title and the browser tab title stay Memory Journal. The Tags, Library, Insights and Learn screens keep their own titles.
+
+### Day writing page tools (acceptance 8, 12)
+
+- [ ] In edit mode the Clock and Tag buttons are in a row under the date, above the writing field, left aligned. Nothing is at the bottom of the page except the writing field and, when open, the keyboard.
+- [ ] Write a long text and scroll: the Clock and Tag row stays at the top of the window while the text moves.
+- [ ] The writing field fills the screen down to the system buttons, or down to the top of the keyboard when it is open.
+- [ ] View mode has no Clock or Tag row.
+- [ ] Place the cursor in the middle of a line, open Add time or Add tag and press Cancel, the close icon or hardware Back: the writing field has focus, the keyboard returns and the cursor is where it was.
+- [ ] Insert a time or a tag from the top buttons: it goes in at the saved cursor with the usual spacing rules.
+
+### Add time sheet (acceptance 9)
+
+- [ ] All 24 hours show in equal cells: 6 columns and four rows on a phone, 8 columns and three rows from 600 px up. The selected hour has the gradient border.
+- [ ] Hour and minutes: the minute field takes only digits 0 to 59 with a numeric keyboard, and the `:00`, `:15`, `:30` and `:45` chips share one row in equal widths.
+- [ ] Insert gives `⏱ 21` for Hour only and `⏱ 21:25` for Hour and minutes, at the cursor. Insert is disabled until the choice is complete.
+
+### Add tag sheet and the other popups (acceptance 10, 11)
+
+- [ ] Add tag shows the category chips, the search field and the list, and Create new tag is fully visible above the system buttons. With the keyboard open the search field and at least three rows stay visible (on a 360 by 640 phone this is expected to fall short of three rows; record what you see).
+- [ ] Check each of Add time, Add tag, Create new tag, the confirmation dialog, the sign-in modal and the merge dialog in every row of this matrix. In each one the header and the footer buttons stay fully visible, the body scrolls when it is long, and nothing is under a system button.
+
+| Window                      | Orientation | Font scale 100 | Font scale 200 | Keyboard open (where a field exists) |
+| --------------------------- | ----------- | -------------- | -------------- | ------------------------------------ |
+| 360 by 640 phone            | Portrait    | [ ]            | [ ]            | [ ]                                  |
+| 360 by 640 phone            | Landscape   | [ ]            | [ ]            | [ ]                                  |
+| 412 by 915 phone            | Portrait    | [ ]            | [ ]            | [ ]                                  |
+| 412 by 915 phone            | Landscape   | [ ]            | [ ]            | [ ]                                  |
+| Window 600 px wide or wider | Dialog      | [ ]            | [ ]            | [ ]                                  |
+
+- [ ] A window 600 px wide or wider shows the sheets as a centered dialog, at most 480 wide.
+- [ ] Hardware Back and Esc close each sheet.
+
+### Version and release (acceptance 13, 14)
+
+- [ ] Settings footer shows v0.2.5, and the version is 0.2.5 in all five `package.json` files, the app config and `LICENSE.txt`.
+- [ ] `git log` has no version-only commit and the `v0.2.5` tag is on the final commit.
+- [ ] `git diff v0.2.4 -- firebase/firestore.rules` is empty, and core tests, app tests, rules tests and CI pass.
 
 ## Results
 
