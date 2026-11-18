@@ -14,7 +14,7 @@ import { TodayCard } from '@/features/calendar/TodayCard';
 import { useTodayId } from '@/features/calendar/useTodayId';
 import { useWrittenDays } from '@/features/calendar/useWrittenDays';
 import { useHolidays } from '@/features/holidays/useHolidays';
-import { Greeting } from '@/features/home/Greeting';
+import { useGreeting } from '@/features/home/useGreeting';
 import { StatsBar } from '@/features/insights/StatsBar';
 import { useInsights } from '@/features/insights/useInsights';
 import { TabHeader } from '@/navigation/TabHeader';
@@ -27,6 +27,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { contentMaxWidth } = useLayout();
   const edges = useTabScreenEdges();
+  // The greeting is the title of Home and the app name is not shown here (v0.2.5, section 6).
+  const greeting = useGreeting();
 
   const todayId = useTodayId();
   // Start on the current month, then follow the user's own navigation.
@@ -59,10 +61,9 @@ export default function HomeScreen() {
         <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
           {/* The sections are the tabs of the bottom bar (or the sidebar), so Home has no link list. */}
           <TabHeader
-            title="Memory Journal"
+            title={greeting}
             trailing={<SignInPill onPress={() => router.push('/sign-in')} />}
           />
-          <Greeting />
           <GuestSignInBanner onSignIn={() => router.push('/sign-in')} />
 
           <StatsBar
