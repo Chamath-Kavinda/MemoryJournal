@@ -232,3 +232,11 @@ Detail uses the word count of revision 1 without time lines. Coverage counts the
 ## D-046: Older days convert on first edit and SaveBar stays
 
 Existing days and passes are never rewritten. View mode shows them through `pageOf` (Free Notes first, then the rows in time order). The Pencil on a legacy Latest pass starts the editor with `pageOf(content)`, and saving creates the next pass, or updates the open one, in the new shape. Section 18.8 listed `SaveBar` for removal, but the Library item screen still uses it, so only `DayWriter`, `HighlightedDay`, the old Day tests and `minuteMarkers.ts` were removed (step 6).
+
+## D-047: Nothing moves, scales or shakes as an animation
+
+From v0.2.5 no element changes its position, size or angle as an animation. Only opacity, colour, drawn strokes, filled bars and counting numbers animate. Stack screens, sheets and dialogs fade over 150 ms. The shared spring and the stagger-by-translation helpers are deleted, and the check in section 4.4 of the v0.2.5 plan keeps it that way. The names PressableScale, FadeUp and Reflow are kept so call sites do not change.
+
+## D-048: The system button style follows the theme, set with NavigationBar style`n
+
+The repository is on Expo SDK 58, which is edge to edge, so the app draws the colour behind the Android buttons and only the style of the buttons is set. The installed expo-navigation-bar documents the style prop as the colour of the buttons: light buttons in the dark theme and dark buttons in the light theme. v0.2.4 passed them the other way round, which made dark buttons on a dark background. uto is not used, because it follows the phone while the app theme can be set by the person. enforceContrast stays off in the plugin config.

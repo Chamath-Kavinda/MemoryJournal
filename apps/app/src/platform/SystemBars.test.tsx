@@ -27,7 +27,7 @@ afterEach(() => {
 });
 
 describe('SystemBars', () => {
-  it('colours the window and uses light buttons on the dark theme (Android)', async () => {
+  it('uses light buttons on the dark theme and colours the window (Android)', async () => {
     Platform.OS = 'android';
     await render(
       <ThemeProvider preference="dark">
@@ -36,10 +36,10 @@ describe('SystemBars', () => {
     );
 
     expect(mockSetBackground).toHaveBeenCalledWith('#07070D');
-    expect(mockNavigationBar).toHaveBeenCalledWith(expect.objectContaining({ style: 'dark' }));
+    expect(mockNavigationBar).toHaveBeenCalledWith(expect.objectContaining({ style: 'light' }));
   });
 
-  it('follows the theme when it changes to light (Android)', async () => {
+  it('switches to dark buttons when the theme changes to light (Android)', async () => {
     Platform.OS = 'android';
     const view = await render(
       <ThemeProvider preference="dark">
@@ -54,7 +54,7 @@ describe('SystemBars', () => {
     );
 
     expect(mockSetBackground).toHaveBeenLastCalledWith('#F7F6FF');
-    expect(mockNavigationBar).toHaveBeenLastCalledWith(expect.objectContaining({ style: 'light' }));
+    expect(mockNavigationBar).toHaveBeenLastCalledWith(expect.objectContaining({ style: 'dark' }));
   });
 
   it('ignores a failure from the native module', async () => {
