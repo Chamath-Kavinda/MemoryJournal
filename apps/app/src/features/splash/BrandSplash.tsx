@@ -14,11 +14,11 @@ import { FONT_FAMILY } from '@/theme/typography';
 import { hideNativeSplash } from './nativeSplash';
 
 const TRACK_WIDTH = 160;
-const SEGMENT_WIDTH = 64;
 const BAR_HEIGHT = 4;
-const ENTER_SCALE = 0.96;
-/** Half cycle of the loading bar gliding from one end to the other. */
-const GLIDE_MS = 700;
+/** Half cycle of the loading bar brightening and dimming. */
+const PULSE_MS = 700;
+/** The loading bar never dims below this opacity. */
+const PULSE_MIN_OPACITY = 0.35;
 
 export interface BrandSplashProps {
   /** True while the splash fades out into the app. */
@@ -30,15 +30,16 @@ export interface BrandSplashProps {
  * and a thin indeterminate loading bar with the violet to blue gradient. It always uses the dark
  * palette, whichever theme is saved, on the same colour as the native splash so the hand-off is
  * invisible. It uses no image and waits for nothing itself: the layout decides when it leaves.
+ * Nothing moves or scales (v0.2.5): the name fades in and the bar pulses in opacity only.
  * With reduce motion on, the bar is static and the caption says Loading.
  */
 export function BrandSplash({ fading = false }: BrandSplashProps) {
   const reduce = useReduceMotion();
-  const glide = useLoopProgress(!fading, GLIDE_MS);
+  const pulse = useLoopProgress(!fading, PULSE_MS);
   const enter = useSharedValue(reduce ? 1 : 0);
   const opacity = useSharedValue(1);
 
-  // The name fades and scales in.
+  // The name fades in.
   useEffect(() => {
     enter.value = withTiming(1, {
       duration: reduce ? DURATION.reduced : DURATION.slow,
@@ -56,12 +57,9 @@ export function BrandSplash({ fading = false }: BrandSplashProps) {
   }, [fading, reduce, opacity]);
 
   const rootStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const nameStyle = useAnimatedStyle(() => ({
-    opacity: enter.value,
-    transform: [{ scale: ENTER_SCALE + (1 - ENTER_SCALE) * enter.value }],
-  }));
-  const segmentStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: glide.value * (TRACK_WIDTH - SEGMENT_WIDTH) }],
+  const nameStyle = useAnimatedStyle(() => ({ opacity: enter.value }));
+  const barStyle = useAnimatedStyle(() => ({
+    opacity: PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * pulse.value,
   }));
 
   return (
@@ -82,7 +80,7 @@ export function BrandSplash({ fading = false }: BrandSplashProps) {
         {reduce ? (
           <Gradient style={StyleSheet.absoluteFill} />
         ) : (
-          <Animated.View style={[styles.segment, segmentStyle]}>
+          <Animated.View style={[StyleSheet.absoluteFill, barStyle]}>
             <Gradient style={StyleSheet.absoluteFill} />
           </Animated.View>
         )}
@@ -129,12 +127,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: RADIUS.pill,
     backgroundColor: DARK_TOKENS.border,
-  },
-  segment: {
-    width: SEGMENT_WIDTH,
-    height: BAR_HEIGHT,
-    borderRadius: RADIUS.pill,
-    overflow: 'hidden',
   },
   caption: {
     color: DARK_TOKENS.textMuted,

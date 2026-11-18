@@ -4,23 +4,21 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
-import { DURATION, SLIDE_DISTANCE } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 
-export interface SlideSwapProps {
+export interface FadeSwapProps {
   children: ReactNode;
-  /** The content slides in again each time this changes, for example the month of a calendar. */
+  /** The content fades in again each time this changes, for example the month of a calendar. */
   swapKey: string | number;
-  /** 1 slides in from the right (going forward), -1 from the left (going back). */
-  direction: 1 | -1;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
 /**
- * Fades and slides new content in from the side when its key changes. Nothing moves the first
- * time it is shown. With reduce motion on it is a plain 100 ms fade with no sideways movement.
+ * Fades new content in when its key changes (v0.2.5: nothing slides). Nothing animates the first
+ * time it is shown. The fade lasts 150 ms, or 100 ms with reduce motion on.
  */
-export function SlideSwap({ children, swapKey, direction, style, testID }: SlideSwapProps) {
+export function FadeSwap({ children, swapKey, style, testID }: FadeSwapProps) {
   const reduce = useReduceMotion();
   const progress = useSharedValue(1);
   const first = useRef(true);
@@ -32,15 +30,12 @@ export function SlideSwap({ children, swapKey, direction, style, testID }: Slide
     }
     progress.value = 0;
     progress.value = withTiming(1, {
-      duration: reduce ? DURATION.reduced : DURATION.base,
+      duration: reduce ? DURATION.reduced : DURATION.fast,
       easing: easeOut,
     });
   }, [swapKey, reduce, progress]);
 
-  const animated = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateX: reduce ? 0 : (1 - progress.value) * SLIDE_DISTANCE * direction }],
-  }));
+  const animated = useAnimatedStyle(() => ({ opacity: progress.value }));
 
   return (
     <Animated.View testID={testID} style={[style, animated]}>

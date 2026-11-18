@@ -1,15 +1,19 @@
 /**
- * Motion tokens (section 15.16). Every timing, spring and distance used by an animation lives
- * here; screens and components never invent their own numbers.
+ * Motion tokens (section 4 of the v0.2.5 plan, which replaces section 15.16). Every timing and
+ * delay used by an animation lives here; screens and components never invent their own numbers.
+ *
+ * From v0.2.5 nothing changes its position, size or angle as an animation, so there are no
+ * spring, scale or distance tokens. Only opacity, color, drawn strokes, filled bars and counting
+ * numbers animate.
  */
 
 /** Durations in milliseconds. */
 export const DURATION = {
-  /** What slides and scales become when the system asks for reduced motion. */
+  /** What every transition becomes when the system asks for reduced motion. */
   reduced: 100,
-  /** Presses and toggles. */
+  /** Presses, toggles, dialogs, sheets and screen fades. */
   fast: 150,
-  /** Most transitions. */
+  /** Most transitions, and the theme cross-fade. */
   base: 250,
   /** Screen entrances. */
   slow: 400,
@@ -21,32 +25,7 @@ export const DURATION = {
 export const EASE_OUT = [0, 0, 0.2, 1] as const;
 export const EASE_IN = [0.4, 0, 1, 1] as const;
 
-/** The one shared spring, for pops and bounces. */
-export const SPRING = { damping: 15, stiffness: 180 } as const;
-
-/** A spring with no bounce (damping ratio above 1), for a thumb that slides between choices (section 16.3). */
-export const SPRING_CALM = { damping: 36, stiffness: 300 } as const;
-
-/** Every button, tab, chip, card and icon button scales to this on press. */
-export const PRESS_SCALE = 0.97;
-
-/** A dialog scales up from this to 1 with the shared spring (section 15.16). */
-export const DIALOG_ENTER_SCALE = 0.92;
-
-/** The icon pop on selection goes 1, 1.2, 1. */
-export const POP_SCALE = 1.2;
-
-/** How far, in points, new content slides in sideways, for example a calendar changing month. */
-export const SLIDE_DISTANCE = 24;
-
-/** How far, in points, a sticky bottom bar rests below its place before it slides up. */
-export const BAR_SLIDE_DISTANCE = 96;
-
-/** A tapped date ripples from the first scale to the second while it fades out. */
-export const RIPPLE_START_SCALE = 0.6;
-export const RIPPLE_END_SCALE = 1.15;
-
-/** Lists stagger by 50 ms per item, for at most 8 items; the rest appear together. */
+/** Lists stagger by 50 ms per item, for at most 8 items; the rest appear together. Fade only. */
 export const STAGGER_STEP = 50;
 export const STAGGER_MAX_ITEMS = 8;
 
@@ -56,7 +35,6 @@ export const MAX_LOOPS = 2;
 /** Half cycle of a looping animation, in milliseconds. */
 export const LOOP_DURATION = {
   breathe: 1400,
-  float: 1800,
   shimmer: 900,
 } as const;
 

@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
-import { easeIn } from '@/motion/easing';
+import { easeIn, easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
-import { DURATION, SPRING } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
@@ -27,8 +27,8 @@ export interface SnackbarProps {
 }
 
 /**
- * A short confirmation with a check that draws itself, for example after saving. It slides in
- * with the shared spring, fades out, and is read out politely by screen readers. With reduce
+ * A short confirmation with a check that draws itself, for example after saving. It fades in
+ * and out (v0.2.5: it no longer slides) and is read out politely by screen readers. With reduce
  * motion on it fades in and out in 100 ms.
  */
 export function Snackbar({
@@ -50,9 +50,7 @@ export function Snackbar({
 
   if (message === null) return null;
 
-  const entering = reduce
-    ? FadeIn.duration(DURATION.reduced)
-    : SlideInDown.springify().damping(SPRING.damping).stiffness(SPRING.stiffness);
+  const entering = FadeIn.duration(reduce ? DURATION.reduced : DURATION.fast).easing(easeOut);
   const exiting = FadeOut.duration(reduce ? DURATION.reduced : DURATION.fast).easing(easeIn);
 
   return (

@@ -158,15 +158,15 @@ describe('InsightsView', () => {
     });
   });
 
-  it('shows the burst on a milestone day and not on another day', async () => {
+  it('shows the milestone message, with no burst of dots, only on a milestone day', async () => {
     const view = await render(
       <InsightsView insights={withStreak(insightsFor([TODAY]), 7)} message={MESSAGE} />,
     );
-    expect(screen.getByTestId('milestone-burst', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('milestone-message', { includeHiddenElements: true })).toBeTruthy();
 
     await view.rerender(
       <InsightsView insights={withStreak(insightsFor([TODAY]), 8)} message={MESSAGE} />,
     );
-    expect(screen.queryByTestId('milestone-burst', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('milestone-message', { includeHiddenElements: true })).toBeNull();
   });
 });

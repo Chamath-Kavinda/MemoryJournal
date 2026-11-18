@@ -12,15 +12,14 @@ import {
 import { format } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Breathe } from '@/components/Breathe';
 import { Card } from '@/components/Card';
+import { FadeSwap } from '@/components/FadeSwap';
 import { IconButton } from '@/components/IconButton';
 import { PressableScale } from '@/components/PressableScale';
-import { Ripple } from '@/components/Ripple';
-import { SlideSwap } from '@/components/SlideSwap';
 import { glowStyle } from '@/theme/glow';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
 import { CALENDAR_CELL_MAX } from '@/theme/sizeClass';
@@ -93,12 +92,11 @@ interface DayCellProps {
 /**
  * One date. Today has a gradient ring that breathes with a soft glow, a written day has a
  * gradient dot, a holiday has a `warning` dot, an empty past day is muted and a future day is
- * faded and disabled. A tap ripples over the date and opens the day at once, so the ripple never
- * delays the next screen. Holidays are display only: they never change what a day allows.
+ * faded and disabled. A tap shows a color highlight and opens the day at once. Holidays are
+ * display only: they never change what a day allows.
  */
 function DayCell({ cell, month, onSelect, paused, holidayNames, wide }: DayCellProps) {
   const { palette, scheme } = useTheme();
-  const [ripple, setRipple] = useState(0);
   const holiday = holidayNames.length > 0;
   const quiet = !cell.isToday && !cell.hasWriting;
   const radius = wide ? RADIUS.card : RADIUS.pill;
@@ -142,10 +140,7 @@ function DayCell({ cell, month, onSelect, paused, holidayNames, wide }: DayCellP
       accessibilityLabel={describeCell(cell, month, holidayNames)}
       accessibilityState={{ disabled: cell.disabled }}
       disabled={cell.disabled}
-      onPress={() => {
-        setRipple((count) => count + 1);
-        onSelect(cell.dayId);
-      }}
+      onPress={() => onSelect(cell.dayId)}
       style={
         wide
           ? { width: CELL_WIDTH, height: WIDE_CELL_HEIGHT, padding: 3 }
@@ -153,7 +148,6 @@ function DayCell({ cell, month, onSelect, paused, holidayNames, wide }: DayCellP
       }
       innerStyle={{ flex: 1 }}
     >
-      <Ripple trigger={ripple} color={palette.neonViolet} />
       {cell.isToday ? (
         <Breathe
           paused={paused}
@@ -318,15 +312,6 @@ export function MonthCalendar({
     [holidays, month.year, month.month],
   );
 
-  // Which way the grid slides in follows the way the month moved. Derived while rendering, so
-  // the direction is already right on the render that shows the new month.
-  const [shown, setShown] = useState<{ month: MonthRef; direction: 1 | -1 }>({
-    month,
-    direction: 1,
-  });
-  const moved = compareMonths(month, shown.month);
-  if (moved !== 0) setShown({ month, direction: moved > 0 ? 1 : -1 });
-
   return (
     <Card
       style={
@@ -382,7 +367,7 @@ export function MonthCalendar({
           ))}
         </View>
 
-        <SlideSwap swapKey={`${month.year}-${month.month}`} direction={shown.direction}>
+        <FadeSwap swapKey={`${month.year}-${month.month}`}>
           {weeks.map((week, rowIndex) => (
             <View key={rowIndex} style={{ flexDirection: 'row' }}>
               {week.map((cell, columnIndex) =>
@@ -409,7 +394,7 @@ export function MonthCalendar({
               )}
             </View>
           ))}
-        </SlideSwap>
+        </FadeSwap>
       </View>
 
       <Legend />

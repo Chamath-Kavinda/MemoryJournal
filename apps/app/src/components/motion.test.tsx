@@ -9,12 +9,9 @@ import { Breathe } from './Breathe';
 import { Button } from './Button';
 import { Chip } from './Chip';
 import { FadeUp } from './FadeUp';
-import { Float } from './Float';
 import { IconButton } from './IconButton';
-import { Pop } from './Pop';
 import { PressableCard } from './PressableCard';
 import { PressableScale } from './PressableScale';
-import { Shake } from './Shake';
 import { Skeleton } from './Skeleton';
 
 let mockReduce = false;
@@ -27,12 +24,13 @@ function styleOf(testID: string) {
   return { ...StyleSheet.flatten(node.props.style), ...animated } as Record<string, unknown>;
 }
 
-function scaleOf(testID: string): number {
-  const transform = styleOf(testID).transform as { scale?: number }[] | undefined;
-  return transform?.find((t) => t.scale !== undefined)?.scale ?? 1;
+/** Nothing may move, scale or turn (v0.2.5): the style must never carry a transform at all. */
+function hasTransform(testID: string): boolean {
+  const transform = styleOf(testID).transform as unknown[] | undefined;
+  return Array.isArray(transform) && transform.length > 0;
 }
 
-/** Advances fake time in 50 ms steps, so animations that chain (springs) get frames in between. */
+/** Advances fake time in 50 ms steps, so animations that chain get frames in between. */
 async function settle(ms = 1500) {
   for (let elapsed = 0; elapsed < ms; elapsed += 50) {
     await act(async () => {
@@ -100,23 +98,28 @@ describe('PressableScale', () => {
     expect(screen.getByRole('button', { name: 'Open' })).toBeDisabled();
   });
 
-  it('scales to 0.97 while pressed and springs back to 1 on release', async () => {
+  it('dims a little while pressed, comes back on release and never scales', async () => {
     await render(
       <PressableScale testID="press" accessibilityLabel="Open" innerStyle={{ width: 40 }}>
         <NativeText>Inside</NativeText>
       </PressableScale>,
     );
     const button = screen.getByRole('button', { name: 'Open' });
-    expect(scaleOf('press-scale')).toBe(1);
+    expect(styleOf('press-scale').opacity).toBe(1);
+    expect(hasTransform('press-scale')).toBe(false);
+
     await fireEvent(button, 'pressIn');
     await settle(300);
-    expect(scaleOf('press-scale')).toBeCloseTo(0.97, 2);
+    expect(styleOf('press-scale').opacity as number).toBeLessThan(1);
+    expect(hasTransform('press-scale')).toBe(false);
+
     await fireEvent(button, 'pressOut');
-    await settle(1500);
-    expect(scaleOf('press-scale')).toBeCloseTo(1, 2);
+    await settle(300);
+    expect(styleOf('press-scale').opacity).toBeCloseTo(1, 2);
+    expect(hasTransform('press-scale')).toBe(false);
   });
 
-  it('does not scale with reduce motion on', async () => {
+  it('still never scales with reduce motion on', async () => {
     mockReduce = true;
     await render(
       <PressableScale testID="press" accessibilityLabel="Open">
@@ -125,7 +128,7 @@ describe('PressableScale', () => {
     );
     await fireEvent(screen.getByRole('button', { name: 'Open' }), 'pressIn');
     await settle(300);
-    expect(scaleOf('press-scale')).toBe(1);
+    expect(hasTransform('press-scale')).toBe(false);
   });
 
   it('gives a function child the press state, which is not pressed at rest', async () => {
@@ -189,6 +192,7 @@ describe('FadeUp', () => {
     expect(styleOf('fade').opacity).toBe(0);
     await settle(1000);
     expect(styleOf('fade').opacity).toBe(1);
+    expect(hasTransform('fade')).toBe(false);
     expect(screen.getByText('Hello')).toBeTruthy();
   });
 
@@ -218,69 +222,7 @@ describe('FadeUp', () => {
     );
     await settle(150);
     expect(styleOf('fade').opacity).toBe(1);
-    const transform = styleOf('fade').transform as { translateY?: number }[] | undefined;
-    expect(transform?.find((t) => t.translateY !== undefined)?.translateY ?? 0).toBe(0);
-  });
-});
-
-describe('Pop', () => {
-  it('grows past 1 on a pop and comes back to rest at 1', async () => {
-    const { rerender } = await render(
-      <Pop testID="pop" trigger={false}>
-        <NativeText>Done</NativeText>
-      </Pop>,
-    );
-    expect(scaleOf('pop')).toBe(1);
-    await rerender(
-      <Pop testID="pop" trigger>
-        <NativeText>Done</NativeText>
-      </Pop>,
-    );
-    let peak = 1;
-    for (let step = 0; step < 100; step += 1) {
-      await settle(50);
-      peak = Math.max(peak, scaleOf('pop'));
-    }
-    expect(peak).toBeGreaterThan(1.1);
-    expect(scaleOf('pop')).toBeCloseTo(1, 2);
-  });
-
-  it('does not move with reduce motion on', async () => {
-    mockReduce = true;
-    const { rerender } = await render(
-      <Pop testID="pop" trigger={1}>
-        <NativeText>Done</NativeText>
-      </Pop>,
-    );
-    await rerender(
-      <Pop testID="pop" trigger={2}>
-        <NativeText>Done</NativeText>
-      </Pop>,
-    );
-    await settle(300);
-    expect(scaleOf('pop')).toBe(1);
-  });
-});
-
-describe('Shake', () => {
-  it('rests in place before and after a shake', async () => {
-    const { rerender } = await render(
-      <Shake testID="shake" trigger={0}>
-        <NativeText>Oops</NativeText>
-      </Shake>,
-    );
-    const offset = () =>
-      (styleOf('shake').transform as { translateX?: number }[] | undefined)?.find(
-        (t) => t.translateX !== undefined,
-      )?.translateX ?? 0;
-    expect(offset()).toBe(0);
-    await rerender(
-      <Shake testID="shake" trigger={1}>
-        <NativeText>Oops</NativeText>
-      </Shake>,
-    );
-    await settle(1000);
-    expect(offset()).toBeCloseTo(0, 2);
+    expect(hasTransform('fade')).toBe(false);
   });
 });
 
@@ -292,17 +234,13 @@ describe('looping components', () => {
         <Breathe testID="breathe">
           <NativeText>Ring</NativeText>
         </Breathe>
-        <Float testID="float">
-          <NativeText>Icon</NativeText>
-        </Float>
         <Skeleton testID="skeleton" />
       </>,
     );
     await settle(3000);
     expect(screen.getByText('Ring')).toBeTruthy();
-    expect(screen.getByText('Icon')).toBeTruthy();
     expect(styleOf('breathe').opacity).toBe(1);
-    expect(scaleOf('breathe')).toBe(1);
+    expect(hasTransform('breathe')).toBe(false);
     expect(styleOf('skeleton').opacity).toBeCloseTo(0.45, 2);
   });
 
@@ -321,9 +259,9 @@ describe('looping components', () => {
 
   it('take a slot while running and give it back on unmount', async () => {
     const { unmount } = await render(
-      <Float testID="float">
-        <NativeText>Icon</NativeText>
-      </Float>,
+      <Breathe testID="breathe">
+        <NativeText>Ring</NativeText>
+      </Breathe>,
     );
     expect(claimLoop()).toBe(true);
     expect(claimLoop()).toBe(false);

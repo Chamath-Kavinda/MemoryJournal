@@ -1,9 +1,5 @@
 import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
-import Animated from 'react-native-reanimated';
-
-import { ROW_LAYOUT } from '@/motion/layout';
-import { useReduceMotion } from '@/motion/useReduceMotion';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 export interface ReflowProps {
   children: ReactNode;
@@ -12,15 +8,14 @@ export interface ReflowProps {
 }
 
 /**
- * A container whose size and position animate when its content or its neighbours change size,
- * so a list of rows opens and closes smoothly instead of jumping. With reduce motion on it does
- * not animate and the change is instant.
+ * A plain container for lists whose rows are added or removed (v0.2.5, section 4). Items no
+ * longer animate to their new places: the list updates at once, and a removed row fades out in
+ * `Removable` first. The name is kept so call sites do not change.
  */
 export function Reflow({ children, style, testID }: ReflowProps) {
-  const reduce = useReduceMotion();
   return (
-    <Animated.View testID={testID} style={style} {...(reduce ? {} : { layout: ROW_LAYOUT })}>
+    <View testID={testID} style={style}>
       {children}
-    </Animated.View>
+    </View>
   );
 }

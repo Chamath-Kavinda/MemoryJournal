@@ -3,7 +3,6 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeOut } from 'react-native-reanimated';
 
 import { easeIn } from '@/motion/easing';
-import { ROW_LAYOUT } from '@/motion/layout';
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { DURATION } from '@/theme/motion';
 
@@ -15,9 +14,8 @@ export interface RemovableProps {
 
 /**
  * One item of a list that can lose items: a deleted card, or a card that a filter hides. When
- * the item is removed it fades out (ease-in, 250 ms) while the items around it glide into the
- * gap, so the list collapses instead of jumping. With reduce motion on the item fades out in
- * 100 ms and the others move at once.
+ * the item is removed it fades out (ease-in, 250 ms) and the list updates (v0.2.5: the items
+ * around it no longer glide into the gap). With reduce motion on the item fades out in 100 ms.
  *
  * Give every `Removable` of a list a stable `key`, so only the items that really leave animate.
  */
@@ -27,7 +25,6 @@ export function Removable({ children, style, testID }: RemovableProps) {
     <Animated.View
       testID={testID}
       style={style}
-      {...(reduce ? {} : { layout: ROW_LAYOUT })}
       exiting={FadeOut.duration(reduce ? DURATION.reduced : DURATION.base).easing(easeIn)}
     >
       {children}

@@ -2,16 +2,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
-import { DURATION, SPRING_CALM } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
@@ -40,10 +35,9 @@ export interface SegmentedControlProps<T extends string> {
 
 /**
  * A row of two or more choices where exactly one is selected, such as Movies and Books. A
- * gradient thumb slides to the selected segment with the calm spring, which has no visible bounce
- * (sections 15.16 and 16.3). With
- * reduce motion on the thumb does not slide: it appears at the new segment with a 100 ms fade.
- * Every segment keeps its text label next to its icon, and is at least 44 high (48 on Android).
+ * gradient thumb is drawn at the selected segment at once and fades in over 150 ms (100 ms with
+ * reduce motion on); it never slides (v0.2.5, section 4). Every segment keeps its text label
+ * next to its icon, and is at least 44 high (48 on Android).
  */
 export function SegmentedControl<T extends string>({
   segments,
@@ -60,7 +54,6 @@ export function SegmentedControl<T extends string>({
     segments.findIndex((segment) => segment.value === value),
   );
 
-  const position = useSharedValue(index);
   const fade = useSharedValue(1);
   const first = useRef(true);
 
@@ -69,22 +62,14 @@ export function SegmentedControl<T extends string>({
       first.current = false;
       return;
     }
-    if (reduce) {
-      position.value = index;
-      fade.value = 0;
-      fade.value = withTiming(1, { duration: DURATION.reduced });
-    } else {
-      position.value = withSpring(index, SPRING_CALM);
-    }
-  }, [index, reduce, position, fade]);
+    fade.value = 0.3;
+    fade.value = withTiming(1, { duration: reduce ? DURATION.reduced : DURATION.fast });
+  }, [index, reduce, fade]);
 
   const count = Math.max(segments.length, 1);
   const thumbWidth = Math.max(0, (trackWidth - BORDER_WIDTH * 2 - INSET * 2) / count);
 
-  const thumbStyle = useAnimatedStyle(() => ({
-    opacity: fade.value,
-    transform: [{ translateX: position.value * thumbWidth }],
-  }));
+  const thumbStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
   const onLayout = (event: LayoutChangeEvent) => setTrackWidth(event.nativeEvent.layout.width);
 
@@ -111,7 +96,7 @@ export function SegmentedControl<T extends string>({
             position: 'absolute',
             top: INSET,
             bottom: INSET,
-            left: INSET,
+            left: INSET + index * thumbWidth,
             width: thumbWidth,
             borderRadius: RADIUS.pill,
             overflow: 'hidden',

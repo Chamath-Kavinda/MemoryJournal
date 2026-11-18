@@ -3,13 +3,14 @@ import { Lock, LockOpen, PenLine, TriangleAlert, type LucideIcon } from 'lucide-
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import Animated, { FadeIn } from 'react-native-reanimated';
+
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { GlowFlash } from '@/components/GlowFlash';
 import { Icon } from '@/components/Icon';
-import { Pop } from '@/components/Pop';
-import { Shake } from '@/components/Shake';
 import { SPACING } from '@/theme/layout';
+import { DURATION } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
@@ -44,8 +45,8 @@ function Badge({ icon, color }: { icon: LucideIcon; color: string }) {
 /**
  * The Today card of Home (section 15.11). Before 21:00 it shows a Lock, "Opens at 9:00 PM" and a
  * live countdown. At or after 21:00 it shows a LockOpen and a gradient Write today button. When
- * the unlock happens while the card is on screen the lock morphs into the open lock with a small
- * shake and a flash of glow. A guest whose device clock looks wrong sees why today stays closed.
+ * the unlock happens while the card is on screen the open lock fades in with a flash of glow
+ * (opacity only, no shake). A guest whose device clock looks wrong sees why today stays closed.
  */
 export function TodayCardView({ access, onWrite }: Props) {
   const { palette, scheme } = useTheme();
@@ -101,11 +102,12 @@ export function TodayCardView({ access, onWrite }: Props) {
     <View testID="today-card" style={{ position: 'relative' }}>
       <Card active>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.md }}>
-          <Shake trigger={unlocks}>
-            <Pop trigger={unlocks > 0 ? unlocks : false}>
-              <Badge icon={LockOpen} color={palette.success} />
-            </Pop>
-          </Shake>
+          <Animated.View
+            key={unlocks}
+            {...(unlocks > 0 ? { entering: FadeIn.duration(DURATION.base) } : {})}
+          >
+            <Badge icon={LockOpen} color={palette.success} />
+          </Animated.View>
           <View style={{ flex: 1, flexShrink: 1, gap: SPACING.xs }}>
             <Text variant="heading">Today is open</Text>
             <Text style={{ color: palette.muted }}>Write down everything you remember.</Text>

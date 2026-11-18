@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
-import { Burst } from './Burst';
 import { ProgressBar } from './ProgressBar';
 import { ScoreRing } from './ScoreRing';
 import { TrendLine, trendPoints } from './TrendLine';
@@ -159,28 +158,5 @@ describe('TrendLine', () => {
     await layout('trend');
 
     expect(screen.getByTestId('trend-line', { includeHiddenElements: true })).toBeTruthy();
-  });
-});
-
-describe('Burst', () => {
-  it('draws 24 dots', async () => {
-    await render(<Burst testID="burst" />);
-
-    const burst = screen.getByTestId('burst', { includeHiddenElements: true });
-    expect(burst.children).toHaveLength(24);
-  });
-
-  it('is decoration, hidden from screen readers', async () => {
-    await render(<Burst testID="burst" />);
-
-    const burst = screen.getByTestId('burst', { includeHiddenElements: true });
-    expect(burst.props.importantForAccessibility).toBe('no-hide-descendants');
-  });
-
-  it('is left out with reduce motion on', async () => {
-    mockReduce = true;
-    await render(<Burst testID="burst" />);
-
-    expect(screen.queryByTestId('burst', { includeHiddenElements: true })).toBeNull();
   });
 });

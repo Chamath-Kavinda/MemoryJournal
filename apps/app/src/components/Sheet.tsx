@@ -1,17 +1,12 @@
 import { X } from 'lucide-react-native';
 import { useEffect, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
-import { BAR_SLIDE_DISTANCE, DURATION, SPRING } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 import { MEDIUM_BREAKPOINT } from '@/theme/sizeClass';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
@@ -46,16 +41,14 @@ export function Sheet({ title, onClose, children, testID = 'sheet' }: Props) {
       appear.value = withTiming(1, { duration: DURATION.reduced });
       return;
     }
-    backdrop.value = withTiming(1, { duration: DURATION.base, easing: easeOut });
-    appear.value = withSpring(1, SPRING);
+    // The panel appears in place; only the backdrop and the panel opacity fade (v0.2.5, section 4).
+    backdrop.value = withTiming(1, { duration: DURATION.fast, easing: easeOut });
+    appear.value = withTiming(1, { duration: DURATION.fast, easing: easeOut });
   }, [reduce, backdrop, appear]);
 
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdrop.value }));
   const panelStyle = useAnimatedStyle(() => ({
     opacity: Math.min(1, Math.max(0, appear.value)),
-    transform: [
-      { translateY: reduce || centered ? 0 : (1 - appear.value) * BAR_SLIDE_DISTANCE * 2 },
-    ],
   }));
 
   return (

@@ -5,7 +5,6 @@ import { View } from 'react-native';
 import { Card } from '@/components/Card';
 import { FadeUp } from '@/components/FadeUp';
 import { Icon } from '@/components/Icon';
-import { Pop } from '@/components/Pop';
 import { PressableCard } from '@/components/PressableCard';
 import { ProgressBar } from '@/components/ProgressBar';
 import { ResponsiveGrid } from '@/components/ResponsiveGrid';
@@ -74,14 +73,14 @@ function LessonCard({ lesson, number, finished, onOpen }: LessonCardProps) {
               {lesson.title}
             </Text>
             {finished ? (
-              <Pop trigger={finished} testID={`lesson-done-${lesson.id}`}>
+              <View testID={`lesson-done-${lesson.id}`}>
                 <Icon
                   icon={CircleCheck}
                   size="inline"
                   color={palette.success}
                   accessibilityLabel="Done"
                 />
-              </Pop>
+              </View>
             ) : null}
           </View>
           <Text style={{ color: palette.muted, fontSize: 14, lineHeight: 20 }}>

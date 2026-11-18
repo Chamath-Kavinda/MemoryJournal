@@ -3,7 +3,6 @@ import { Lock, LockOpen } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
-import { Pop } from '@/components/Pop';
 import { BORDER_WIDTH, RADIUS, SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
@@ -15,8 +14,8 @@ interface Props {
 
 /**
  * A small chip in the header of the Day screen: a Lock with the live countdown while today is
- * closed, and a LockOpen when the day can be written. The open lock pops when a day unlocks
- * while it is on screen. Future days and unknown days have no chip.
+ * closed, and a LockOpen when the day can be written. The icon changes at once, with no pop.
+ * Future days and unknown days have no chip.
  */
 export function LockChip({ access }: Props) {
   const { palette } = useTheme();
@@ -46,9 +45,7 @@ export function LockChip({ access }: Props) {
         backgroundColor: palette.surfaceRaised,
       }}
     >
-      <Pop trigger={open}>
-        <Icon icon={open ? LockOpen : Lock} size={16} color={tone} />
-      </Pop>
+      <Icon icon={open ? LockOpen : Lock} size={16} color={tone} />
       <Text variant="caption" style={{ fontVariant: ['tabular-nums'], fontWeight: '600' }}>
         {label}
       </Text>

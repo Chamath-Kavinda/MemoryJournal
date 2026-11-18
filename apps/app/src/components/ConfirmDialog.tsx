@@ -1,24 +1,18 @@
 import { Info, Trash2, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, MIN_TARGET, RADIUS, SPACING } from '@/theme/layout';
-import { DIALOG_ENTER_SCALE, DURATION, SPRING } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text, TextInput } from '@/theme/themed';
 import { SCRIM } from '@/theme/tokens';
 
 import { Button } from './Button';
 import { Icon } from './Icon';
-import { Shake } from './Shake';
 
 /** A word or phrase the person has to type before the action button works. */
 export interface TypedConfirmation {
@@ -84,26 +78,17 @@ export function ConfirmDialog({
 
   const backdrop = useSharedValue(0);
   const appear = useSharedValue(0);
-  const scale = useSharedValue(DIALOG_ENTER_SCALE);
 
+  // The dialog and its backdrop fade in place (150 ms, or 100 ms with reduce motion on).
+  // Nothing scales, slides or springs (v0.2.5, section 4).
   useEffect(() => {
-    if (reduce) {
-      // Slides and scales become short fades.
-      scale.value = 1;
-      backdrop.value = withTiming(1, { duration: DURATION.reduced });
-      appear.value = withTiming(1, { duration: DURATION.reduced });
-      return;
-    }
-    backdrop.value = withTiming(1, { duration: DURATION.base, easing: easeOut });
-    appear.value = withTiming(1, { duration: DURATION.base, easing: easeOut });
-    scale.value = withSpring(1, SPRING);
-  }, [reduce, backdrop, appear, scale]);
+    const duration = reduce ? DURATION.reduced : DURATION.fast;
+    backdrop.value = withTiming(1, { duration, easing: easeOut });
+    appear.value = withTiming(1, { duration, easing: easeOut });
+  }, [reduce, backdrop, appear]);
 
   const backdropStyle = useAnimatedStyle(() => ({ opacity: backdrop.value }));
-  const dialogStyle = useAnimatedStyle(() => ({
-    opacity: appear.value,
-    transform: [{ scale: scale.value }],
-  }));
+  const dialogStyle = useAnimatedStyle(() => ({ opacity: appear.value }));
 
   const canConfirm = typed === undefined || typed.matches(typedText);
   const calm = notice || neutral;
@@ -159,7 +144,7 @@ export function ConfirmDialog({
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ padding: SPACING.xl, gap: SPACING.md }}
             >
-              <Shake trigger={0} playOnMount style={{ alignSelf: 'center' }}>
+              <View style={{ alignSelf: 'center' }}>
                 <View
                   style={{
                     width: 56,
@@ -173,7 +158,7 @@ export function ConfirmDialog({
                 >
                   <Icon icon={shownIcon} size="control" color={tint} />
                 </View>
-              </Shake>
+              </View>
 
               <Text
                 accessibilityRole="header"

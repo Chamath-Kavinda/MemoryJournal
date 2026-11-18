@@ -6,7 +6,6 @@ import { ActivityIndicator, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Icon } from '@/components/Icon';
-import { Shake } from '@/components/Shake';
 import { useConfirm } from '@/components/useConfirm';
 import { SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -81,11 +80,9 @@ export function DeleteAccountSection({ uid }: { uid: string }) {
       )}
 
       {message ? (
-        <Shake key={message} trigger={0} playOnMount>
-          <Text accessibilityRole="alert" style={{ color: palette.danger }}>
-            {message}
-          </Text>
-        </Shake>
+        <Text accessibilityRole="alert" style={{ color: palette.danger }}>
+          {message}
+        </Text>
       ) : null}
     </Card>
   );

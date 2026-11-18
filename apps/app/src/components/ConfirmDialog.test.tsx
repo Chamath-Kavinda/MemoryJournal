@@ -59,9 +59,9 @@ function styleOf(testID: string) {
   return { ...StyleSheet.flatten(node.props.style), ...animated } as Record<string, unknown>;
 }
 
-function scaleOf(testID: string): number {
-  const transform = styleOf(testID).transform as { scale?: number }[] | undefined;
-  return transform?.find((t) => t.scale !== undefined)?.scale ?? 1;
+function hasTransform(testID: string): boolean {
+  const transform = styleOf(testID).transform as unknown[] | undefined;
+  return Array.isArray(transform) && transform.length > 0;
 }
 
 /** Advances fake time in 50 ms steps, so animations that chain (springs) get frames in between. */
@@ -271,7 +271,7 @@ describe('ConfirmDialog motion', () => {
 
     expect(styleOf('confirm-scrim').opacity).toBe(1);
     expect(styleOf('confirm-dialog').opacity).toBe(1);
-    expect(scaleOf('confirm-dialog')).toBeCloseTo(1, 2);
+    expect(hasTransform('confirm-dialog')).toBe(false);
   });
 
   it('only fades, without scaling, when reduce motion is on', async () => {
@@ -286,7 +286,7 @@ describe('ConfirmDialog motion', () => {
 
     await settle(300);
 
-    expect(scaleOf('confirm-dialog')).toBe(1);
+    expect(hasTransform('confirm-dialog')).toBe(false);
     expect(styleOf('confirm-dialog').opacity).toBe(1);
     expect(styleOf('confirm-scrim').opacity).toBe(1);
   });

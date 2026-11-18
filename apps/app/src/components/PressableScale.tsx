@@ -6,16 +6,10 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
-import { DURATION, PRESS_SCALE, SPRING } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 
 export interface PressState {
   pressed: boolean;
@@ -34,7 +28,7 @@ export interface PressableScaleProps {
   accessibilityState?: AccessibilityState | undefined;
   /** Layout of the touchable area (width, margin, flex). */
   style?: StyleProp<ViewStyle>;
-  /** Look of the part that scales: size, radius, border and fill. */
+  /** Look of the inner part: size, radius, border and fill. */
   innerStyle?: StyleProp<ViewStyle> | ((state: PressState) => StyleProp<ViewStyle>);
   testID?: string | undefined;
   /** Pointer and keyboard focus, used by the navigation tooltips on the web build. */
@@ -45,8 +39,9 @@ export interface PressableScaleProps {
 }
 
 /**
- * The shared press feedback: scale to 0.97 on press with a quick ease-out and a spring back on
- * release. With reduce motion on, nothing scales and the control dims for 100 ms instead.
+ * The shared press feedback (v0.2.5): nothing moves, scales or springs. The control dims a
+ * little while pressed, with a 150 ms fade (100 ms with reduce motion on), and callers can
+ * change colour through the `pressed` state. The name is kept so call sites do not change.
  * The control stays tappable while it animates; the animation runs on the UI thread.
  */
 export function PressableScale({
@@ -67,29 +62,20 @@ export function PressableScale({
   onBlur,
 }: PressableScaleProps) {
   const reduce = useReduceMotion();
-  const scale = useSharedValue(1);
   const dim = useSharedValue(0);
+  const duration = reduce ? DURATION.reduced : DURATION.fast;
 
   const animated = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
     opacity: 1 - dim.value * 0.15,
   }));
 
   const handlePressIn = () => {
     if (disabled) return;
-    if (reduce) {
-      dim.value = withTiming(1, { duration: DURATION.reduced });
-    } else {
-      scale.value = withTiming(PRESS_SCALE, { duration: DURATION.fast, easing: easeOut });
-    }
+    dim.value = withTiming(1, { duration });
   };
 
   const handlePressOut = () => {
-    if (reduce) {
-      dim.value = withTiming(0, { duration: DURATION.reduced });
-    } else {
-      scale.value = withSpring(1, SPRING);
-    }
+    dim.value = withTiming(0, { duration });
   };
 
   return (

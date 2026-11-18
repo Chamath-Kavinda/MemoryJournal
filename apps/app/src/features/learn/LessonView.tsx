@@ -6,7 +6,6 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { FadeUp } from '@/components/FadeUp';
 import { Icon } from '@/components/Icon';
-import { Pop } from '@/components/Pop';
 import { BORDER_WIDTH, SPACING } from '@/theme/layout';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
@@ -117,15 +116,13 @@ export function LessonView({ lesson, done, onToggleDone, onTryIt }: Props) {
           alignItems: 'flex-start',
         }}
       >
-        <Pop trigger={done} testID="done-pop">
-          <Button
-            testID="mark-done"
-            label={done ? 'Mark as not done' : 'Mark as done'}
-            icon={Check}
-            variant={done ? 'secondary' : 'primary'}
-            onPress={onToggleDone}
-          />
-        </Pop>
+        <Button
+          testID="mark-done"
+          label={done ? 'Mark as not done' : 'Mark as done'}
+          icon={Check}
+          variant={done ? 'secondary' : 'primary'}
+          onPress={onToggleDone}
+        />
       </View>
     </View>
   );

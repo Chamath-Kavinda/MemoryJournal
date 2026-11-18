@@ -2,9 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, Text as NativeText } from 'react-native';
 
 import { ErrorCard } from './ErrorCard';
+import { FadeSwap } from './FadeSwap';
 import { GlowFlash } from './GlowFlash';
-import { Ripple } from './Ripple';
-import { SlideSwap } from './SlideSwap';
 
 let mockReduce = false;
 jest.mock('@/motion/useReduceMotion', () => ({ useReduceMotion: () => mockReduce }));
@@ -16,14 +15,10 @@ function styleOf(testID: string) {
   return { ...StyleSheet.flatten(node.props.style), ...animated } as Record<string, unknown>;
 }
 
-function translateXOf(testID: string): number {
-  const transform = styleOf(testID).transform as { translateX?: number }[] | undefined;
-  return transform?.find((t) => t.translateX !== undefined)?.translateX ?? 0;
-}
-
-function scaleOf(testID: string): number {
-  const transform = styleOf(testID).transform as { scale?: number }[] | undefined;
-  return transform?.find((t) => t.scale !== undefined)?.scale ?? 1;
+/** Nothing may move (v0.2.5): the style must never carry a transform at all. */
+function hasTransform(testID: string): boolean {
+  const transform = styleOf(testID).transform as unknown[] | undefined;
+  return Array.isArray(transform) && transform.length > 0;
 }
 
 /** Advances fake time in 50 ms steps, so animations that chain get frames in between. */
@@ -44,98 +39,73 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('SlideSwap', () => {
+describe('FadeSwap', () => {
   const child = <NativeText>Grid</NativeText>;
 
-  it('rests in place the first time it is shown', async () => {
+  it('is fully visible and in place the first time it is shown', async () => {
     await render(
-      <SlideSwap testID="swap" swapKey="2026-11" direction={1}>
+      <FadeSwap testID="swap" swapKey="2026-11">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
 
     expect(styleOf('swap').opacity).toBe(1);
-    expect(translateXOf('swap')).toBe(0);
+    expect(hasTransform('swap')).toBe(false);
   });
 
-  it('starts off to the side when the key changes and ends back in place', async () => {
+  it('cross-fades when the key changes and never moves', async () => {
     const { rerender } = await render(
-      <SlideSwap testID="swap" swapKey="2026-11" direction={1}>
+      <FadeSwap testID="swap" swapKey="2026-11">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
     await rerender(
-      <SlideSwap testID="swap" swapKey="2026-12" direction={1}>
+      <FadeSwap testID="swap" swapKey="2026-12">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
     await settle(50);
 
-    // Going forward the new content comes in from the right, so it starts at a positive offset.
-    expect(translateXOf('swap')).toBeGreaterThan(0);
+    expect(styleOf('swap').opacity as number).toBeLessThan(1);
+    expect(hasTransform('swap')).toBe(false);
 
-    await settle(1000);
-    expect(translateXOf('swap')).toBeCloseTo(0, 2);
+    await settle(500);
     expect(styleOf('swap').opacity).toBe(1);
+    expect(hasTransform('swap')).toBe(false);
   });
 
-  it('comes in from the left when going back', async () => {
+  it('behaves the same going back a month: a fade with no sideways movement', async () => {
     const { rerender } = await render(
-      <SlideSwap testID="swap" swapKey="2026-11" direction={-1}>
+      <FadeSwap testID="swap" swapKey="2026-11">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
     await rerender(
-      <SlideSwap testID="swap" swapKey="2026-10" direction={-1}>
+      <FadeSwap testID="swap" swapKey="2026-10">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
     await settle(50);
 
-    expect(translateXOf('swap')).toBeLessThan(0);
+    expect(hasTransform('swap')).toBe(false);
   });
 
-  it('is a plain fade with no sideways movement with reduce motion on', async () => {
+  it('ends fully visible with reduce motion on', async () => {
     mockReduce = true;
     const { rerender } = await render(
-      <SlideSwap testID="swap" swapKey="2026-11" direction={1}>
+      <FadeSwap testID="swap" swapKey="2026-11">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
     await rerender(
-      <SlideSwap testID="swap" swapKey="2026-12" direction={1}>
+      <FadeSwap testID="swap" swapKey="2026-12">
         {child}
-      </SlideSwap>,
+      </FadeSwap>,
     );
-    await settle(50);
-    expect(translateXOf('swap')).toBe(0);
-
     await settle(300);
+
     expect(styleOf('swap').opacity).toBe(1);
-  });
-});
-
-describe('Ripple', () => {
-  it('is invisible until it is triggered, then spreads out and fades away', async () => {
-    const { rerender } = await render(<Ripple testID="ripple" trigger={0} color="#000000" />);
-    expect(styleOf('ripple').opacity).toBeCloseTo(0, 2);
-
-    await rerender(<Ripple testID="ripple" trigger={1} color="#000000" />);
-    await settle(100);
-    expect(styleOf('ripple').opacity as number).toBeGreaterThan(0);
-
-    await settle(1000);
-    expect(styleOf('ripple').opacity).toBeCloseTo(0, 2);
-    expect(scaleOf('ripple')).toBeGreaterThan(1);
-  });
-
-  it('does nothing with reduce motion on', async () => {
-    mockReduce = true;
-    const { rerender } = await render(<Ripple testID="ripple" trigger={0} color="#000000" />);
-    await rerender(<Ripple testID="ripple" trigger={1} color="#000000" />);
-    await settle(100);
-
-    expect(styleOf('ripple').opacity).toBeCloseTo(0, 2);
+    expect(hasTransform('swap')).toBe(false);
   });
 });
 

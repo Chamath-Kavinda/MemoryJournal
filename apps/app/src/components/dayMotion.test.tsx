@@ -5,7 +5,6 @@ import { SNACKBAR_DURATION, Snackbar } from './Snackbar';
 import { DrawCheck } from './DrawCheck';
 import { Reflow } from './Reflow';
 import { Reveal } from './Reveal';
-import { Rotate } from './Rotate';
 import { Toggle } from './Toggle';
 
 let mockReduce = false;
@@ -16,11 +15,6 @@ function styleOf(testID: string) {
   const node = screen.getByTestId(testID, { includeHiddenElements: true });
   const animated = (node.props.jestAnimatedStyle as { value?: object } | undefined)?.value ?? {};
   return { ...StyleSheet.flatten(node.props.style), ...animated } as Record<string, unknown>;
-}
-
-function transformOf(testID: string, key: string): unknown {
-  const transform = styleOf(testID).transform as Record<string, unknown>[] | undefined;
-  return transform?.find((t) => t[key] !== undefined)?.[key];
 }
 
 /** Advances fake time in 50 ms steps, so animations that chain (springs) get frames in between. */
@@ -72,58 +66,28 @@ describe('Toggle', () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it('slides the thumb to the right end when it turns on', async () => {
+  it('draws the thumb at its new position at once, with no translate', async () => {
     const view = await render(
       <Toggle value={false} onValueChange={jest.fn()} accessibilityLabel="Notify" testID="t" />,
     );
-    expect(transformOf('t-thumb', 'translateX')).toBe(0);
+    const before = styleOf('t-thumb').left as number;
+    expect(styleOf('t-thumb').transform).toBeUndefined();
 
     await view.rerender(
       <Toggle value onValueChange={jest.fn()} accessibilityLabel="Notify" testID="t" />,
     );
-    await settle();
 
-    expect(transformOf('t-thumb', 'translateX') as number).toBeGreaterThan(15);
+    expect(styleOf('t-thumb').left as number).toBeGreaterThan(before + 15);
+    expect(styleOf('t-thumb').transform).toBeUndefined();
   });
 
-  it('with reduce motion the thumb does not slide but still ends on the right side', async () => {
+  it('with reduce motion the thumb is still on the right side and nothing translates', async () => {
     mockReduce = true;
     await render(<Toggle value onValueChange={jest.fn()} accessibilityLabel="Notify" testID="t" />);
     await settle(300);
 
-    expect(transformOf('t-thumb', 'translateX')).toBe(0);
+    expect(styleOf('t-thumb').transform).toBeUndefined();
     expect(styleOf('t-thumb').left as number).toBeGreaterThan(15);
-  });
-});
-
-describe('Rotate', () => {
-  it('rests at 0 degrees and turns to 180 when turned', async () => {
-    const view = await render(
-      <Rotate turned={false} testID="r">
-        <NativeText>chevron</NativeText>
-      </Rotate>,
-    );
-    expect(transformOf('r', 'rotate')).toBe('0deg');
-
-    await view.rerender(
-      <Rotate turned testID="r">
-        <NativeText>chevron</NativeText>
-      </Rotate>,
-    );
-    await settle(600);
-
-    expect(transformOf('r', 'rotate')).toBe('180deg');
-  });
-
-  it('with reduce motion jumps straight to the final angle', async () => {
-    mockReduce = true;
-    await render(
-      <Rotate turned testID="r">
-        <NativeText>chevron</NativeText>
-      </Rotate>,
-    );
-
-    expect(transformOf('r', 'rotate')).toBe('180deg');
   });
 });
 

@@ -5,13 +5,12 @@ import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, MIN_TARGET, RADIUS } from '@/theme/layout';
-import { DURATION, SPRING } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { GRADIENT_END, GRADIENT_START } from '@/theme/tokens';
 
@@ -35,9 +34,9 @@ export interface ToggleProps {
 }
 
 /**
- * An on/off switch. The thumb slides with the shared spring and the brand gradient fades in
- * behind it when the switch turns on. With reduce motion on the thumb moves with a 100 ms fade
- * of the colours and no slide. The touch target is at least 44 high (48 on Android).
+ * An on/off switch. The thumb is drawn in its new position at once (v0.2.5: nothing slides), and
+ * the thumb colour and the brand gradient behind it fade over 150 ms (100 ms with reduce motion
+ * on). The touch target is at least 44 high (48 on Android).
  */
 export function Toggle({
   value,
@@ -51,10 +50,9 @@ export function Toggle({
   const progress = useSharedValue(value ? 1 : 0);
 
   useEffect(() => {
-    const target = value ? 1 : 0;
-    progress.value = reduce
-      ? withTiming(target, { duration: DURATION.reduced })
-      : withSpring(target, SPRING);
+    progress.value = withTiming(value ? 1 : 0, {
+      duration: reduce ? DURATION.reduced : DURATION.fast,
+    });
   }, [value, reduce, progress]);
 
   const off = palette.textMuted;
@@ -62,8 +60,6 @@ export function Toggle({
 
   const thumbStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(progress.value, [0, 1], [off, on]),
-    transform: [{ translateX: reduce ? 0 : progress.value * TRAVEL }],
-    left: reduce ? INSET + (progress.value >= 0.5 ? TRAVEL : 0) : INSET,
   }));
   const fillStyle = useAnimatedStyle(() => ({
     opacity: Math.min(1, Math.max(0, progress.value)),
@@ -103,6 +99,7 @@ export function Toggle({
           {
             position: 'absolute',
             top: INSET,
+            left: INSET + (value ? TRAVEL : 0),
             width: THUMB,
             height: THUMB,
             borderRadius: THUMB / 2,

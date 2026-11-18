@@ -1,18 +1,13 @@
 import { Save } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/components/Button';
-import { easeIn } from '@/motion/easing';
+import { easeIn, easeOut } from '@/motion/easing';
 import { useReduceMotion } from '@/motion/useReduceMotion';
 import { BORDER_WIDTH, SPACING } from '@/theme/layout';
-import { BAR_SLIDE_DISTANCE, DURATION, SPRING } from '@/theme/motion';
+import { DURATION } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Text } from '@/theme/themed';
 
@@ -30,9 +25,9 @@ interface Props {
 }
 
 /**
- * The sticky bottom bar of the writer. It slides up with the shared spring when there is
- * something to save, or a message to show about a save, and slides away when everything is
- * saved. A snackbar confirms a finished save. Place it at the bottom of a parent that fills
+ * The sticky bottom bar of the writer. It fades in when there is something to save, or a message
+ * to show about a save, and fades away when everything is saved (v0.2.5: it no longer slides).
+ * A snackbar confirms a finished save. Place it at the bottom of a parent that fills
  * the screen.
  */
 export function SaveBar({ canSave, saving, failed, pendingSync, onSave }: Props) {
@@ -44,15 +39,14 @@ export function SaveBar({ canSave, saving, failed, pendingSync, onSave }: Props)
 
   const progress = useSharedValue(visible ? 1 : 0);
   useEffect(() => {
-    const target = visible ? 1 : 0;
-    if (reduce) progress.value = withTiming(target, { duration: DURATION.reduced });
-    else if (visible) progress.value = withSpring(1, SPRING);
-    else progress.value = withTiming(0, { duration: DURATION.base, easing: easeIn });
+    progress.value = withTiming(visible ? 1 : 0, {
+      duration: reduce ? DURATION.reduced : DURATION.fast,
+      easing: visible ? easeOut : easeIn,
+    });
   }, [visible, reduce, progress]);
 
   const animated = useAnimatedStyle(() => ({
     opacity: Math.min(1, Math.max(0, progress.value)),
-    transform: [{ translateY: reduce ? 0 : (1 - progress.value) * BAR_SLIDE_DISTANCE }],
   }));
 
   let message = '';

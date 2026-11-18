@@ -3,17 +3,14 @@ import {
   EASE_IN,
   EASE_OUT,
   MAX_LOOPS,
-  POP_SCALE,
-  PRESS_SCALE,
-  SPRING,
-  SPRING_CALM,
   STAGGER_MAX_ITEMS,
   STAGGER_STEP,
   staggerDelay,
 } from './motion';
+import * as allTokens from './motion';
 
 describe('motion tokens', () => {
-  it('uses the durations of section 15.16', () => {
+  it('uses the durations of section 4.4', () => {
     expect(DURATION).toEqual({ reduced: 100, fast: 150, base: 250, slow: 400, hero: 900 });
   });
 
@@ -22,16 +19,11 @@ describe('motion tokens', () => {
     expect(DURATION.base).toBeLessThanOrEqual(250);
   });
 
-  it('uses the shared spring and the press and pop scales', () => {
-    expect(SPRING).toEqual({ damping: 15, stiffness: 180 });
-    expect(PRESS_SCALE).toBe(0.97);
-    expect(POP_SCALE).toBe(1.2);
-  });
-
-  it('has a calm spring that never overshoots, for the theme control thumb', () => {
-    const dampingRatio = SPRING_CALM.damping / (2 * Math.sqrt(SPRING_CALM.stiffness));
-    expect(dampingRatio).toBeGreaterThanOrEqual(1);
-    expect(SPRING_CALM.damping).toBeGreaterThan(SPRING.damping);
+  it('has no spring, scale or distance tokens (v0.2.5: nothing moves as an animation)', () => {
+    const tokens = allTokens as Record<string, unknown>;
+    for (const name of Object.keys(tokens)) {
+      expect(name).not.toMatch(/SPRING|SCALE|DISTANCE/);
+    }
   });
 
   it('describes ease-out as decelerating and ease-in as accelerating', () => {

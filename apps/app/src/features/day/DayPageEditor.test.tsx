@@ -79,7 +79,7 @@ describe('useDayPageTools', () => {
     const { result } = await renderHook(() => useDayPageTools());
     const before = result.current.now;
 
-    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 17, 22, 5));
+    jest.useFakeTimers().setSystemTime(new Date(before.getTime() + 60 * 60 * 1000));
     await act(async () => result.current.openTime());
     jest.useRealTimers();
 

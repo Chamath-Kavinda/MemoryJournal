@@ -17,11 +17,6 @@ function styleOf(testID: string) {
   return { ...StyleSheet.flatten(node.props.style), ...animated } as Record<string, unknown>;
 }
 
-function transformOf(testID: string, key: string): unknown {
-  const transform = styleOf(testID).transform as Record<string, unknown>[] | undefined;
-  return transform?.find((t) => t[key] !== undefined)?.[key];
-}
-
 /** Advances fake time in 50 ms steps, so animations that chain (springs) get frames in between. */
 async function settle(ms = 1500) {
   for (let elapsed = 0; elapsed < ms; elapsed += 50) {
@@ -90,7 +85,7 @@ describe('SegmentedControl', () => {
     expect(onChange).toHaveBeenCalledWith('book');
   });
 
-  it('slides the thumb to the second segment with the spring', async () => {
+  it('draws the thumb at the second segment at once, with no translate', async () => {
     const view = await render(
       <SegmentedControl
         testID="seg"
@@ -101,38 +96,8 @@ describe('SegmentedControl', () => {
       />,
     );
     await layoutTrack('seg');
-    expect(transformOf('seg-thumb', 'translateX')).toBe(0);
-
-    await view.rerender(
-      <SegmentedControl
-        testID="seg"
-        accessibilityLabel="Library type"
-        segments={segments}
-        value="book"
-        onChange={jest.fn()}
-      />,
-    );
-    await settle(3000);
-
-    // Track 300 wide, minus the border and inset on both sides, split in two: 146 per segment.
-    // The spring may still be settling around it, so allow its small overshoot.
-    const x = transformOf('seg-thumb', 'translateX') as number;
-    expect(x).toBeGreaterThan(140);
-    expect(x).toBeLessThan(160);
-  });
-
-  it('with reduce motion the thumb jumps to the new segment and fades back in', async () => {
-    mockReduce = true;
-    const view = await render(
-      <SegmentedControl
-        testID="seg"
-        accessibilityLabel="Library type"
-        segments={segments}
-        value="movie"
-        onChange={jest.fn()}
-      />,
-    );
-    await layoutTrack('seg');
+    expect(styleOf('seg-thumb').transform).toBeUndefined();
+    const startLeft = styleOf('seg-thumb').left as number;
 
     await view.rerender(
       <SegmentedControl
@@ -145,7 +110,38 @@ describe('SegmentedControl', () => {
     );
     await settle(300);
 
-    expect(transformOf('seg-thumb', 'translateX') as number).toBeCloseTo(146, 0);
+    // Track 300 wide, minus the border and inset on both sides, split in two: 146 per segment.
+    expect(styleOf('seg-thumb').transform).toBeUndefined();
+    expect((styleOf('seg-thumb').left as number) - startLeft).toBeCloseTo(146, 0);
+  });
+
+  it('with reduce motion the thumb is at the new segment and fades back in', async () => {
+    mockReduce = true;
+    const view = await render(
+      <SegmentedControl
+        testID="seg"
+        accessibilityLabel="Library type"
+        segments={segments}
+        value="movie"
+        onChange={jest.fn()}
+      />,
+    );
+    await layoutTrack('seg');
+    const startLeft = styleOf('seg-thumb').left as number;
+
+    await view.rerender(
+      <SegmentedControl
+        testID="seg"
+        accessibilityLabel="Library type"
+        segments={segments}
+        value="book"
+        onChange={jest.fn()}
+      />,
+    );
+    await settle(300);
+
+    expect(styleOf('seg-thumb').transform).toBeUndefined();
+    expect((styleOf('seg-thumb').left as number) - startLeft).toBeCloseTo(146, 0);
     expect(styleOf('seg-thumb').opacity).toBe(1);
   });
 });

@@ -18,9 +18,8 @@ import {
 } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeInLeft } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { Burst } from '@/components/Burst';
 import { Card } from '@/components/Card';
 import { CountUp } from '@/components/CountUp';
 import { FadeUp } from '@/components/FadeUp';
@@ -90,16 +89,14 @@ function Section({ icon, title, trailing, children }: SectionProps) {
   );
 }
 
-/** The weekly change: an arrow that slides in beside the sentence. */
+/** The weekly change: an arrow that fades in beside the sentence. */
 function WeeklyChange({ delta }: { delta: number }) {
   const { palette } = useTheme();
   const reduce = useReduceMotion();
   const text = deltaText(delta);
   const icon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
   const color = delta > 0 ? palette.success : delta < 0 ? palette.danger : palette.muted;
-  const entering = reduce
-    ? FadeIn.duration(DURATION.reduced)
-    : FadeInLeft.duration(DURATION.base).easing(easeOut);
+  const entering = FadeIn.duration(reduce ? DURATION.reduced : DURATION.base).easing(easeOut);
   return (
     <View
       testID="score-change"
@@ -177,6 +174,7 @@ function Stat({ icon, label, value, children }: StatProps) {
 
 function StreakCard({ streak }: Pick<Insights, 'streak'>) {
   const { palette } = useTheme();
+  const reduce = useReduceMotion();
   const next = nextMilestone(streak.currentStreak);
   const previous = previousMilestone(streak.currentStreak);
   const progress = next === null ? 1 : (streak.currentStreak - previous) / (next - previous);
@@ -194,14 +192,29 @@ function StreakCard({ streak }: Pick<Insights, 'streak'>) {
         <Stat icon={Trophy} label="Longest" value={plural(streak.longestStreak, 'day')} />
         <Stat icon={Snowflake} label="Freezes banked" value={String(streak.freezeCount)} />
       </View>
-      <View>
-        <ProgressBar
-          testID="streak-progress"
-          progress={progress}
-          accessibilityLabel="Progress to the next milestone"
-        />
-        {atMilestone ? <Burst testID="milestone-burst" /> : null}
-      </View>
+      <ProgressBar
+        testID="streak-progress"
+        progress={progress}
+        accessibilityLabel="Progress to the next milestone"
+      />
+      {atMilestone ? (
+        // The milestone message card fades in. No dots, nothing moves (v0.2.5, section 4.3).
+        <Animated.View
+          testID="milestone-message"
+          entering={FadeIn.duration(reduce ? DURATION.reduced : DURATION.base).easing(easeOut)}
+          style={{
+            padding: SPACING.md,
+            borderRadius: RADIUS.card,
+            borderWidth: BORDER_WIDTH,
+            borderColor: palette.border,
+            backgroundColor: palette.surfaceRaised,
+          }}
+        >
+          <Text style={{ color: palette.text, fontSize: 14, fontWeight: '600' }}>
+            {`Milestone reached: ${plural(streak.currentStreak, 'day')} in a row.`}
+          </Text>
+        </Animated.View>
+      ) : null}
       <Text style={{ color: palette.text, fontSize: 14 }}>
         {next === null
           ? 'You have reached every milestone.'

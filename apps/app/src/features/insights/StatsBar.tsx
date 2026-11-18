@@ -97,7 +97,7 @@ export function StatsBar({ insights, status, onOpen, paused = false }: Props) {
           label="Streak"
           icon={
             streak !== null && streak > 0 ? (
-              <Breathe paused={paused} minOpacity={0.7} maxScale={1.1}>
+              <Breathe paused={paused} minOpacity={0.7}>
                 {flame}
               </Breathe>
             ) : (

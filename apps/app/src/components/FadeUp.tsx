@@ -15,17 +15,16 @@ export interface FadeUpProps {
   children: ReactNode;
   /** Position in a list. Items stagger by 50 ms, and items past the eighth appear together. */
   index?: number;
-  /** How far, in points, the content rises while it fades in. */
-  distance?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
 /**
- * Fades its content in while moving up. With reduce motion on it is a plain 100 ms fade with no
- * movement and no stagger.
+ * A fade-in entrance (v0.2.5): opacity only, nothing rises or moves. List items stagger by 50 ms
+ * for at most 8 items. With reduce motion on it is a plain 100 ms fade with no stagger. The name
+ * is kept so call sites do not change.
  */
-export function FadeUp({ children, index = 0, distance = 12, style, testID }: FadeUpProps) {
+export function FadeUp({ children, index = 0, style, testID }: FadeUpProps) {
   const reduce = useReduceMotion();
   const progress = useSharedValue(0);
 
@@ -37,7 +36,6 @@ export function FadeUp({ children, index = 0, distance = 12, style, testID }: Fa
 
   const animated = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateY: reduce ? 0 : (1 - progress.value) * distance }],
   }));
 
   return (
