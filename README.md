@@ -220,7 +220,7 @@ All business logic lives in `packages/core` so mobile and desktop behave identic
 
 These steps are for people who got the APK directly from the developer. Only install an app from someone you trust.
 
-1. Download `MemoryJournal-v0.2.4-android.apk` from the [GitHub Releases](../../releases) page. It works on 64-bit and 32-bit phones. You can compare the file with the SHA-256 checksum in the release text.
+1. Download `MemoryJournal-v0.2.5-android.apk` from the [GitHub Releases](../../releases) page. It works on 64-bit and 32-bit phones. You can compare the file with the SHA-256 checksum in the release text.
 2. Open the file. If Android asks, allow your browser or file manager to install apps from this source.
 3. If Google Play Protect shows **App blocked** or **Unknown developer**, this is not a virus finding. It means Google has not seen an app from this developer before, because the app is signed with a new key and installed from outside Google Play. Tap **Install anyway** (the small text link under the description), then continue.
 4. A new version installs over the old one and keeps your data. You do not need to uninstall first.
@@ -292,6 +292,6 @@ Journal text is never sent to any AI service or third party. The analyzer runs e
 ## License
 
 Memory Journal — End User License Agreement  
-Version 0.2.4  
+Version 0.2.5  
 Copyright © 2026 Chama Bro. All rights reserved.  
 See `LICENSE.txt` for full terms.

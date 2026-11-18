@@ -1,5 +1,30 @@
 # Release notes
 
+## v0.2.5 (2026-11-18)
+
+Version 0.2.5 calms the motion of the app and fixes what was seen on a real Android phone with three-button navigation (`docs/build-documentation-v0.2.5.md`). The journal rules (21:00 unlock, revisions, tags, score, streak), the data shape and the Firestore rules are unchanged.
+
+### What is new
+
+- **Calmer motion.** Nothing jumps, bounces, slides or shakes any more. Screens, sheets and dialogs fade in place, and a press changes a colour instead of shrinking the button. Fades, colour changes, the score ring and trend line drawing, progress bars, counting numbers and skeletons stay.
+- **Visible system buttons.** The Back, Home and Recent buttons and the gesture pill follow the theme: light buttons in the dark theme, dark buttons in the light theme, changing at once when the theme changes. The status bar icons follow the theme too.
+- **Greeting at the top of Home.** The greeting (`Good morning, Sam`) takes the place of the app name in the top bar and is shown once. It wraps at large font sizes and never pushes the Sign in pill or the Settings gear out of view.
+- **Popups that fit.** Add time, Add tag, Create new tag, the confirmation dialog, the sign-in modal and the merge dialog share one panel with a fixed header and a fixed footer. Long content scrolls, the buttons stay above the system buttons, and the panel lifts above the keyboard. From 600 px wide, and on landscape phones, it is a centered dialog.
+- **Tools at the top of the writing page.** The Clock and Tag buttons are in a row under the date and stay in place while the text scrolls. The writing field fills the rest of the screen. Cancelling a sheet gives the field its focus and cursor back.
+- **An even hour grid.** The Add time sheet shows the 24 hours in equal cells, 6 columns on a phone and 8 from 600 px up. The `:00`, `:15`, `:30` and `:45` chips share one row, and the minute field takes digits only.
+
+### Removed
+
+- Every spring, bounce, slide, scale and shake animation, and the helpers behind them.
+- The toolbar at the bottom of the writing page.
+
+### Known limits
+
+- These changes have been checked by tests, not yet by a person on a phone. The system buttons, the sheets above the system buttons and above the keyboard still need the checks in section 15 of `docs/qa.md`.
+- With the keyboard open on a 640 dp tall phone, Add tag may list fewer than three tags. The search field and the footer buttons stay visible.
+- The date picker of the Library still uses its own modal, because the plan does not list it.
+- The greeting is display only and does not change the 21:00 lock, the streak or the score.
+
 ## v0.2.4 (2026-11-17)
 
 Version 0.2.4 changes how a day is shown and written (section 18 of the build document). The journal rules (21:00 unlock, revisions, tags, score, streak) and the Firestore rules are unchanged.

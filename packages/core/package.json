@@ -1,6 +1,6 @@
 {
   "name": "@memory-journal/core",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Pure TypeScript business logic: time rules, revisions, score, streak, messages.",
   "main": "src/index.ts",

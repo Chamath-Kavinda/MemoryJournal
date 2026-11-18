@@ -1,5 +1,5 @@
 Memory Journal - End User License Agreement
-Version 0.2.4
+Version 0.2.5
 Copyright (c) 2026 Chama Bro. All rights reserved.
 
 BY INSTALLING OR USING THIS SOFTWARE YOU AGREE TO THE FOLLOWING TERMS.
